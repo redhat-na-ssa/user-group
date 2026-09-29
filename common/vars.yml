@@ -1,0 +1,16 @@
+# Cluster-wide settings shared by all demo playbooks (Ansible counterpart of
+# common/env.sh). Load with:  vars_files: ../common/vars.yml
+ocp_api: https://api.homeocp.ocp4.peterlarsen.org:6443
+ocp_console: https://console-openshift-console.apps.homeocp.ocp4.peterlarsen.org
+ocp_apps_domain: apps.homeocp.ocp4.peterlarsen.org
+
+gitea_url: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org
+gitea_internal_url: http://local-gitea.gitea.svc:3000   # what pipelines clone from
+gitea_user: demo
+gitea_password: welcome1
+gitea_org: ocpdemo
+
+demo_user_password: welcome1
+
+# Presentation namespace: slide decks + follow-up app
+faa_namespace: faa-demo

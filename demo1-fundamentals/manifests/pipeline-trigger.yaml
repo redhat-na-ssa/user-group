@@ -1,0 +1,103 @@
+# Push-to-deploy wiring, staged by setup.sh before the demo.
+#
+# Gitea (webhook on ocpdemo/guestbook, push to main)
+#   -> EventListener el-guestbook (validates the webhook secret)
+#   -> TriggerTemplate: a PipelineRun of the "guestbook" pipeline
+#
+# The "guestbook" Pipeline itself is created live in the console
+# (Import from Git -> Add pipeline), so these parameters match what the
+# console's s2i-python-deployment template expects.
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: guestbook-gitea-push
+  labels:
+    app.kubernetes.io/part-of: guestbook
+spec:
+  params:
+    - name: git-revision
+      value: $(body.after)
+    - name: git-commit-message
+      value: $(body.head_commit.message)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: guestbook
+  labels:
+    app.kubernetes.io/part-of: guestbook
+spec:
+  params:
+    - name: git-revision
+    - name: git-commit-message
+      default: ""
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: guestbook-push-
+        labels:
+          tekton.dev/pipeline: guestbook
+          app.kubernetes.io/instance: guestbook
+          pipelines.openshift.io/trigger: gitea-push
+        annotations:
+          demo/commit-message: $(tt.params.git-commit-message)
+      spec:
+        pipelineRef:
+          name: guestbook
+        params:
+          - name: APP_NAME
+            value: guestbook
+          - name: GIT_REPO
+            # in-cluster Service, not the webhook's clone_url (the public route)
+            value: http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
+          - name: GIT_REVISION
+            value: $(tt.params.git-revision)
+          - name: IMAGE_NAME
+            value: image-registry.openshift-image-registry.svc:5000/demo-intro/guestbook
+          - name: PATH_CONTEXT
+            value: .
+          - name: VERSION
+            value: 3.12-ubi9
+        workspaces:
+          - name: workspace
+            volumeClaimTemplate:
+              spec:
+                accessModes: [ReadWriteOnce]
+                resources:
+                  requests:
+                    storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: guestbook
+  labels:
+    app.kubernetes.io/part-of: guestbook
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: gitea-push-main
+      interceptors:
+        # Gitea sends GitHub-compatible X-GitHub-Event / X-Hub-Signature-256
+        # headers, so the stock github interceptor validates the secret.
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+          params:
+            - name: secretRef
+              value:
+                secretName: guestbook-webhook
+                secretKey: secret
+            - name: eventTypes
+              value: [push]
+        - ref:
+            name: cel
+            kind: ClusterInterceptor
+          params:
+            - name: filter
+              value: body.ref == 'refs/heads/main'
+      bindings:
+        - ref: guestbook-gitea-push
+      template:
+        ref: guestbook

@@ -1,0 +1,7 @@
+# Part 4: routes are sticky by default (cookie) - spread requests across all
+# pods instead, so a browser refresh visibly lands on different pods.
+#   oc patch route/guestbook --patch-file=manifests/guestbook-route-roundrobin.patch.yaml
+metadata:
+  annotations:
+    haproxy.router.openshift.io/balance: roundrobin
+    haproxy.router.openshift.io/disable_cookies: "true"

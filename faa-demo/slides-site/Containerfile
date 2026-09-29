@@ -1,0 +1,18 @@
+# Static site for the FAA demo slide decks: nginx serving the decks in site/
+# plus reveal.js, fonts and a QR code library installed from npm at build
+# time (no CDN needed at the venue).
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS assets
+WORKDIR /opt/app-root/src
+COPY package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
+RUN mkdir -p out/reveal out/fonts out/lib \
+ && cp -r node_modules/reveal.js/dist/. out/reveal/ \
+ && cp node_modules/qrcode-generator/dist/qrcode.js out/lib/ \
+ && for f in red-hat-display red-hat-text red-hat-mono; do \
+      cp -r node_modules/@fontsource/$f out/fonts/$f; \
+    done
+
+FROM registry.access.redhat.com/ubi9/nginx-126
+COPY --from=assets /opt/app-root/src/out/ /opt/app-root/src/
+COPY site/ /opt/app-root/src/
+CMD ["nginx", "-g", "daemon off;"]

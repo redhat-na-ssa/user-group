@@ -1,0 +1,16 @@
+# Brand material is internal only: the source packs and anything else in a
+# branding/ directory stay out of Git. Logos a deck actually uses are
+# extracted into that demo's images/ directory (see images/SOURCES.md).
+branding/
+*.zip
+*.odp
+*.odf
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Project Python venv (see requirements.txt)
+.venv/
+# Ansible collections installed from requirements.yml
+collections/

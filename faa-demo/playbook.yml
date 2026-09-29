@@ -1,0 +1,287 @@
+# Initialize the faa-demo namespace: the slide decks (static reveal.js site)
+# and the follow-up app. Safe to re-run: sources are synced to Gitea, and an
+# image is only rebuilt when its source changed (or the image is missing).
+#
+#   ansible-playbook faa-demo/playbook.yml
+#
+# Needs: an `oc login` as cluster admin, kubernetes.core (requirements.yml)
+# and the Python kubernetes library (requirements.txt).
+- name: Presentation namespace (slides + follow-ups)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  vars:
+    repo_root: "{{ playbook_dir | dirname }}"
+    followup_url: "https://followups-{{ faa_namespace }}.{{ ocp_apps_domain }}"
+    # One entry per demo deck: <demo>/slides/index.html, <demo>/images/,
+    # <demo>/cheatsheet.sh, plus the files the web terminal downloads.
+    decks:
+      - name: demo1-fundamentals
+        title: OpenShift Fundamentals
+        files:
+          - manifests/hello-pod.yaml
+          - manifests/guestbook-db-env.patch.yaml
+          - manifests/guestbook-route-roundrobin.patch.yaml
+    apps:
+      - name: slides
+        repo: faa-slides
+        description: Slide decks for the Red Hat User Group for FAA
+        runtime: nginx
+        health: /
+      - name: followups
+        repo: faa-followups
+        description: Questions and follow-ups app for the FAA demo sessions
+        runtime: python
+        health: /healthz
+        pvc: true
+
+  tasks:
+    # ------------------------------------------------------------ preflight
+    - name: Check the cluster connection
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: openshift-pipelines
+      register: pipelines_ns
+      failed_when: pipelines_ns.resources | length == 0
+
+    - name: Check the Gitea login
+      ansible.builtin.uri:
+        url: "{{ gitea_url }}/api/v1/user"
+        user: "{{ gitea_user }}"
+        password: "{{ gitea_password }}"
+        force_basic_auth: true
+
+    # ------------------------------------------------------------ namespace
+    - name: Namespace {{ faa_namespace }}
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ faa_namespace }}"
+            annotations:
+              openshift.io/display-name: Red Hat User Group for FAA
+              openshift.io/description: Slide decks and the follow-up app
+
+    - name: Build pipeline
+      kubernetes.core.k8s:
+        namespace: "{{ faa_namespace }}"
+        src: "{{ playbook_dir }}/manifests/pipeline.yaml"
+
+    # ------------------------------------------------------------ build contexts
+    - name: Work directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: faa-demo
+      register: work
+
+    - name: Slides site - build files
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/slides-site/"
+        dest: "{{ work.path }}/faa-slides/"
+        mode: preserve
+
+    - name: Slides site - shared theme and script
+      ansible.builtin.copy:
+        src: "{{ repo_root }}/common/deck/"
+        dest: "{{ work.path }}/faa-slides/site/common/"
+
+    - name: Slides site - deck list and config
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ work.path }}/faa-slides/site/{{ item.dest }}"
+      loop:
+        - {src: templates/index.html.j2, dest: index.html}
+        - {src: templates/config.js.j2, dest: config.js}
+
+    - name: Slides site - deck directories
+      ansible.builtin.file:
+        path: "{{ work.path }}/faa-slides/site/{{ item.name }}/files"
+        state: directory
+      loop: "{{ decks }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Slides site - decks
+      ansible.builtin.copy:
+        src: "{{ repo_root }}/{{ item.0.name }}/{{ item.1.src }}"
+        dest: "{{ work.path }}/faa-slides/site/{{ item.0.name }}/{{ item.1.dest }}"
+      loop: "{{ decks | product([
+                 {'src': 'slides/index.html', 'dest': 'index.html'},
+                 {'src': 'images/', 'dest': 'images/'},
+                 {'src': 'cheatsheet.sh', 'dest': 'cheatsheet.sh'}]) | list }}"
+      loop_control:
+        label: "{{ item.0.name }}/{{ item.1.dest }}"
+
+    - name: Slides site - files for the web terminal
+      ansible.builtin.copy:
+        src: "{{ repo_root }}/{{ item.0.name }}/{{ item.1 }}"
+        dest: "{{ work.path }}/faa-slides/site/{{ item.0.name }}/files/"
+      loop: "{{ decks | subelements('files') }}"
+      loop_control:
+        label: "{{ item.0.name }}/{{ item.1 | basename }}"
+
+    - name: Follow-up app
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/followup-app/"
+        dest: "{{ work.path }}/faa-followups/"
+
+    # ------------------------------------------------------------ gitea
+    - name: Gitea repos
+      ansible.builtin.uri:
+        url: "{{ gitea_url }}/api/v1/orgs/{{ gitea_org }}/repos"
+        method: POST
+        user: "{{ gitea_user }}"
+        password: "{{ gitea_password }}"
+        force_basic_auth: true
+        body_format: json
+        body: {name: "{{ item.repo }}", description: "{{ item.description }}", private: false, default_branch: main}
+        status_code: [201, 409]   # 409 = already exists
+      loop: "{{ apps }}"
+      loop_control:
+        label: "{{ gitea_org }}/{{ item.repo }}"
+
+    - name: Push sources to Gitea (commits only when something changed)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        cd "{{ work.path }}"
+        url="{{ gitea_url | regex_replace('^https://', 'https://' ~ gitea_user ~ ':' ~ gitea_password ~ '@') }}/{{ gitea_org }}/{{ item.repo }}.git"
+        git clone -q "$url" "{{ item.repo }}.git" 2>/dev/null
+        mv "{{ item.repo }}.git/.git" "{{ item.repo }}/.git"
+        cd "{{ item.repo }}"
+        git checkout -q -B main 2>/dev/null || git checkout -q --orphan main
+        git add -A
+        if git diff --cached --quiet 2>/dev/null && git rev-parse -q --verify HEAD >/dev/null; then
+          echo unchanged
+        else
+          git -c user.name="{{ gitea_user }}" -c user.email="{{ gitea_user }}@example.com" \
+            commit -qm "Update from hyperconverged repo"
+          git -c credential.helper= push -q origin main
+          echo pushed
+        fi
+      args:
+        executable: /bin/bash
+      loop: "{{ apps }}"
+      loop_control:
+        label: "{{ gitea_org }}/{{ item.repo }}"
+      register: push
+      changed_when: "'pushed' in push.stdout"
+      no_log: false
+
+    - name: Remove the work directory
+      ansible.builtin.file:
+        path: "{{ work.path }}"
+        state: absent
+
+    # ------------------------------------------------------------ build
+    - name: Current images
+      kubernetes.core.k8s_info:
+        api_version: image.openshift.io/v1
+        kind: ImageStreamTag
+        namespace: "{{ faa_namespace }}"
+        name: "{{ item.name }}:latest"
+      loop: "{{ apps }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: istags
+
+    - name: Decide what to build
+      ansible.builtin.set_fact:
+        to_build: >-
+          {{ apps | zip(push.results, istags.results)
+             | selectattr('1.changed')
+             | map(attribute='0') | list
+           + apps | zip(push.results, istags.results)
+             | rejectattr('1.changed')
+             | selectattr('2.resources', 'equalto', [])
+             | map(attribute='0') | list }}
+
+    - name: Start builds
+      kubernetes.core.k8s:
+        namespace: "{{ faa_namespace }}"
+        definition:
+          apiVersion: tekton.dev/v1
+          kind: PipelineRun
+          metadata:
+            generateName: "build-{{ item.name }}-"
+            labels: {app: "{{ item.name }}"}
+          spec:
+            pipelineRef: {name: build-image}
+            params:
+              - {name: GIT_URL, value: "{{ gitea_internal_url }}/{{ gitea_org }}/{{ item.repo }}.git"}
+              - {name: IMAGE, value: "image-registry.openshift-image-registry.svc:5000/{{ faa_namespace }}/{{ item.name }}:latest"}
+            workspaces:
+              - name: source
+                volumeClaimTemplate:
+                  spec:
+                    accessModes: [ReadWriteOnce]
+                    resources: {requests: {storage: 1Gi}}
+      loop: "{{ to_build }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: runs
+
+    - name: Wait for the builds
+      kubernetes.core.k8s_info:
+        api_version: tekton.dev/v1
+        kind: PipelineRun
+        namespace: "{{ faa_namespace }}"
+        name: "{{ item.result.metadata.name }}"
+      loop: "{{ runs.results }}"
+      loop_control:
+        label: "{{ item.result.metadata.name }}"
+      register: run_state
+      until: >-
+        run_state.resources | length > 0 and
+        (run_state.resources[0].status.conditions | default([]) | selectattr('type', 'equalto', 'Succeeded')
+         | rejectattr('status', 'equalto', 'Unknown') | list | length > 0)
+      retries: 90
+      delay: 10
+      failed_when: >-
+        (run_state.resources[0].status.conditions | selectattr('type', 'equalto', 'Succeeded')
+         | first).status != 'True'
+
+    # ------------------------------------------------------------ deploy
+    - name: Deployments, services and routes
+      kubernetes.core.k8s:
+        namespace: "{{ faa_namespace }}"
+        template: "{{ playbook_dir }}/manifests/apps.yaml.j2"
+
+    - name: Roll out rebuilt images
+      kubernetes.core.k8s:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ faa_namespace }}"
+        name: "{{ item.name }}"
+        definition:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  faa-demo/built-at: "{{ now(utc=true).isoformat() }}"
+      loop: "{{ to_build }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Wait for the apps
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ faa_namespace }}"
+        name: "{{ item.name }}"
+        wait: true
+        wait_condition: {type: Available, status: "True"}
+        wait_timeout: 300
+      loop: "{{ apps }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Done
+      ansible.builtin.debug:
+        msg:
+          - "Slides:     https://slides-{{ faa_namespace }}.{{ ocp_apps_domain }}/"
+          - "Follow-ups: {{ followup_url }}/"
+          - "Cheat-sheet (web terminal): curl -sO http://slides.{{ faa_namespace }}.svc:8080/<demo>/cheatsheet.sh"

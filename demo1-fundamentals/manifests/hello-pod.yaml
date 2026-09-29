@@ -1,0 +1,14 @@
+# Part 2: paste into the console (+ / Import YAML) to create a bare pod.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello
+  labels:
+    app: hello
+spec:
+  containers:
+    - name: nginx
+      image: image-registry.openshift-image-registry.svc:5000/openshift/nginx:1.26-ubi9
+      command: ["nginx", "-g", "daemon off;"]
+      ports:
+        - containerPort: 8080

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Red Hat User Group for FAA</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <style>
+    body { margin:0; background:#292929; color:#fff; font-family:"Red Hat Text", system-ui, sans-serif; }
+    header { background:#151515; padding:2rem 3rem; border-bottom:3px solid #ee0000; }
+    h1 { font-family:"Red Hat Display", system-ui, sans-serif; font-weight:400; margin:0; }
+    main { max-width:60rem; margin:2rem auto; padding:0 1.5rem; }
+    a.deck { display:block; padding:1.2rem 1.4rem; margin:.8rem 0; background:#1f1f1f; color:#fff; text-decoration:none; border-left:4px solid #ee0000; font-size:1.3rem; }
+    a.deck:hover { background:#151515; }
+    .muted { color:#8a8d90; font-size:.9rem; }
+    a { color:#73bcf7; }
+  </style>
+</head>
+<body>
+  <header><h1>Red Hat User Group for FAA</h1></header>
+  <main>
+{% for deck in decks %}
+    <a class="deck" href="{{ deck.name }}/">{{ deck.title }}</a>
+{% endfor %}
+    <p class="muted">Questions and follow-ups: <a href="{{ followup_url }}/">{{ followup_url }}</a></p>
+  </main>
+</body>
+</html>

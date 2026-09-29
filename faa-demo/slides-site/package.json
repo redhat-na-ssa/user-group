@@ -1,0 +1,12 @@
+{
+  "name": "faa-slides",
+  "private": true,
+  "description": "Runtime assets for the FAA demo slide decks (reveal.js, fonts, QR code)",
+  "dependencies": {
+    "@fontsource/red-hat-display": "^5.2.0",
+    "@fontsource/red-hat-mono": "^5.2.0",
+    "@fontsource/red-hat-text": "^5.2.0",
+    "qrcode-generator": "^2.0.0",
+    "reveal.js": "^6.0.2"
+  }
+}

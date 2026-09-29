@@ -1,0 +1,6 @@
+# Python environment for running the playbooks (project venv):
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+#   source .venv/bin/activate
+#   ansible-galaxy collection install -r requirements.yml   (into ./collections, see ansible.cfg)
+ansible-core>=2.17
+kubernetes>=29.0.0

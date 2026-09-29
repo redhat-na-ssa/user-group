@@ -1,0 +1,168 @@
+/* Red Hat dark theme for reveal.js, modelled on the dark layouts of the
+   "Red Hat standard presentation template" (16:9). Fonts are bundled
+   locally by the slides-site build (no internet needed at the venue). */
+
+:root {
+  --rh-bg: #292929;          /* slide background */
+  --rh-bg-deep: #151515;     /* title band, code, panels */
+  --rh-panel: #1f1f1f;
+  --rh-red: #ee0000;
+  --rh-teal: #147878;
+  --rh-blue: #0066cc;
+  --rh-text: #ffffff;
+  --rh-muted: #c7c7c7;
+  --rh-dim: #8a8d90;
+  --r-background-color: var(--rh-bg);
+  --r-main-font: "Red Hat Text", "Liberation Sans", Arial, sans-serif;
+  --r-heading-font: "Red Hat Display", "Liberation Sans", Arial, sans-serif;
+  --r-code-font: "Red Hat Mono", "Liberation Mono", monospace;
+  --r-main-color: var(--rh-text);
+  --r-heading-color: var(--rh-text);
+  --r-link-color: #73bcf7;
+  --r-link-color-hover: #bee1f4;
+  --r-selection-background-color: var(--rh-red);
+  --r-main-font-size: 34px;
+}
+
+.reveal-viewport { background: var(--rh-bg); }
+.reveal {
+  font-family: var(--r-main-font);
+  font-size: var(--r-main-font-size);
+  color: var(--r-main-color);
+}
+.reveal .slides { text-align: center; }
+.reveal a { color: var(--r-link-color); }
+.reveal a:hover { color: var(--r-link-color-hover); }
+.reveal .progress { color: var(--rh-red); height: 4px; }
+
+/* ------------------------------------------------------------ headings */
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family: var(--r-heading-font);
+  color: var(--r-heading-color);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-transform: none;
+  margin: 0 0 0.3em;
+}
+.reveal h1 { font-size: 2.3em; }
+.reveal h2 { font-size: 1.55em; }
+.reveal h3 { font-size: 1.15em; }
+.reveal .subheading, .reveal h2 + p.sub, .reveal h1 + p.sub {
+  color: var(--rh-red);
+  font-family: var(--r-heading-font);
+  font-size: 0.95em;
+  margin-top: -0.3em;
+}
+.reveal p { line-height: 1.35; }
+.reveal .muted { color: var(--rh-muted); }
+.reveal .small { font-size: 0.7em; }
+.reveal .red { color: var(--rh-red); }
+
+/* Red triangle bullets, as in the template */
+.reveal ul { list-style: none; display: inline-block; text-align: left; margin: 0; }
+.reveal ul li { position: relative; padding-left: 1.2em; margin: 0.35em 0; }
+.reveal ul li::before {
+  content: ""; position: absolute; left: 0.1em; top: 0.42em;
+  border-left: 0.45em solid var(--rh-red);
+  border-top: 0.28em solid transparent; border-bottom: 0.28em solid transparent;
+}
+.reveal ol { display: inline-block; text-align: left; }
+
+/* ------------------------------------------------------------ code */
+.reveal pre {
+  width: 100%; margin: 0.6em auto; box-shadow: none;
+  font-size: 0.6em; line-height: 1.45; text-align: left;
+}
+.reveal pre code {
+  background: var(--rh-bg-deep); color: #f0f0f0;
+  border-left: 4px solid var(--rh-red);
+  padding: 0.8em 1.1em; max-height: 560px; border-radius: 0;
+}
+.reveal code { font-family: var(--r-code-font); }
+.reveal :not(pre) > code { background: var(--rh-bg-deep); padding: 0.05em 0.3em; color: #ffcccc; }
+
+/* ------------------------------------------------------------ chrome */
+/* thin red rule at the left edge (template's section marker line) */
+.deck-rule {
+  position: fixed; left: 36px; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(to bottom, var(--rh-red) 0 11%, transparent 11% 89%, var(--rh-red) 89% 100%);
+  z-index: 20; pointer-events: none;
+}
+.deck-footer {
+  position: fixed; left: 72px; bottom: 22px; z-index: 20;
+  font-family: var(--r-main-font); font-size: 16px; color: var(--rh-dim);
+  pointer-events: none;
+}
+.deck-hat {
+  position: fixed; right: 40px; bottom: 18px; width: 40px; z-index: 20; pointer-events: none;
+}
+.reveal .slide-number {
+  left: auto; right: 100px; bottom: 22px; top: auto;
+  background: transparent; color: var(--rh-dim);
+  font-family: var(--r-main-font); font-size: 16px;
+}
+/* title / closing slides draw their own chrome */
+.no-chrome .deck-footer, .no-chrome .deck-hat, .no-chrome .deck-rule { display: none; }
+
+/* ------------------------------------------------------------ layouts */
+/* Title slide: left aligned, darker bottom band with the Red Hat logo */
+.reveal section.title-slide { text-align: left; padding: 0 0 0 110px; }
+.title-slide .logos { display: flex; align-items: center; gap: 48px; margin-bottom: 70px; }
+.title-slide .logos img { height: 64px; margin: 0; }
+.title-slide .logos .faa { height: 120px; }
+.title-slide h1 { font-size: 2.4em; max-width: 1400px; }
+.reveal .title-slide p.sub { color: var(--rh-text); font-family: var(--r-heading-font); font-size: 1.15em; margin-top: 0.2em; }
+.title-slide .meta { margin-top: 70px; font-size: 0.75em; color: var(--rh-muted); }
+.title-band {
+  position: absolute; left: -2000px; right: -2000px; bottom: -80px; height: 150px;
+  background: var(--rh-bg-deep);
+}
+.title-band img { position: absolute; right: 2060px; bottom: 50px; height: 50px; }
+
+/* Section divider: dark right column like the template */
+.reveal section.divider { text-align: left; padding-left: 110px; }
+.divider h2 { font-size: 2em; max-width: 1000px; }
+.divider .sub { color: var(--rh-red); font-family: var(--r-heading-font); }
+.divider .kicker { color: var(--rh-muted); font-size: 0.7em; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Term slides (architecture 1:1): big word, one line, a picture */
+.term { display: grid; grid-template-columns: 1fr 1.25fr; align-items: center; gap: 60px; text-align: left; height: 820px; padding: 0 60px; }
+.term h2 { font-size: 2.1em; margin-bottom: 0.2em; }
+.term .def { font-size: 1.05em; color: var(--rh-muted); }
+.term .where { margin-top: 1.4em; font-size: 0.7em; color: var(--rh-dim); }
+.term .where b { color: var(--rh-red); font-weight: 500; }
+.term svg, .term img { width: 100%; max-height: 640px; }
+
+/* Demo step slides: numbered steps left, "as code" right */
+.steps { display: grid; grid-template-columns: 1.1fr 1fr; gap: 70px; text-align: left; align-items: center; margin: 60px 40px 0; }
+.steps ol { font-size: 1.05em; margin: 0; padding-left: 1.2em; }
+.steps ol li { margin: 0.6em 0; line-height: 1.3; }
+.steps .cli-label { font-size: 0.6em; color: var(--rh-dim); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+.steps pre { font-size: 0.62em; margin-top: 0.4em; }
+
+/* Backup screenshot slides (vertical, "press down") */
+.reveal section.backup h3 { font-size: 0.8em; color: var(--rh-muted); margin-bottom: 0.4em; }
+.reveal section.backup img.shot { max-height: 820px; max-width: 1640px; border: 1px solid #444; margin: 0; }
+.shot-missing {
+  width: 1400px; height: 700px; margin: 0 auto; border: 2px dashed #555;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  color: var(--rh-dim); font-size: 0.8em;
+}
+.shot-missing code { margin-top: 0.6em; }
+.backup-tag {
+  display: inline-block; font-size: 0.5em; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--rh-bg-deep); background: var(--rh-muted); padding: 0.15em 0.6em; margin-bottom: 0.6em;
+}
+
+/* Q&A */
+.reveal section.qa { text-align: left; padding-left: 110px; }
+.qa h1 { font-size: 4em; }
+.qa .banner { width: 180px; height: 8px; background: var(--rh-red); margin: 30px 0 50px; }
+.qa .followup { font-size: 0.85em; color: var(--rh-muted); }
+.qa .followup a { font-size: 1.05em; word-break: break-all; }
+.qa .qr { position: absolute; right: 120px; top: 50%; transform: translateY(-50%); width: 340px; background: #fff; padding: 16px; }
+
+/* diagrams */
+.reveal svg text { font-family: var(--r-main-font); }
+.reveal .diagram { width: 100%; max-height: 700px; }

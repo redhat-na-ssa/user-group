@@ -1,0 +1,155 @@
+# CATCH-UP ONLY. This is roughly what the console's "Import from Git" (with
+# "Add pipeline") creates for the guestbook. During the demo the presenter
+# creates it live in the console; steps/03b-import-from-git.sh applies this
+# file instead if the console step goes wrong.
+# ${GIT_REPO} is substituted by the script.
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/instance: guestbook
+    app.kubernetes.io/name: guestbook
+    app.kubernetes.io/part-of: guestbook
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: guestbook
+  labels:
+    app.kubernetes.io/instance: guestbook
+    app.kubernetes.io/name: guestbook
+    app.kubernetes.io/part-of: guestbook
+    pipeline.openshift.io/runtime: python
+    pipeline.openshift.io/runtime-version: 3.12-ubi9
+    pipeline.openshift.io/type: kubernetes
+spec:
+  params:
+    - name: APP_NAME
+      type: string
+      default: guestbook
+    - name: GIT_REPO
+      type: string
+      default: ${GIT_REPO}
+    - name: GIT_REVISION
+      type: string
+      default: main
+    - name: IMAGE_NAME
+      type: string
+      default: image-registry.openshift-image-registry.svc:5000/demo-intro/guestbook
+    - name: PATH_CONTEXT
+      type: string
+      default: .
+    - name: VERSION
+      type: string
+      default: 3.12-ubi9
+  workspaces:
+    - name: workspace
+  tasks:
+    - name: fetch-repository
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: git-clone}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: URL, value: $(params.GIT_REPO)}
+        - {name: REVISION, value: $(params.GIT_REVISION)}
+        - {name: SUBDIRECTORY, value: ""}
+        - {name: DELETE_EXISTING, value: "true"}
+      workspaces:
+        - {name: output, workspace: workspace}
+    - name: build
+      runAfter: [fetch-repository]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: s2i-python}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: IMAGE, value: $(params.IMAGE_NAME)}
+        - {name: TLS_VERIFY, value: "false"}
+        - {name: CONTEXT, value: $(params.PATH_CONTEXT)}
+        - {name: VERSION, value: $(params.VERSION)}
+      workspaces:
+        - {name: source, workspace: workspace}
+    - name: deploy
+      runAfter: [build]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: openshift-client}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: SCRIPT, value: oc rollout status deploy/$(params.APP_NAME)}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/component: guestbook
+    app.kubernetes.io/instance: guestbook
+    app.kubernetes.io/name: guestbook
+    app.kubernetes.io/part-of: guestbook
+    app.openshift.io/runtime: python
+    app.openshift.io/runtime-version: 3.12-ubi9
+  annotations:
+    app.openshift.io/vcs-uri: ${GIT_REPO}
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"guestbook:latest"},
+        "fieldPath":"spec.template.spec.containers[?(@.name==\"guestbook\")].image","paused":false}]
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guestbook
+  template:
+    metadata:
+      labels:
+        app: guestbook
+        deployment: guestbook
+    spec:
+      containers:
+        - name: guestbook
+          image: image-registry.openshift-image-registry.svc:5000/demo-intro/guestbook:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/part-of: guestbook
+spec:
+  selector:
+    app: guestbook
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/part-of: guestbook
+spec:
+  to:
+    kind: Service
+    name: guestbook
+  port:
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

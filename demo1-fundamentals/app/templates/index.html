@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+    body { font-family: "Red Hat Text", system-ui, sans-serif; margin: 0; background: #f5f5f5; color: #151515; }
+    header { background: {{ color }}; color: #fff; padding: 1.5rem 2rem; }
+    header h1 { margin: 0; font-size: 2rem; }
+    .version { display: inline-block; background: rgba(0,0,0,.35); border-radius: 1rem;
+               padding: .2rem .8rem; margin-left: .8rem; font-size: 1.1rem; vertical-align: middle; }
+    .meta { margin-top: .6rem; font-family: monospace; font-size: 1rem; opacity: .95; }
+    main { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; }
+    form { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    input { padding: .6rem; border: 1px solid #bbb; border-radius: 4px; font-size: 1rem; }
+    input[name=name] { width: 10rem; } input[name=message] { flex: 1; min-width: 14rem; }
+    button { padding: .6rem 1.2rem; background: #151515; color: #fff; border: 0; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid #ddd; }
+    th { background: #eee; } td.small { font-family: monospace; font-size: .8rem; color: #555; }
+    .error { background: #fde8e8; border-left: 4px solid #c9190b; padding: 1rem; margin-bottom: 1rem; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ title }} <span class="version">v{{ version }}</span></h1>
+    <div class="meta">served by pod: <strong>{{ pod }}</strong> &nbsp;|&nbsp; database: {{ db_host }}</div>
+  </header>
+  <main>
+    {% if error %}<div class="error">Database unavailable: {{ error }}</div>{% endif %}
+    <form method="post" action="/sign">
+      <input name="name" placeholder="Your name" maxlength="60">
+      <input name="message" placeholder="Leave a message" maxlength="280" required>
+      <button type="submit">Sign</button>
+    </form>
+    <table>
+      <tr><th>Who</th><th>Message</th><th>Written by pod / version</th></tr>
+      {% for name, message, pod, version, created in entries %}
+      <tr><td>{{ name }}</td><td>{{ message }}</td><td class="small">{{ pod }}<br>v{{ version }} · {{ created.strftime('%H:%M:%S') }}</td></tr>
+      {% else %}
+      <tr><td colspan="3"><em>No entries yet - be the first!</em></td></tr>
+      {% endfor %}
+    </table>
+  </main>
+</body>
+</html>

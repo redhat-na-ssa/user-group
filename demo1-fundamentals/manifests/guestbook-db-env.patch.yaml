@@ -1,0 +1,11 @@
+# Part 3: give the guestbook the database credentials - every key in the
+# guestbook-db secret becomes an environment variable with the same name.
+#   oc patch deployment/guestbook --patch-file=manifests/guestbook-db-env.patch.yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: guestbook
+          envFrom:
+            - secretRef:
+                name: guestbook-db

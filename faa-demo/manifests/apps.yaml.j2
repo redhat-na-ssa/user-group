@@ -1,0 +1,89 @@
+# slides (nginx serving the decks) and followups (Flask + SQLite on a PVC).
+# Images come from the build-image pipeline; the playbook restarts a
+# Deployment after its image was rebuilt.
+{% for app in apps %}
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: {{ app.name }}
+  labels: {app: {{ app.name }}, app.kubernetes.io/part-of: faa-demo}
+{% if app.pvc | default(false) %}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ app.name }}-data
+  labels: {app: {{ app.name }}, app.kubernetes.io/part-of: faa-demo}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+{% endif %}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ app.name }}
+  labels:
+    app: {{ app.name }}
+    app.kubernetes.io/part-of: faa-demo
+    app.openshift.io/runtime: {{ app.runtime }}
+spec:
+  replicas: 1
+{% if app.pvc | default(false) %}
+  strategy:
+    type: Recreate            # RWO volume, SQLite - one pod at a time
+{% endif %}
+  selector:
+    matchLabels: {app: {{ app.name }}}
+  template:
+    metadata:
+      labels: {app: {{ app.name }}}
+    spec:
+      containers:
+        - name: {{ app.name }}
+          image: image-registry.openshift-image-registry.svc:5000/{{ faa_namespace }}/{{ app.name }}:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: {path: {{ app.health }}, port: 8080}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+{% if app.pvc | default(false) %}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ app.name }}-data
+{% endif %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ app.name }}
+  labels: {app: {{ app.name }}, app.kubernetes.io/part-of: faa-demo}
+spec:
+  selector: {app: {{ app.name }}}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ app.name }}
+  labels: {app: {{ app.name }}, app.kubernetes.io/part-of: faa-demo}
+spec:
+  host: {{ app.name }}-{{ faa_namespace }}.{{ ocp_apps_domain }}
+  to: {kind: Service, name: {{ app.name }}}
+  port: {targetPort: http}
+  tls: {termination: edge, insecureEdgeTerminationPolicy: Redirect}
+{% endfor %}

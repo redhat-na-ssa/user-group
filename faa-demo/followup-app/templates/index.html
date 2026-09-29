@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Follow-ups{% if session %} · {{ session }}{% endif %}</title>
+  <style>
+    :root { --bg:#292929; --deep:#151515; --panel:#1f1f1f; --red:#ee0000; --text:#fff; --muted:#c7c7c7; --dim:#8a8d90; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:"Red Hat Text", system-ui, sans-serif; }
+    header { background:var(--deep); padding:1.2rem 1.5rem; border-bottom:3px solid var(--red); }
+    header h1 { margin:0; font-family:"Red Hat Display", system-ui, sans-serif; font-weight:400; font-size:1.7rem; }
+    header .session { color:var(--red); font-size:1rem; margin-top:.2rem; }
+    main { max-width:52rem; margin:1.5rem auto; padding:0 1rem; }
+    form.add { display:grid; grid-template-columns:1fr; gap:.6rem; background:var(--panel); padding:1rem; }
+    textarea, input, select { width:100%; padding:.7rem; font-size:1rem; background:var(--deep); color:var(--text); border:1px solid #444; border-radius:4px; font-family:inherit; }
+    textarea { min-height:5rem; resize:vertical; }
+    .row { display:flex; gap:.6rem; flex-wrap:wrap; }
+    .row > * { flex:1 1 12rem; }
+    button { padding:.7rem 1.2rem; font-size:1rem; background:var(--red); color:#fff; border:0; border-radius:4px; cursor:pointer; flex:0 0 auto; }
+    ul { list-style:none; padding:0; margin:1.5rem 0; }
+    li { display:flex; gap:.8rem; align-items:flex-start; padding:.8rem 0; border-bottom:1px solid #3c3c3c; }
+    li.done .text { color:var(--dim); text-decoration:line-through; }
+    li form button { background:transparent; border:1px solid #555; padding:.2rem .6rem; font-size:1.1rem; line-height:1; }
+    .text { flex:1; white-space:pre-wrap; }
+    .meta { color:var(--dim); font-size:.8rem; margin-top:.2rem; }
+    .tools { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; color:var(--muted); font-size:.9rem; }
+    .tools select { width:auto; }
+    a { color:#73bcf7; }
+    .empty { color:var(--dim); font-style:italic; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Questions &amp; follow-ups</h1>
+    {% if session %}<div class="session">{{ session }}</div>{% endif %}
+  </header>
+  <main>
+    <form class="add" method="post" action="/add">
+      <input type="hidden" name="session" value="{{ session }}">
+      <textarea name="text" placeholder="A question, or something to follow up on" maxlength="1000" required autofocus></textarea>
+      <div class="row">
+        <input name="who" placeholder="Your name or email (optional)" maxlength="80">
+        <button type="submit">Add</button>
+      </div>
+    </form>
+
+    <div class="tools" style="margin-top:1.2rem">
+      <form method="get" action="/">
+        <select name="session" onchange="this.form.submit()" aria-label="Session">
+          <option value="" {% if not session %}selected{% endif %}>All sessions</option>
+          {% for name, n in sessions %}
+          <option value="{{ name }}" {% if name == session %}selected{% endif %}>{{ name or "(none)" }} ({{ n }})</option>
+          {% endfor %}
+        </select>
+      </form>
+      <a href="/export.md{% if session %}?session={{ session | urlencode }}{% endif %}">Export as Markdown</a>
+    </div>
+
+    <ul>
+      {% for it in items %}
+      <li class="{{ 'done' if it.done }}">
+        <form method="post" action="/toggle/{{ it.id }}">
+          <input type="hidden" name="session" value="{{ session }}">
+          <button type="submit" title="{{ 'Reopen' if it.done else 'Mark done' }}">{{ '✓' if it.done else '○' }}</button>
+        </form>
+        <div class="text">{{ it.text }}
+          <div class="meta">{{ it.who or 'anonymous' }} · {{ it.created.replace('T', ' ')[:16] }}{% if not session and it.session %} · {{ it.session }}{% endif %}</div>
+        </div>
+      </li>
+      {% else %}
+      <li class="empty">Nothing yet.</li>
+      {% endfor %}
+    </ul>
+  </main>
+</body>
+</html>

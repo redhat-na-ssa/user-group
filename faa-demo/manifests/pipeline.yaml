@@ -1,0 +1,41 @@
+# Generic build pipeline for the faa-demo namespace: clone a Gitea repo and
+# build its Containerfile with buildah, pushing to the internal registry.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-image
+spec:
+  params:
+    - name: GIT_URL
+      type: string
+    - name: IMAGE
+      type: string
+  workspaces:
+    - name: source
+  tasks:
+    - name: fetch
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: git-clone}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: URL, value: $(params.GIT_URL)}
+        - {name: REVISION, value: main}
+      workspaces:
+        - {name: output, workspace: source}
+    - name: build
+      runAfter: [fetch]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: buildah}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: IMAGE, value: $(params.IMAGE)}
+        - {name: DOCKERFILE, value: ./Containerfile}
+        - {name: TLS_VERIFY, value: "false"}
+      workspaces:
+        - {name: source, workspace: source}
