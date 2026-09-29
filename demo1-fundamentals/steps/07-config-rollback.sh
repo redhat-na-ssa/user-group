@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 6 - Configuration change rolls out a new ReplicaSet; then roll back.
+# Part 7 - Configuration change rolls out a new ReplicaSet; then roll back.
 # Runs as user1.
 #
 # Usage: 06-config-rollback.sh [COLOR]    (default #0066cc)

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Part 5 - Ship v2: commit a change to app.py in Gitea (what the presenter
-# does in Gitea's web editor). The webhook starts the pipeline, which builds
+# Part 6 - Ship v2: create the EventListener (Import YAML in the console),
+# then commit a change to app.py in Gitea (what the presenter does in Gitea's
+# web editor). The webhook starts the pipeline, which builds
 # a new image; the image change rolls out the Deployment. Runs as user1.
 #
 # Usage: 05-new-version.sh [VERSION]    (default 2.0)
@@ -10,6 +11,12 @@ source "${DEMO_DIR}/demo.env"
 NEW_VERSION=${1:-2.0}
 use_user "${EDIT_USER}"
 oc project -q "${NS}" >/dev/null
+
+if ! oc get eventlistener.triggers.tekton.dev/guestbook >/dev/null 2>&1; then
+  run oc apply -f "${DEMO_DIR}/manifests/guestbook-eventlistener.yaml"
+  for _ in {1..30}; do oc get deployment/el-guestbook >/dev/null 2>&1 && break; sleep 2; done
+  wait_rollout deployment/el-guestbook "${NS}"
+fi
 
 info "Committing VERSION = \"${NEW_VERSION}\" to ${GITEA_ORG}/${GIT_REPO_NAME} (app.py)"
 file=$(gitea_api GET "/repos/${GITEA_ORG}/${GIT_REPO_NAME}/contents/app.py")

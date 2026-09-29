@@ -24,6 +24,7 @@
           - manifests/hello-pod.yaml
           - manifests/guestbook-db-env.patch.yaml
           - manifests/guestbook-route-roundrobin.patch.yaml
+          - manifests/guestbook-eventlistener.yaml
     apps:
       - name: slides
         repo: faa-slides
@@ -266,18 +267,28 @@
       loop_control:
         label: "{{ item.name }}"
 
-    - name: Wait for the apps
+    # Like `oc rollout status`: every replica runs the new template (Available
+    # alone is already true while the old pod is still serving)
+    - name: Wait for the rollouts
       kubernetes.core.k8s_info:
         api_version: apps/v1
         kind: Deployment
         namespace: "{{ faa_namespace }}"
         name: "{{ item.name }}"
-        wait: true
-        wait_condition: {type: Available, status: "True"}
-        wait_timeout: 300
       loop: "{{ apps }}"
       loop_control:
         label: "{{ item.name }}"
+      register: rollout
+      vars:
+        d: "{{ rollout.resources[0] | default({}) }}"
+      until: >-
+        d.status is defined and
+        d.status.observedGeneration | default(0) >= d.metadata.generation and
+        d.status.updatedReplicas | default(0) == d.spec.replicas and
+        d.status.replicas | default(0) == d.spec.replicas and
+        d.status.availableReplicas | default(0) == d.spec.replicas
+      retries: 60
+      delay: 5
 
     - name: Done
       ansible.builtin.debug:

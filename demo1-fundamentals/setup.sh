@@ -3,10 +3,12 @@
 #
 # End state ("ready to present"):
 #   * project demo-intro, peter=admin, user1=edit, user2=view
-#   * PostgreSQL running (the "platform team" provided database)
+#   * an EMPTY project: PostgreSQL is deployed live in Part 1 from the
+#     staged project template "postgresql-demo" (Developer Catalog)
 #   * Gitea repo ocpdemo/guestbook holding the app source at VERSION 1.0
-#   * push-to-deploy wiring: Gitea webhook -> EventListener -> TriggerTemplate
-#     that runs the "guestbook" pipeline
+#   * push-to-deploy wiring: Gitea webhook, TriggerBinding and TriggerTemplate
+#     that runs the "guestbook" pipeline (the EventListener that connects them
+#     is created live in Part 6)
 #   * NO guestbook app or pipeline - the presenter creates them live with
 #     the console's Import from Git
 #   * per-user kubeconfigs for user1/user2 in ~/.kube/demo-users
@@ -29,19 +31,11 @@ grant_role admin "${ADMIN_USER}" "${NS}"
 grant_role edit  "${EDIT_USER}"  "${NS}"
 grant_role view  "${VIEW_USER}"  "${NS}"
 
-info "Database"
-if oc get secret guestbook-db -n "${NS}" >/dev/null 2>&1; then
-  ok "Secret guestbook-db exists"
-else
-  oc create secret generic guestbook-db -n "${NS}" \
-    --from-literal=POSTGRESQL_USER=guestbook \
-    --from-literal=POSTGRESQL_PASSWORD="$(openssl rand -hex 12)" \
-    --from-literal=POSTGRESQL_DATABASE=guestbook >/dev/null
-  oc label secret guestbook-db -n "${NS}" app.kubernetes.io/part-of=guestbook >/dev/null
-  ok "Created secret guestbook-db"
-fi
-oc apply -n "${NS}" -f "${DEMO_DIR}/manifests/database.yaml" >/dev/null
-wait_rollout deployment/postgresql "${NS}"
+info "Database template"
+# Shows up in +Add -> Developer Catalog -> Databases as "PostgreSQL";
+# instantiated live in Part 1 (creates a Deployment, Service, Secret and PVC)
+oc apply -n "${NS}" -f "${DEMO_DIR}/manifests/postgresql-template.yaml" >/dev/null
+ok "Template postgresql-demo staged"
 
 info "Source repository"
 gitea_ensure_repo "${GIT_REPO_NAME}" "Guestbook - OpenShift fundamentals demo"
@@ -70,9 +64,12 @@ oc create rolebinding pipeline-triggers -n "${NS}" \
 oc create clusterrolebinding "${NS}-pipeline-triggers" \
   --clusterrole=tekton-triggers-eventlistener-clusterroles --serviceaccount="${NS}:pipeline" \
   --dry-run=client -o yaml | oc apply -f - >/dev/null
+# Binding and template only: the EventListener (el-guestbook) is created live
+# in Part 6 from manifests/guestbook-eventlistener.yaml. Until then Gitea's
+# webhook has nothing to deliver to, which is fine - nothing pushes before Part 6.
 oc apply -n "${NS}" -f "${DEMO_DIR}/manifests/pipeline-trigger.yaml" >/dev/null
-for _ in {1..30}; do oc get deployment/el-guestbook -n "${NS}" >/dev/null 2>&1 && break; sleep 2; done
-wait_rollout deployment/el-guestbook "${NS}"
+oc delete -n "${NS}" --ignore-not-found eventlistener.triggers.tekton.dev/guestbook >/dev/null
+ok "Trigger binding and template staged (EventListener comes in Part 6)"
 gitea_ensure_webhook "${GIT_REPO_NAME}" "${EL_URL}" \
   "$(oc get secret guestbook-webhook -n "${NS}" -o jsonpath='{.data.secret}' | base64 -d)"
 if ! oc get pipeline.tekton.dev/guestbook -n "${NS}" >/dev/null 2>&1; then

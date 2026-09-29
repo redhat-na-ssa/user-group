@@ -53,27 +53,31 @@
       <p class="where">In the demo: <b>the admin's Nodes page</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Cluster: control plane and worker nodes">
-      <rect x="10" y="10" width="780" height="500" rx="18" fill="none" stroke="#8a8d90" stroke-width="3" stroke-dasharray="10 8"/>
-      <text x="30" y="50" fill="#c7c7c7" font-size="26">cluster</text>
-      <g font-size="22" text-anchor="middle" fill="#fff">
-        <rect x="60" y="90" width="200" height="150" rx="10" fill="#151515" stroke="#ee0000" stroke-width="3"/>
-        <rect x="300" y="90" width="200" height="150" rx="10" fill="#151515" stroke="#ee0000" stroke-width="3"/>
-        <rect x="540" y="90" width="200" height="150" rx="10" fill="#151515" stroke="#ee0000" stroke-width="3"/>
-        <text x="160" y="160">API · etcd</text><text x="160" y="195" fill="#c7c7c7" font-size="18">control plane</text>
-        <text x="400" y="160">scheduler</text><text x="400" y="195" fill="#c7c7c7" font-size="18">control plane</text>
-        <text x="640" y="160">controllers</text><text x="640" y="195" fill="#c7c7c7" font-size="18">control plane</text>
-        <rect x="60" y="300" width="200" height="170" rx="10" fill="#151515" stroke="#147878" stroke-width="3"/>
-        <rect x="300" y="300" width="200" height="170" rx="10" fill="#151515" stroke="#147878" stroke-width="3"/>
-        <rect x="540" y="300" width="200" height="170" rx="10" fill="#151515" stroke="#147878" stroke-width="3"/>
-        <text x="160" y="450" fill="#c7c7c7" font-size="18">worker</text>
-        <text x="400" y="450" fill="#c7c7c7" font-size="18">worker</text>
-        <text x="640" y="450" fill="#c7c7c7" font-size="18">worker</text>
-      </g>
-      <g fill="#147878">
-        <rect x="85" y="330" width="60" height="40" rx="6"/><rect x="165" y="330" width="60" height="40" rx="6"/><rect x="85" y="385" width="60" height="40" rx="6"/>
-        <rect x="325" y="330" width="60" height="40" rx="6"/><rect x="405" y="330" width="60" height="40" rx="6"/>
-        <rect x="565" y="330" width="60" height="40" rx="6"/><rect x="645" y="330" width="60" height="40" rx="6"/><rect x="645" y="385" width="60" height="40" rx="6"/>
-      </g>
+      <rect class="dg-box grey" x="10" y="10" width="780" height="500" rx="16"/>
+      <text class="dg-label left" x="34" y="44">CLUSTER</text>
+      <use href="#i-node" x="95" y="62" width="110" height="110"/>
+      <text class="dg-small" x="150" y="196">API · etcd</text>
+      <use href="#i-node" x="345" y="62" width="110" height="110"/>
+      <text class="dg-small" x="400" y="196">scheduler</text>
+      <use href="#i-node" x="595" y="62" width="110" height="110"/>
+      <text class="dg-small" x="650" y="196">controllers</text>
+      <text class="dg-label" x="400" y="232">CONTROL PLANE</text>
+      <path class="dg-line grey dg-dash" d="M40,258 H760"/>
+      <rect class="dg-panel" x="55" y="285" width="200" height="150" rx="10"/>
+      <use href="#i-node" class="grey" x="63" y="291" width="34" height="34"/>
+      <use href="#i-pod" x="73" y="318" width="74" height="74"/>
+      <use href="#i-pod" x="163" y="318" width="74" height="74"/>
+      <text class="dg-label" x="155" y="468">WORKER NODE</text>
+      <rect class="dg-panel" x="300" y="285" width="200" height="150" rx="10"/>
+      <use href="#i-node" class="grey" x="308" y="291" width="34" height="34"/>
+      <use href="#i-pod" x="318" y="318" width="74" height="74"/>
+      <use href="#i-pod" x="408" y="318" width="74" height="74"/>
+      <text class="dg-label" x="400" y="468">WORKER NODE</text>
+      <rect class="dg-panel" x="545" y="285" width="200" height="150" rx="10"/>
+      <use href="#i-node" class="grey" x="553" y="291" width="34" height="34"/>
+      <use href="#i-pod" x="563" y="318" width="74" height="74"/>
+      <use href="#i-pod-new" class="grey" x="653" y="318" width="74" height="74"/>
+      <text class="dg-label" x="645" y="468">WORKER NODE</text>
     </svg>
   </div>
   <aside class="notes">
@@ -95,19 +99,22 @@
       <p class="where">In the demo: <b>the "Node" field on every pod</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="A node running pods">
-      <rect x="80" y="40" width="640" height="440" rx="16" fill="#151515" stroke="#147878" stroke-width="4"/>
-      <text x="110" y="85" fill="#fff" font-size="28">worker-2</text>
-      <text x="110" y="118" fill="#8a8d90" font-size="20">RHEL CoreOS · CRI-O · kubelet</text>
-      <g fill="#147878" stroke="#1f9a9a" stroke-width="2">
-        <rect x="120" y="170" width="160" height="110" rx="10"/><rect x="320" y="170" width="160" height="110" rx="10"/><rect x="520" y="170" width="160" height="110" rx="10"/>
-        <rect x="120" y="320" width="160" height="110" rx="10"/><rect x="320" y="320" width="160" height="110" rx="10"/>
-      </g>
-      <g fill="#fff" font-size="22" text-anchor="middle">
-        <text x="200" y="232">pod</text><text x="400" y="232">pod</text><text x="600" y="232">pod</text>
-        <text x="200" y="382">pod</text><text x="400" y="382">pod</text>
-      </g>
-      <rect x="520" y="320" width="160" height="110" rx="10" fill="none" stroke="#8a8d90" stroke-width="2" stroke-dasharray="8 6"/>
-      <text x="600" y="382" fill="#8a8d90" font-size="20" text-anchor="middle">free capacity</text>
+      <rect class="dg-panel" x="90" y="36" width="620" height="440" rx="14" style="stroke:#ee0000"/>
+      <use href="#i-node" x="112" y="52" width="58" height="58"/>
+      <text class="dg-title left" x="184" y="82">worker-2</text>
+      <text class="dg-small left" x="184" y="106">RHEL CoreOS · CRI-O · kubelet</text>
+      <use href="#i-pod" x="150" y="150" width="90" height="90"/>
+      <text class="dg-ip" x="195" y="264">10.129.1.15</text>
+      <use href="#i-pod" x="305" y="150" width="90" height="90"/>
+      <text class="dg-ip" x="350" y="264">10.129.1.22</text>
+      <use href="#i-pod" x="460" y="150" width="90" height="90"/>
+      <text class="dg-ip" x="505" y="264">10.129.1.31</text>
+      <use href="#i-pod" x="150" y="300" width="90" height="90"/>
+      <text class="dg-ip" x="195" y="414">10.129.1.40</text>
+      <use href="#i-pod" x="305" y="300" width="90" height="90"/>
+      <text class="dg-ip" x="350" y="414">10.129.1.47</text>
+      <use href="#i-pod-new" class="grey" x="460" y="300" width="90" height="90"/>
+      <text class="dg-small" x="505" y="418">free capacity</text>
     </svg>
   </div>
   <aside class="notes">
@@ -127,20 +134,22 @@
       <p class="where">In the demo: <b>the pipeline builds one</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Image layers pushed to a registry">
-      <g font-size="22" fill="#fff">
-        <rect x="60" y="120" width="320" height="70" fill="#ee0000"/><text x="80" y="165">guestbook app</text>
-        <rect x="60" y="195" width="320" height="70" fill="#a30000"/><text x="80" y="240">Flask, psycopg</text>
-        <rect x="60" y="270" width="320" height="70" fill="#5f0000"/><text x="80" y="315">Python 3.12</text>
-        <rect x="60" y="345" width="320" height="70" fill="#3b0000"/><text x="80" y="390">RHEL UBI 9</text>
-      </g>
-      <text x="220" y="100" fill="#c7c7c7" font-size="20" text-anchor="middle">image = layers</text>
-      <path d="M400 265 H520" stroke="#fff" stroke-width="4" marker-end="url(#arr1)"/>
-      <defs><marker id="arr1" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>
-      <text x="460" y="250" fill="#c7c7c7" font-size="18" text-anchor="middle">push</text>
-      <rect x="540" y="150" width="220" height="230" rx="14" fill="#151515" stroke="#8a8d90" stroke-width="3"/>
-      <text x="650" y="200" fill="#fff" font-size="24" text-anchor="middle">registry</text>
-      <g fill="#292929" stroke="#8a8d90"><rect x="575" y="225" width="150" height="34"/><rect x="575" y="268" width="150" height="34"/><rect x="575" y="311" width="150" height="34"/></g>
-      <g fill="#c7c7c7" font-size="16" text-anchor="middle"><text x="650" y="248">guestbook:v2</text><text x="650" y="291">guestbook:v1</text><text x="650" y="334">postgresql:15</text></g>
+      <use href="#i-image" x="55" y="140" width="130" height="130"/>
+      <text class="dg-label" x="120" y="305">CONTAINER IMAGE</text>
+      <text class="dg-small" x="120" y="330">binary</text>
+      <path class="dg-line" d="M190,205 H282" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="236" y="188">push</text>
+      <use href="#i-registry" x="290" y="140" width="130" height="130"/>
+      <text class="dg-label" x="355" y="305">REGISTRY</text>
+      <path class="dg-line" d="M425,205 H517" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="471" y="188">pull · run</text>
+      <use href="#i-container" x="525" y="140" width="130" height="130"/>
+      <text class="dg-label" x="590" y="305">CONTAINER</text>
+      <text class="dg-small" x="590" y="330">runtime</text>
+      <rect class="dg-panel" x="250" y="365" width="210" height="112" rx="8"/>
+      <text class="dg-mono" x="272" y="398">guestbook:v2</text>
+      <text class="dg-mono" x="272" y="424">guestbook:v1</text>
+      <text class="dg-mono" x="272" y="450">postgresql:15</text>
     </svg>
   </div>
   <aside class="notes">
@@ -161,13 +170,16 @@
       <p class="where">In the demo: <b>Part 2</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="A pod with a container, an IP and a volume">
-      <rect x="140" y="60" width="520" height="400" rx="26" fill="#147878" fill-opacity="0.25" stroke="#147878" stroke-width="4"/>
-      <text x="170" y="110" fill="#fff" font-size="28">pod</text>
-      <text x="630" y="110" fill="#c7c7c7" font-size="22" text-anchor="end">IP 10.129.1.15</text>
-      <rect x="200" y="150" width="400" height="120" rx="12" fill="#151515" stroke="#ee0000" stroke-width="3"/>
-      <text x="400" y="220" fill="#fff" font-size="26" text-anchor="middle">container: nginx</text>
-      <rect x="200" y="310" width="400" height="100" rx="12" fill="none" stroke="#8a8d90" stroke-width="3" stroke-dasharray="10 6"/>
-      <text x="400" y="368" fill="#c7c7c7" font-size="22" text-anchor="middle">volume (optional)</text>
+      <use href="#i-image" x="30" y="170" width="115" height="115"/>
+      <text class="dg-label" x="87" y="318">CONTAINER IMAGE</text>
+      <path class="dg-line" d="M150,228 H250" marker-end="url(#dg-arrow)"/>
+      <use href="#i-container" x="255" y="170" width="115" height="115"/>
+      <text class="dg-label" x="312" y="318">CONTAINER</text>
+      <path class="dg-line" d="M375,228 H490" marker-end="url(#dg-arrow)"/>
+      <use href="#i-pod" x="495" y="118" width="220" height="220"/>
+      <text class="dg-label" x="605" y="372">POD</text>
+      <text class="dg-ip" x="605" y="398">10.129.1.15</text>
+      <text class="dg-small" x="400" y="470">one IP · shared storage · disposable</text>
     </svg>
   </div>
   <aside class="notes">
@@ -184,19 +196,30 @@
     <div>
       <h2>Deployment</h2>
       <p class="def">"Keep N copies of this pod running."<br>Change it, and it rolls out.</p>
-      <p class="where">In the demo: <b>Parts 3 to 6</b></p>
+      <p class="where">In the demo: <b>every part</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Deployment keeping three replicas">
-      <rect x="60" y="40" width="680" height="110" rx="12" fill="#151515" stroke="#ee0000" stroke-width="3"/>
-      <text x="400" y="88" fill="#fff" font-size="26" text-anchor="middle">Deployment: guestbook</text>
-      <text x="400" y="124" fill="#c7c7c7" font-size="20" text-anchor="middle">image v2 · replicas: 3</text>
-      <path d="M400 150 V200" stroke="#fff" stroke-width="3"/>
-      <rect x="120" y="200" width="560" height="80" rx="12" fill="none" stroke="#8a8d90" stroke-width="3"/>
-      <text x="400" y="250" fill="#c7c7c7" font-size="22" text-anchor="middle">ReplicaSet (one per version)</text>
-      <path d="M220 280 V330 M400 280 V330 M580 280 V330" stroke="#fff" stroke-width="3"/>
-      <g fill="#147878"><rect x="150" y="330" width="140" height="100" rx="12"/><rect x="330" y="330" width="140" height="100" rx="12"/><rect x="510" y="330" width="140" height="100" rx="12"/></g>
-      <g fill="#fff" font-size="22" text-anchor="middle"><text x="220" y="388">pod</text><text x="400" y="388">pod</text><text x="580" y="388">pod</text></g>
-      <text x="400" y="480" fill="#8a8d90" font-size="20" text-anchor="middle">a pod dies → a new one replaces it</text>
+      <use href="#i-doc" x="30" y="150" width="130" height="130"/>
+      <text class="dg-label" x="95" y="310">DEPLOYMENT</text>
+      <text class="dg-small" x="95" y="334">replicas: 3</text>
+      <text class="dg-mono" x="66" y="212" style="font-size:13px">image</text>
+      <text class="dg-mono" x="66" y="232" style="font-size:13px">replicas</text>
+      <text class="dg-mono" x="66" y="252" style="font-size:13px">strategy</text>
+      <path class="dg-line" d="M165,215 H232" marker-end="url(#dg-arrow)"/>
+      <text class="dg-label" x="290" y="150">1</text>
+      <use href="#i-pod" x="240" y="165" width="100" height="100"/>
+      <text class="dg-label" x="290" y="295">POD</text>
+      <text class="dg-label" x="420" y="150">2</text>
+      <use href="#i-pod" x="370" y="165" width="100" height="100"/>
+      <text class="dg-label" x="420" y="295">POD</text>
+      <text class="dg-label" x="550" y="150">3</text>
+      <use href="#i-pod" x="500" y="165" width="100" height="100"/>
+      <text class="dg-label" x="550" y="295">POD</text>
+      <path class="dg-line dg-dash" d="M605,215 H655" marker-end="url(#dg-arrow)"/>
+      <text class="dg-label" x="710" y="150">v2</text>
+      <use href="#i-pod-new" x="660" y="165" width="100" height="100"/>
+      <text class="dg-small" x="710" y="295">rolling update</text>
+      <text class="dg-small" x="400" y="420">a pod dies → a new one replaces it · change it → it rolls out</text>
     </svg>
   </div>
   <aside class="notes">
@@ -217,16 +240,24 @@
       <p class="where">In the demo: <b>the guestbook finds <code>postgresql</code> by name</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Service load balancing to pods">
-      <defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>
-      <rect x="40" y="200" width="220" height="120" rx="60" fill="#151515" stroke="#0066cc" stroke-width="4"/>
-      <text x="150" y="255" fill="#fff" font-size="24" text-anchor="middle">postgresql</text>
-      <text x="150" y="288" fill="#c7c7c7" font-size="18" text-anchor="middle">:5432 · stable</text>
-      <path d="M260 260 L520 120" stroke="#fff" stroke-width="3" marker-end="url(#arr2)"/>
-      <path d="M260 260 L520 260" stroke="#fff" stroke-width="3" marker-end="url(#arr2)"/>
-      <path d="M260 260 L520 400" stroke="#fff" stroke-width="3" marker-end="url(#arr2)" stroke-dasharray="10 8"/>
-      <g fill="#147878"><rect x="530" y="75" width="190" height="90" rx="12"/><rect x="530" y="215" width="190" height="90" rx="12"/></g>
-      <rect x="530" y="355" width="190" height="90" rx="12" fill="none" stroke="#147878" stroke-width="3" stroke-dasharray="10 6"/>
-      <g font-size="20" text-anchor="middle"><text x="625" y="127" fill="#fff">pod 10.129.1.15</text><text x="625" y="267" fill="#fff">pod 10.130.0.9</text><text x="625" y="407" fill="#8a8d90">new pod, new IP</text></g>
+      <use href="#i-hex" x="325" y="14" width="150" height="150"/>
+      <text class="dg-in" x="400" y="82">SERVICE</text>
+      <text class="dg-in" x="400" y="104">guestbook</text>
+      <path class="dg-line" d="M400,164 V205 M170,205 H630 M170,205 V246 M400,205 V246 M630,205 V246"/>
+      <use href="#i-pod" x="25" y="30" width="90" height="90"/>
+      <text class="dg-small" x="70" y="142">any pod</text>
+      <path class="dg-line dg-dash" d="M118,75 H322" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="220" y="62">http://guestbook:8080</text>
+      <use href="#i-pod" x="115" y="250" width="110" height="110"/>
+      <text class="dg-label" x="170" y="386">POD</text>
+      <text class="dg-ip" x="170" y="408">10.129.1.15</text>
+      <use href="#i-pod" x="345" y="250" width="110" height="110"/>
+      <text class="dg-label" x="400" y="386">POD</text>
+      <text class="dg-ip" x="400" y="408">10.130.0.9</text>
+      <use href="#i-pod" x="575" y="250" width="110" height="110"/>
+      <text class="dg-label" x="630" y="386">POD</text>
+      <text class="dg-ip" x="630" y="408">10.128.2.4</text>
+      <text class="dg-small" x="400" y="470">one stable name · load-balanced across the pods</text>
     </svg>
   </div>
   <aside class="notes">
@@ -246,19 +277,22 @@
       <p class="where">In the demo: <b>the app URL</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Browser to router to service">
-      <defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>
-      <rect x="20" y="200" width="170" height="110" rx="12" fill="#151515" stroke="#8a8d90" stroke-width="3"/>
-      <text x="105" y="262" fill="#fff" font-size="22" text-anchor="middle">browser</text>
-      <path d="M190 255 H280" stroke="#fff" stroke-width="3" marker-end="url(#arr3)"/>
-      <text x="235" y="235" fill="#c7c7c7" font-size="16" text-anchor="middle">HTTPS</text>
-      <rect x="290" y="180" width="200" height="150" rx="12" fill="#151515" stroke="#ee0000" stroke-width="4"/>
-      <text x="390" y="245" fill="#fff" font-size="24" text-anchor="middle">router</text>
-      <text x="390" y="278" fill="#c7c7c7" font-size="16" text-anchor="middle">guestbook-demo-intro.apps…</text>
-      <path d="M490 255 H570" stroke="#fff" stroke-width="3" marker-end="url(#arr3)"/>
-      <rect x="580" y="200" width="200" height="110" rx="55" fill="#151515" stroke="#0066cc" stroke-width="4"/>
-      <text x="680" y="262" fill="#fff" font-size="22" text-anchor="middle">Service</text>
-      <rect x="270" y="120" width="530" height="280" rx="18" fill="none" stroke="#8a8d90" stroke-width="2" stroke-dasharray="10 8"/>
-      <text x="785" y="150" fill="#8a8d90" font-size="18" text-anchor="end">cluster</text>
+      <rect class="dg-box grey" x="275" y="100" width="505" height="400" rx="14"/>
+      <text class="dg-label left" x="295" y="130">CLUSTER</text>
+      <use href="#i-browser" x="20" y="160" width="150" height="150"/>
+      <text class="dg-label" x="95" y="335">BROWSER</text>
+      <path class="dg-line dg-dash" d="M172,235 H300" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="236" y="215">HTTPS</text>
+      <use href="#i-hex" x="300" y="160" width="150" height="150"/>
+      <text class="dg-in" x="375" y="241">ROUTE</text>
+      <path class="dg-line" d="M452,235 H498" marker-end="url(#dg-arrow)"/>
+      <use href="#i-hex" x="500" y="160" width="150" height="150"/>
+      <text class="dg-in" x="575" y="241">SERVICE</text>
+      <path class="dg-line" d="M575,312 V345 M480,345 H670 M480,345 V372 M575,345 V372 M670,345 V372"/>
+      <use href="#i-pod" x="442" y="372" width="76" height="76"/>
+      <use href="#i-pod" x="537" y="372" width="76" height="76"/>
+      <use href="#i-pod" x="632" y="372" width="76" height="76"/>
+      <text class="dg-small" x="400" y="70">https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org</text>
     </svg>
   </div>
   <aside class="notes">
@@ -275,20 +309,40 @@
     <div>
       <h2>Project</h2>
       <p class="def">A namespace: names, quotas, network - and who may do what.</p>
-      <p class="where">In the demo: <b>Part 1</b></p>
+      <p class="where">In the demo: <b>Part 5</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Project with users and roles">
-      <rect x="220" y="40" width="540" height="440" rx="20" fill="#151515" stroke="#ee0000" stroke-width="4"/>
-      <text x="250" y="90" fill="#fff" font-size="28">demo-intro</text>
-      <g fill="#147878"><rect x="260" y="130" width="140" height="80" rx="10"/><rect x="420" y="130" width="140" height="80" rx="10"/><rect x="580" y="130" width="140" height="80" rx="10"/></g>
-      <rect x="260" y="235" width="460" height="60" rx="8" fill="#292929" stroke="#8a8d90"/>
-      <text x="490" y="273" fill="#c7c7c7" font-size="20" text-anchor="middle">secrets · config · storage</text>
-      <g font-size="22">
-        <circle cx="90" cy="130" r="34" fill="#292929" stroke="#fff" stroke-width="3"/><text x="90" y="190" fill="#fff" text-anchor="middle">peter</text>
-        <circle cx="90" cy="265" r="34" fill="#292929" stroke="#fff" stroke-width="3"/><text x="90" y="325" fill="#fff" text-anchor="middle">user1</text>
-        <circle cx="90" cy="400" r="34" fill="#292929" stroke="#fff" stroke-width="3"/><text x="90" y="460" fill="#fff" text-anchor="middle">user2</text>
-      </g>
-      <g font-size="20" fill="#c7c7c7"><text x="260" y="360">peter → admin</text><text x="260" y="400">user1 → edit</text><text x="260" y="440">user2 → view</text></g>
+      <rect class="dg-panel" x="235" y="30" width="540" height="215" rx="8"/>
+      <rect x="235" y="30" width="540" height="36" rx="8" fill="#ee0000"/>
+      <text class="dg-in" x="260" y="54" style="text-anchor:start">DEMO-INTRO</text>
+      <use href="#i-pod" x="262" y="88" width="80" height="80"/>
+      <text class="dg-label" x="302" y="202">POD</text>
+      <use href="#i-pod" x="362" y="88" width="80" height="80"/>
+      <text class="dg-label" x="402" y="202">POD</text>
+      <use href="#i-pod" x="462" y="88" width="80" height="80"/>
+      <text class="dg-label" x="502" y="202">POD</text>
+      <use href="#i-doc" x="575" y="88" width="80" height="80"/>
+      <use href="#i-lock" x="597" y="122" width="36" height="36"/>
+      <text class="dg-label" x="615" y="202">SECRET</text>
+      <use href="#i-disk" x="675" y="88" width="80" height="80"/>
+      <text class="dg-label" x="715" y="202">STORAGE</text>
+      <rect class="dg-panel" x="235" y="290" width="540" height="190" rx="8"/>
+      <rect x="235" y="290" width="540" height="36" rx="8" fill="#5c5f62"/>
+      <text class="dg-in" x="260" y="314" style="text-anchor:start">OTHER-TEAM</text>
+      <use href="#i-pod" class="grey" x="262" y="350" width="80" height="80"/>
+      <use href="#i-pod" class="grey" x="362" y="350" width="80" height="80"/>
+      <use href="#i-pod" class="grey" x="462" y="350" width="80" height="80"/>
+      <use href="#i-user" class="white" x="35" y="40" width="70" height="70"/>
+      <text class="dg-small" x="70" y="132">peter · <tspan class="dg-red">admin</tspan></text>
+      <use href="#i-user" class="white" x="35" y="150" width="70" height="70"/>
+      <text class="dg-small" x="70" y="242">user1 · <tspan class="dg-red">edit</tspan></text>
+      <use href="#i-user" class="white" x="35" y="260" width="70" height="70"/>
+      <text class="dg-small" x="70" y="352">user2 · <tspan class="dg-red">view</tspan></text>
+      <path class="dg-line" d="M110,75 L230,110" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M110,185 L230,135" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M110,295 L230,160" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line grey dg-dash" d="M110,305 L230,385" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="150" y="405">no access</text>
     </svg>
   </div>
   <aside class="notes">
@@ -305,23 +359,36 @@
     <div>
       <h2>ConfigMap &amp; Secret</h2>
       <p class="def">Configuration and credentials, kept outside the image.</p>
-      <p class="where">In the demo: <b>Parts 3 and 6</b></p>
+      <p class="where">In the demo: <b>Parts 1, 3 and 7</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Secret and config injected into a pod">
-      <defs><marker id="arr4" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>
-      <rect x="40" y="70" width="300" height="160" rx="12" fill="#151515" stroke="#0066cc" stroke-width="3"/>
-      <text x="60" y="110" fill="#fff" font-size="24">ConfigMap</text>
-      <text x="60" y="150" fill="#c7c7c7" font-size="19" font-family="monospace">APP_COLOR=#0066cc</text>
-      <text x="60" y="185" fill="#c7c7c7" font-size="19" font-family="monospace">APP_TITLE=Guestbook</text>
-      <rect x="40" y="290" width="300" height="160" rx="12" fill="#151515" stroke="#ee0000" stroke-width="3"/>
-      <text x="60" y="330" fill="#fff" font-size="24">Secret</text>
-      <text x="60" y="370" fill="#c7c7c7" font-size="19" font-family="monospace">POSTGRESQL_USER=•••</text>
-      <text x="60" y="405" fill="#c7c7c7" font-size="19" font-family="monospace">POSTGRESQL_PASSWORD=•••</text>
-      <path d="M340 150 L480 240" stroke="#fff" stroke-width="3" marker-end="url(#arr4)"/>
-      <path d="M340 370 L480 290" stroke="#fff" stroke-width="3" marker-end="url(#arr4)"/>
-      <rect x="490" y="180" width="270" height="170" rx="20" fill="#147878" fill-opacity="0.3" stroke="#147878" stroke-width="4"/>
-      <text x="625" y="255" fill="#fff" font-size="24" text-anchor="middle">pod</text>
-      <text x="625" y="292" fill="#c7c7c7" font-size="18" text-anchor="middle">env vars or files</text>
+      <rect class="dg-box" x="15" y="30" width="375" height="460" rx="10"/>
+      <text class="dg-title left" x="35" y="68">DEV</text>
+      <use href="#i-doc" x="40" y="95" width="100" height="100"/>
+      <text class="dg-label" x="90" y="218">CONFIGMAP</text>
+      <text class="dg-mono" x="90" y="242" style="text-anchor:middle;font-size:14px">COLOR=#ee0000</text>
+      <use href="#i-doc" x="40" y="285" width="100" height="100"/>
+      <use href="#i-lock" x="70" y="325" width="40" height="40"/>
+      <text class="dg-label" x="90" y="408">SECRET</text>
+      <text class="dg-mono" x="90" y="432" style="text-anchor:middle;font-size:14px">PASSWORD=•••</text>
+      <path class="dg-line" d="M145,150 L238,228" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M145,335 L238,268" marker-end="url(#dg-arrow)"/>
+      <use href="#i-pod" x="240" y="185" width="125" height="125"/>
+      <text class="dg-label" x="302" y="338">POD</text>
+      <rect class="dg-box" x="410" y="30" width="375" height="460" rx="10"/>
+      <text class="dg-title left" x="430" y="68">PROD</text>
+      <use href="#i-doc" x="435" y="95" width="100" height="100"/>
+      <text class="dg-label" x="485" y="218">CONFIGMAP</text>
+      <text class="dg-mono" x="485" y="242" style="text-anchor:middle;font-size:14px">COLOR=#0066cc</text>
+      <use href="#i-doc" x="435" y="285" width="100" height="100"/>
+      <use href="#i-lock" x="465" y="325" width="40" height="40"/>
+      <text class="dg-label" x="485" y="408">SECRET</text>
+      <text class="dg-mono" x="485" y="432" style="text-anchor:middle;font-size:14px">PASSWORD=•••</text>
+      <path class="dg-line" d="M540,150 L633,228" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M540,335 L633,268" marker-end="url(#dg-arrow)"/>
+      <use href="#i-pod" x="635" y="185" width="125" height="125"/>
+      <text class="dg-label" x="697" y="338">POD</text>
+      <text class="dg-small" x="400" y="515">same image everywhere · configuration injected at run time</text>
     </svg>
   </div>
   <aside class="notes">
@@ -338,19 +405,30 @@
     <div>
       <h2>Pipeline</h2>
       <p class="def">Automated steps from source code to running app. Each step is a pod.</p>
-      <p class="where">In the demo: <b>Parts 3 and 5</b></p>
+      <p class="where">In the demo: <b>Parts 3 and 6</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Pipeline: fetch, build, deploy">
-      <defs><marker id="arr5" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>
-      <text x="400" y="120" fill="#c7c7c7" font-size="22" text-anchor="middle">git commit →</text>
-      <g font-size="22" text-anchor="middle">
-        <rect x="30" y="200" width="210" height="110" rx="55" fill="#151515" stroke="#147878" stroke-width="4"/><text x="135" y="262" fill="#fff">fetch</text>
-        <rect x="295" y="200" width="210" height="110" rx="55" fill="#151515" stroke="#147878" stroke-width="4"/><text x="400" y="262" fill="#fff">build image</text>
-        <rect x="560" y="200" width="210" height="110" rx="55" fill="#151515" stroke="#147878" stroke-width="4"/><text x="665" y="262" fill="#fff">deploy</text>
-      </g>
-      <path d="M240 255 H290" stroke="#fff" stroke-width="3" marker-end="url(#arr5)"/>
-      <path d="M505 255 H555" stroke="#fff" stroke-width="3" marker-end="url(#arr5)"/>
-      <text x="400" y="400" fill="#8a8d90" font-size="20" text-anchor="middle">OpenShift Pipelines (Tekton)</text>
+      <text class="dg-label" x="400" y="70">OPENSHIFT PIPELINES (TEKTON)</text>
+      <text class="dg-small" x="400" y="98">each task runs in its own pod</text>
+      <use href="#i-git" x="15" y="180" width="100" height="100"/>
+      <text class="dg-label" x="65" y="310">GIT</text>
+      <text class="dg-small" x="65" y="334">commit</text>
+      <path class="dg-line" d="M118,230 H158" marker-end="url(#dg-arrow)"/>
+      <use href="#i-task" x="160" y="165" width="130" height="130"/>
+      <text class="dg-label" x="225" y="310">FETCH</text>
+      <use href="#i-task" x="330" y="165" width="130" height="130"/>
+      <text class="dg-label" x="395" y="310">BUILD</text>
+      <use href="#i-task" x="500" y="165" width="130" height="130"/>
+      <text class="dg-label" x="565" y="310">DEPLOY</text>
+      <path class="dg-line" d="M292,230 H328" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M462,230 H498" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M632,230 H672" marker-end="url(#dg-arrow)"/>
+      <use href="#i-pod" x="675" y="180" width="100" height="100"/>
+      <text class="dg-label" x="725" y="310">POD</text>
+      <path class="dg-line dg-dash" d="M395,322 V352" marker-end="url(#dg-arrow)"/>
+      <use href="#i-image" x="345" y="355" width="100" height="100"/>
+      <text class="dg-label" x="395" y="482">IMAGE</text>
+      <text class="dg-small" x="395" y="505">→ registry</text>
     </svg>
   </div>
   <aside class="notes">
@@ -366,30 +444,48 @@
   <h2>Today's application</h2>
   <p class="subheading">Every box is a word from the last ten slides</p>
   <svg class="diagram" viewBox="0 0 1600 640" style="max-width:1600px" aria-label="Guestbook architecture">
-    <defs><marker id="arr6" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#fff"/></marker></defs>
-    <rect x="20" y="20" width="1560" height="600" rx="20" fill="none" stroke="#ee0000" stroke-width="3"/>
-    <text x="50" y="65" fill="#fff" font-size="28">project demo-intro</text>
-    <g font-size="24" text-anchor="middle">
-      <rect x="60" y="120" width="220" height="100" rx="12" fill="#151515" stroke="#8a8d90" stroke-width="3"/><text x="170" y="165" fill="#fff">Gitea</text><text x="170" y="198" fill="#c7c7c7" font-size="18">source code</text>
-      <rect x="360" y="120" width="240" height="100" rx="50" fill="#151515" stroke="#147878" stroke-width="3"/><text x="480" y="165" fill="#fff">Pipeline</text><text x="480" y="198" fill="#c7c7c7" font-size="18">fetch · build · deploy</text>
-      <rect x="680" y="120" width="220" height="100" rx="12" fill="#151515" stroke="#8a8d90" stroke-width="3"/><text x="790" y="165" fill="#fff">Image</text><text x="790" y="198" fill="#c7c7c7" font-size="18">guestbook:latest</text>
-      <rect x="60" y="360" width="220" height="100" rx="12" fill="#151515" stroke="#8a8d90" stroke-width="3"/><text x="170" y="418" fill="#fff">browser</text>
-      <rect x="360" y="360" width="200" height="100" rx="12" fill="#151515" stroke="#ee0000" stroke-width="3"/><text x="460" y="418" fill="#fff">Route</text>
-      <rect x="640" y="360" width="200" height="100" rx="50" fill="#151515" stroke="#0066cc" stroke-width="3"/><text x="740" y="418" fill="#fff">Service</text>
-      <rect x="920" y="300" width="260" height="220" rx="14" fill="#147878" fill-opacity="0.25" stroke="#147878" stroke-width="3"/><text x="1050" y="345" fill="#fff">Deployment</text>
-      <rect x="950" y="370" width="90" height="60" rx="8" fill="#147878"/><rect x="1060" y="370" width="90" height="60" rx="8" fill="#147878"/><rect x="1005" y="440" width="90" height="60" rx="8" fill="#147878"/>
-      <rect x="1250" y="360" width="200" height="100" rx="50" fill="#151515" stroke="#0066cc" stroke-width="3"/><text x="1350" y="418" fill="#fff">postgresql</text>
-      <rect x="1250" y="120" width="200" height="100" rx="12" fill="#151515" stroke="#ee0000" stroke-width="3"/><text x="1350" y="178" fill="#fff">Secret</text>
-      <rect x="1250" y="520" width="200" height="80" rx="12" fill="#151515" stroke="#8a8d90" stroke-width="3" stroke-dasharray="8 6"/><text x="1350" y="568" fill="#c7c7c7" font-size="20">storage (PVC)</text>
-    </g>
-    <g stroke="#fff" stroke-width="3" fill="none">
-      <path d="M280 170 H355" marker-end="url(#arr6)"/><path d="M600 170 H675" marker-end="url(#arr6)"/>
-      <path d="M900 170 H1050 V295" marker-end="url(#arr6)"/>
-      <path d="M280 410 H355" marker-end="url(#arr6)"/><path d="M560 410 H635" marker-end="url(#arr6)"/><path d="M840 410 H915" marker-end="url(#arr6)"/>
-      <path d="M1180 410 H1245" marker-end="url(#arr6)"/><path d="M1350 220 V355" marker-end="url(#arr6)"/><path d="M1350 460 V515"/>
-      <path d="M1250 170 H1120 V295" marker-end="url(#arr6)" stroke-dasharray="8 6"/>
-    </g>
-  </svg>
+      <rect class="dg-box" x="10" y="10" width="1580" height="620" rx="16"/>
+      <text class="dg-label left" x="36" y="46">PROJECT DEMO-INTRO</text>
+      <use href="#i-git" x="60" y="80" width="110" height="110"/>
+      <text class="dg-label" x="115" y="218">GITEA</text>
+      <path class="dg-line" d="M172,135 H226" marker-end="url(#dg-arrow)"/>
+      <use href="#i-task" x="230" y="70" width="130" height="130"/>
+      <text class="dg-label" x="295" y="218">PIPELINE</text>
+      <path class="dg-line" d="M362,135 H416" marker-end="url(#dg-arrow)"/>
+      <use href="#i-image" x="420" y="80" width="110" height="110"/>
+      <text class="dg-label" x="475" y="218">IMAGE</text>
+      <path class="dg-line" d="M532,135 H760 V296" marker-end="url(#dg-arrow)"/>
+      <use href="#i-doc" x="1120" y="80" width="110" height="110"/>
+      <use href="#i-lock" x="1150" y="118" width="48" height="48"/>
+      <text class="dg-label" x="1175" y="218">SECRET</text>
+      <path class="dg-line dg-dash" d="M1118,135 H940 V296" marker-end="url(#dg-arrow)"/>
+      <path class="dg-line" d="M1232,135 H1375 V336" marker-end="url(#dg-arrow)"/>
+      <use href="#i-browser" x="40" y="330" width="130" height="130"/>
+      <text class="dg-label" x="105" y="478">BROWSER</text>
+      <path class="dg-line" d="M172,395 H226" marker-end="url(#dg-arrow)"/>
+      <use href="#i-hex" x="230" y="320" width="150" height="150"/>
+      <text class="dg-in" x="305" y="400">ROUTE</text>
+      <path class="dg-line" d="M382,395 H436" marker-end="url(#dg-arrow)"/>
+      <use href="#i-hex" x="440" y="320" width="150" height="150"/>
+      <text class="dg-in" x="515" y="392">SERVICE</text>
+      <text class="dg-small" x="515" y="414" style="font-size:14px">guestbook</text>
+      <path class="dg-line" d="M592,395 H646" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-box grey" x="650" y="300" width="400" height="200" rx="12"/>
+      <text class="dg-label" x="850" y="332">DEPLOYMENT GUESTBOOK</text>
+      <use href="#i-pod" x="680" y="352" width="100" height="100"/>
+      <use href="#i-pod" x="800" y="352" width="100" height="100"/>
+      <use href="#i-pod" x="920" y="352" width="100" height="100"/>
+      <path class="dg-line" d="M1052,395 H1106" marker-end="url(#dg-arrow)"/>
+      <use href="#i-hex" x="1110" y="320" width="150" height="150"/>
+      <text class="dg-in" x="1185" y="392">SERVICE</text>
+      <text class="dg-small" x="1185" y="414" style="font-size:14px">postgresql</text>
+      <path class="dg-line" d="M1262,395 H1316" marker-end="url(#dg-arrow)"/>
+      <use href="#i-pod" x="1320" y="340" width="110" height="110"/>
+      <text class="dg-label" x="1375" y="476">POSTGRESQL</text>
+      <path class="dg-line" d="M1375,488 V503"/>
+      <use href="#i-disk" x="1335" y="505" width="80" height="80"/>
+      <text class="dg-label" x="1470" y="560" style="text-anchor:start">PVC</text>
+    </svg>
   <aside class="notes">
     This is what we'll build in the next 30 minutes. Top row: code in Gitea, a
     pipeline turns it into an image. Bottom row: the browser reaches a Route,
@@ -415,49 +511,49 @@
 <!-- Part 1 -->
 <section>
   <section>
-    <h2>1 · Projects and RBAC</h2>
-    <p class="subheading">A project is a tenant - the admin decides who does what</p>
+    <h2>1 · "It's this simple"</h2>
+    <p class="subheading">A database from the catalog - with everything it needs</p>
     <div class="steps">
       <ol>
-        <li>peter: <b>Nodes</b> - the machines from the slides</li>
-        <li>user1: <b>Topology</b> - the database is already there</li>
-        <li>peter: <b>Project access</b> - admin / edit / view</li>
-        <li>user2: read-only, and no <b>Secrets</b></li>
+        <li>Topology: an empty project</li>
+        <li><b>+Add → Developer Catalog → Databases</b></li>
+        <li><b>PostgreSQL 15</b> → <b>Instantiate Template</b></li>
+        <li>Deployment, Service, <b>Secret</b>, storage - one form</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">oc get rolebindings -n demo-intro
-oc auth can-i create deployments \
-   -n demo-intro --as=user2
-oc auth can-i get secrets \
-   -n demo-intro --as=user2</code></pre>
+<pre><code class="language-bash">oc new-app --template=postgresql-demo
+oc get deployment,service,secret,pvc \
+  -l template=postgresql-demo</code></pre>
       </div>
     </div>
     <aside class="notes">
-      Browser C (peter, Administrator perspective): Compute → Nodes - "developers
-      never need this page, and user1 can't even see it".
-      Browser A (user1): Topology for demo-intro - PostgreSQL provided by "the
-      platform team": Deployment, pod, Service, storage.
-      Browser C (peter, Developer perspective): Project → Project access - peter
-      admin, user1 edit, user2 view. Only the admin sees this tab.
-      Browser B (user2): same Topology, read-only; Secrets → access denied.
-      CLI: oc get rolebindings -n demo-intro ; oc auth can-i create deployments
-      -n demo-intro --as=user2 (no) ; oc auth can-i get secrets -n demo-intro
-      --as=user2 (no).
+"This is the project the platform team gave me - empty, but with a
+      catalog." +Add → Developer Catalog → Databases → PostgreSQL 15 (provider
+      "Red Hat User Group for FAA" - not the plain Red Hat one, that creates a
+      DeploymentConfig) → Instantiate Template. The form: service postgresql,
+      application guestbook, generated user and password, database guestbook,
+      1Gi, version 15-el9. "I don't even pick a password." Create.
+      Topology: postgresql in the guestbook group, blue in seconds. Walk
+      through what one form created: Deployment (1 pod), Service
+      postgresql:5432 (the name our app will use), Secret postgresql (reveal:
+      database-user / -password / -name), PVC (storage that outlives the pod).
+      Templates, Helm charts and operators are how a platform team hands out
+      approved building blocks.
       Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Nodes (Administrator perspective)</h3>
-    <div class="shot" data-src="images/demo1-p1-nodes.png" data-caption="Compute → Nodes as peter"></div>
+    <span class="backup-tag">Backup</span><h3>Developer Catalog: PostgreSQL 15</h3>
+    <div class="shot" data-src="images/demo1-postgres-catalog.png" data-caption="+Add → Developer Catalog → Databases"></div>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Topology with the database</h3>
-    <div class="shot" data-src="images/demo1-p1-topology.png" data-caption="Topology of demo-intro as user1"></div>
+    <span class="backup-tag">Backup</span><h3>Instantiate Template</h3>
+    <div class="shot" data-src="images/demo1-postgres-template-form.png" data-caption="The PostgreSQL 15 template form"></div>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Project access</h3>
-    <div class="shot" data-src="images/demo1-p1-project-access.png" data-caption="Project → Project access as peter"></div>
+    <span class="backup-tag">Backup</span><h3>PostgreSQL in Topology</h3>
+    <div class="shot" data-src="images/demo1-postgres-topology.png" data-caption="Topology with postgresql running"></div>
   </section>
 </section>
 
@@ -465,100 +561,72 @@ oc auth can-i get secrets \
 <section>
   <section>
     <h2>2 · Containers and pods</h2>
-    <p class="subheading">A bare pod: useful to look at, fragile on its own</p>
+    <p class="subheading">Look inside - then see what a bare pod is worth</p>
     <div class="steps">
       <ol>
+        <li>The database pod: Details, <b>Logs</b>, <b>Terminal</b>, Events</li>
         <li><b>+Add → Import YAML</b>: a pod is a name and an image</li>
-        <li>Details, <b>Logs</b>, <b>Terminal</b>, Events</li>
         <li>Delete it - nothing brings it back</li>
         <li>Delete the database pod - it comes back</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">oc apply -f hello-pod.yaml
-oc get pod hello -o wide
-oc exec hello -- ps -ef
+<pre><code class="language-bash">oc rsh deployment/postgresql psql -c '\l'
+oc apply -f hello-pod.yaml
 oc delete pod hello
+oc delete pod -l app=postgresql
 oc get pods</code></pre>
       </div>
     </div>
     <aside class="notes">
-      +Add → Import YAML, paste manifests/hello-pod.yaml, Create.
-      Pod page: Details (pod IP, Node - tie back to the slide), Logs, Terminal
-      (run: id - random high UID, not root; ps -ef), Events (scheduled → pulled →
-      started). Actions → Delete Pod: gone for good.
-      Contrast: delete the PostgreSQL pod in Topology - its Deployment replaces
-      it within seconds, and the data survives on the PVC.
+Topology → postgresql → the pod. Details: pod IP and Node (tie back to
+      the slide). Logs: the database starting. Terminal: psql -c '\l' - you're
+      inside the running container; id - a random high UID, not root. Events:
+      scheduled → volume attached → pulled → started.
+      +Add → Import YAML, paste manifests/hello-pod.yaml, Create: "this is all
+      a pod is - a name and an image". Actions → Delete Pod: gone for good.
+      Contrast: delete the PostgreSQL pod - its Deployment replaces it within
+      seconds, and the data survives on the PVC.
+      Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Pod details</h3>
-    <div class="shot" data-src="images/demo1-p2-pod-details.png" data-caption="hello pod details (IP, node)"></div>
+    <div class="shot" data-src="images/demo1-pods-details.png" data-caption="Database pod details (IP, node)"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Pod terminal</h3>
-    <div class="shot" data-src="images/demo1-p2-pod-terminal.png" data-caption="hello pod Terminal tab running id / ps -ef"></div>
+    <div class="shot" data-src="images/demo1-pods-terminal.png" data-caption="Pod Terminal tab running psql / id"></div>
   </section>
 </section>
 
-<!-- Part 3a -->
+<!-- Part 3 -->
 <section>
   <section>
-    <h2>3a · "It's this simple"</h2>
-    <p class="subheading">Deploy an existing image</p>
-    <div class="steps">
-      <ol>
-        <li><b>+Add → Container images</b></li>
-        <li><code>quay.io/plarsen/pacman</code></li>
-        <li>Application <b>Games</b>, name <b>pacman</b></li>
-        <li>Create - open the route - play</li>
-      </ol>
-      <div>
-        <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">oc new-app --image=quay.io/plarsen/pacman \
-   --name=pacman
-oc create route edge pacman \
-   --service=pacman</code></pre>
-      </div>
-    </div>
-    <aside class="notes">
-      "Registry, name, done. That's a Deployment, a Service and a Route - the
-      same objects we're about to create for our own app, except that one
-      starts from source code."
-    </aside>
-  </section>
-  <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Container images form</h3>
-    <div class="shot" data-src="images/demo1-p3a-container-image.png" data-caption="+Add → Container images, filled in for pacman"></div>
-  </section>
-</section>
-
-<!-- Part 3b -->
-<section>
-  <section>
-    <h2>3b · From source code to running app</h2>
+    <h2>3 · From source code to running app</h2>
     <p class="subheading">Import from Git - with a pipeline</p>
     <div class="steps">
       <ol>
         <li><b>+Add → Import from Git</b> - Gitea Service URL</li>
         <li>Python 3.12 · app <b>guestbook</b> · build: <b>Pipelines</b></li>
         <li>Watch the pipeline: fetch → build → deploy</li>
-        <li>"Database unavailable" → give it the <b>Secret</b></li>
+        <li>"Database unavailable" → map the <b>Secret</b></li>
       </ol>
       <div>
         <p class="cli-label">Credentials, as code</p>
 <pre><code class="language-bash">oc patch deployment/guestbook \
   --patch-file=guestbook-db-env.patch.yaml
 
-# spec.template.spec.containers:
-#   - name: guestbook
-#     envFrom:
-#       - secretRef:
-#           name: guestbook-db</code></pre>
+# env:
+#   - name: POSTGRESQL_USER
+#     valueFrom:
+#       secretKeyRef:
+#         name: postgresql
+#         key: database-user</code></pre>
       </div>
     </div>
     <aside class="notes">
-      Git Repo URL: http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
+Git Repo URL: http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
       - the yellow "repository is unreachable" warning is expected: the console
       checks from outside the cluster, the pipeline clones from inside. Choose
       Builder Image → Python 3.12-ubi9 by hand. Application guestbook, Name
@@ -569,31 +637,34 @@ oc create route edge pacman \
       logs (no Dockerfile; image pushed to the internal registry) → Topology:
       the Deployment exists and waits for its image → Service and Route already
       there → deploy turns green.
-      App shows "password authentication failed": show ONE row in the
-      Deployment's Environment tab (POSTGRESQL_USER → guestbook-db /
-      POSTGRESQL_USER), cancel - "twenty variables, three environments?" - then
-      in the terminal:
+      App shows "password authentication failed": the app reached postgresql
+      by Service name but has no credentials. Show ONE row in the Deployment's
+      Environment tab (full page): POSTGRESQL_USER → secret postgresql → key
+      database-user - "the name is what the app reads, the key is where the
+      Secret keeps it". Reload - "twenty variables, three environments?" -
+      then in the web terminal:
       oc patch deployment/guestbook --patch-file=guestbook-db-env.patch.yaml
       New pod rolls out. Refresh, sign the guestbook.
-      Secret talking point: env vars keep it simple today; in production mount
-      files or use a vault / External Secrets Operator.
+      Env vars keep it simple today; in production mount files or use a
+      vault / External Secrets Operator.
+      Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Import from Git</h3>
-    <div class="shot" data-src="images/demo1-p3b-import-from-git.png" data-caption="Import from Git form (Python, guestbook, Pipelines)"></div>
+    <div class="shot" data-src="images/demo1-source-import-from-git.png" data-caption="Import from Git form (Python, guestbook, Pipelines)"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>PipelineRun</h3>
-    <div class="shot" data-src="images/demo1-p3b-pipelinerun.png" data-caption="PipelineRun graph: fetch-repository → build → deploy"></div>
+    <div class="shot" data-src="images/demo1-source-pipelinerun.png" data-caption="PipelineRun graph: fetch-repository → build → deploy"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Environment from the Secret</h3>
-    <div class="shot" data-src="images/demo1-p3b-environment.png" data-caption="Deployment → Environment tab"></div>
+    <div class="shot" data-src="images/demo1-source-environment.png" data-caption="Deployment → Environment tab, one row mapped"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>The guestbook, v1.0</h3>
-    <div class="shot" data-src="images/demo1-p3b-app-v1.png" data-caption="Guestbook page v1.0 with entries"></div>
+    <div class="shot" data-src="images/demo1-source-app-v1.png" data-caption="Guestbook page v1.0 with entries"></div>
   </section>
 </section>
 
@@ -618,7 +689,7 @@ oc patch route/guestbook \
       </div>
     </div>
     <aside class="notes">
-      Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
+Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
       /readyz port 8080 ("only send traffic once the pod can reach the
       database"). Liveness: HTTP GET /healthz port 8080, initial delay 10
       ("restart it if the process hangs"). Add → another rollout.
@@ -629,68 +700,126 @@ oc patch route/guestbook \
       pod can answer." Then:
       oc patch route/guestbook --patch-file=guestbook-route-roundrobin.patch.yaml
       Refresh in a new private window a few times - the pod name changes.
-      user2 (Browser B): no scale arrows.
+      Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Health checks</h3>
-    <div class="shot" data-src="images/demo1-p4-health-checks.png" data-caption="Add Health Checks form"></div>
+    <div class="shot" data-src="images/demo1-scale-health-checks.png" data-caption="Add Health Checks form"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Three replicas</h3>
-    <div class="shot" data-src="images/demo1-p4-scaled.png" data-caption="Deployment details scaled to 3 pods"></div>
+    <div class="shot" data-src="images/demo1-scale-replicas.png" data-caption="Deployment details scaled to 3 pods"></div>
   </section>
 </section>
 
 <!-- Part 5 -->
 <section>
   <section>
-    <h2>5 · A commit becomes a new version</h2>
-    <p class="subheading">No tickets, no manual redeploy</p>
+    <h2>5 · Projects and RBAC</h2>
+    <p class="subheading">Who may do what - per project</p>
     <div class="steps">
       <ol>
-        <li>Gitea: edit <code>app.py</code> → <code>VERSION = "2.0"</code> → commit</li>
-        <li><b>Pipelines</b>: a run started by itself</li>
-        <li>Topology: new pods up, old ones drain</li>
-        <li>Refresh: <b>v2.0</b> - and the data is still there</li>
+        <li>peter: <b>Nodes</b> - the machines from the slides</li>
+        <li>peter: <b>Project access</b> - admin / edit / view</li>
+        <li>user2: same app, read-only</li>
+        <li>user2: no scaling, no <b>Secrets</b></li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">git commit -am "Release v2.0"
-git push
-oc get pipelineruns -w
-oc rollout status deployment/guestbook</code></pre>
+<pre><code class="language-bash">oc get rolebindings -n demo-intro
+oc auth can-i patch deployments/scale \
+   -n demo-intro --as=user2
+oc auth can-i get secrets \
+   -n demo-intro --as=user2</code></pre>
       </div>
     </div>
     <aside class="notes">
-      In Gitea (ocpdemo/guestbook): app.py → Edit → VERSION = "2.0" → commit to
-      main. Pipelines: a new PipelineRun "guestbook-push-..." started on its
-      own - Gitea's webhook called the trigger. Point at el-guestbook in
-      Topology ("Triggers" group): that's the listener Gitea called.
-      Watch Topology: new pods only take traffic after the readiness check
-      from Part 4 passes. Refresh: v2.0, all entries still there.
-      Fallback if nothing starts in ~10 s: Pipelines → guestbook → Actions →
-      Start. Afterwards check Gitea → Settings → Webhooks → Recent deliveries.
+"Everything so far happened in a project, as a developer with the edit
+      role." Browser C (peter, Administrator perspective): Compute → Nodes -
+      "developers never need this page, and user1 can't even see it".
+      Browser C (peter, Developer perspective): Project → Project access -
+      peter admin, user1 edit, user2 view, and the pipeline service account
+      edit: "roles aren't only for people". Only the admin sees this tab.
+      Browser B (user2): the same app, read-only - no scale arrows, Secrets →
+      access denied (can't read the database password), no edit actions.
+      Roles are standard and bound per project: user1 could be admin in a
+      sandbox and view in production.
+      Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Commit in Gitea</h3>
-    <div class="shot" data-src="images/demo1-p5-gitea-edit.png" data-caption="Gitea web editor: VERSION = 2.0"></div>
+    <span class="backup-tag">Backup</span><h3>Nodes (Administrator perspective)</h3>
+    <div class="shot" data-src="images/demo1-rbac-nodes.png" data-caption="Compute → Nodes as peter"></div>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Triggered PipelineRun</h3>
-    <div class="shot" data-src="images/demo1-p5-pipelinerun.png" data-caption="PipelineRun guestbook-push-… started by the webhook"></div>
+    <span class="backup-tag">Backup</span><h3>Project access</h3>
+    <div class="shot" data-src="images/demo1-rbac-project-access.png" data-caption="Project → Project access as peter"></div>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>The guestbook, v2.0</h3>
-    <div class="shot" data-src="images/demo1-p5-app-v2.png" data-caption="Guestbook page v2.0"></div>
+    <span class="backup-tag">Backup</span><h3>user2: read-only</h3>
+    <div class="shot" data-src="images/demo1-rbac-user2.png" data-caption="Topology or Secrets as user2"></div>
   </section>
 </section>
 
 <!-- Part 6 -->
 <section>
   <section>
-    <h2>6 · Configuration and rollback</h2>
+    <h2>6 · A commit becomes a new version</h2>
+    <p class="subheading">No tickets, no manual redeploy</p>
+    <div class="steps">
+      <ol>
+        <li><b>+Add → Import YAML</b>: the EventListener</li>
+        <li>Gitea: <code>VERSION = "2.0"</code> → commit</li>
+        <li><b>Pipelines</b>: a run started by itself</li>
+        <li>Refresh: <b>v2.0</b> - the data is still there</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc apply -f guestbook-eventlistener.yaml
+git commit -am "Release v2.0" &amp;&amp; git push
+oc get pipelineruns -w
+oc rollout status deployment/guestbook</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+First the listener: +Add → Import YAML, paste
+      manifests/guestbook-eventlistener.yaml, Create. el-guestbook appears in
+      Topology: "the endpoint Gitea calls on every push - it checks the
+      webhook secret and starts our pipeline. Part of OpenShift Pipelines
+      (Tekton Triggers); just another Deployment." Wait for the blue ring.
+      In Gitea (ocpdemo/guestbook): app.py → Edit → VERSION = "2.0" → commit to
+      main. Pipelines: a new PipelineRun "guestbook-push-..." started on its
+      own - Gitea called el-guestbook, which started the run.
+      Watch Topology: new pods only take traffic after the readiness check
+      from Part 4 passes. Refresh: v2.0, all entries still there.
+      Fallback if nothing starts in ~10 s: Pipelines → guestbook → Actions →
+      Start. Afterwards check Gitea → Settings → Webhooks → Recent deliveries.
+      Press DOWN for backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>EventListener in Topology</h3>
+    <div class="shot" data-src="images/demo1-commit-eventlistener.png" data-caption="Topology with el-guestbook after Import YAML"></div>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Commit in Gitea</h3>
+    <div class="shot" data-src="images/demo1-commit-gitea-edit.png" data-caption="Gitea web editor: VERSION = 2.0"></div>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Triggered PipelineRun</h3>
+    <div class="shot" data-src="images/demo1-commit-pipelinerun.png" data-caption="PipelineRun guestbook-push-… started by the webhook"></div>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The guestbook, v2.0</h3>
+    <div class="shot" data-src="images/demo1-commit-app-v2.png" data-caption="Guestbook page v2.0"></div>
+  </section>
+</section>
+
+<!-- Part 7 -->
+<section>
+  <section>
+    <h2>7 · Configuration and rollback</h2>
     <p class="subheading">Configuration is part of the Deployment too</p>
     <div class="steps">
       <ol>
@@ -709,22 +838,23 @@ oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-      Topology → guestbook → the Deployment name (full page) → Environment →
+Topology → guestbook → the Deployment name (full page) → Environment →
       Add more: APP_COLOR = #0066cc, APP_TITLE = Guestbook - config change →
-      Save. Refresh: blue. Deployment → ReplicaSets tab: one per revision.
+      Save. Refresh: blue. ReplicaSets tab: one per revision.
       Roll back in the web terminal: oc rollout undo deployment/guestbook.
       Refresh: red v2.0 again.
       (Env vars roll out automatically; a ConfigMap change would not - that's
       one reason we use env here.)
+      Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Blue banner</h3>
-    <div class="shot" data-src="images/demo1-p6-config-change.png" data-caption="Guestbook with APP_COLOR #0066cc"></div>
+    <div class="shot" data-src="images/demo1-config-banner.png" data-caption="Guestbook with APP_COLOR #0066cc"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>ReplicaSets</h3>
-    <div class="shot" data-src="images/demo1-p6-replicasets.png" data-caption="Deployment → ReplicaSets tab"></div>
+    <div class="shot" data-src="images/demo1-config-replicasets.png" data-caption="Deployment → ReplicaSets tab"></div>
   </section>
 </section>
 
@@ -733,10 +863,11 @@ oc rollout undo deployment/guestbook</code></pre>
   <h2>What we just did</h2>
   <p class="subheading">Every word from part one - live</p>
   <ul>
-    <li>Project &amp; RBAC - who can do what</li>
+    <li>Catalog - a database in one form</li>
     <li>Pod → Deployment - declared, kept true</li>
     <li>Service &amp; Route - names inside, HTTPS outside</li>
     <li>Pipeline - commit → image → rolling update</li>
+    <li>Project &amp; RBAC - who can do what</li>
   </ul>
   <aside class="notes">
     Go back to "Today's application" if there's time and point at each box.

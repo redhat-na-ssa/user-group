@@ -1,0 +1,172 @@
+# A project-local PostgreSQL template, staged in demo-intro by setup.sh and
+# instantiated live in Part 1 (+Add -> Developer Catalog -> Databases).
+#
+# Creates: Secret, Service, PersistentVolumeClaim and a Deployment (apps/v1).
+#
+# Why our own template: the stock openshift/postgresql-persistent template
+# (and the PostgreSQL Helm chart) create the deprecated DeploymentConfig type.
+# This one keeps the stock template's parameters and Secret keys
+# (database-user, database-password, database-name), uses a Deployment, and
+# defaults to PostgreSQL 15 on RHEL 9.
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: postgresql-demo
+  annotations:
+    openshift.io/display-name: PostgreSQL 15
+    description: >-
+      PostgreSQL database with persistent storage, deployed as a Deployment.
+      Scaling to more than one replica is not supported.
+    openshift.io/long-description: >-
+      A standalone PostgreSQL server with a database created. The database is
+      stored on persistent storage; the credentials are generated and kept in
+      a Secret named after the service.
+    openshift.io/provider-display-name: Red Hat User Group for FAA
+    iconClass: icon-postgresql
+    tags: database,postgresql
+message: |-
+  The following service has been created in your project: ${DATABASE_SERVICE_NAME}.
+
+         Username: ${POSTGRESQL_USER}
+    Database Name: ${POSTGRESQL_DATABASE}
+   Connection URL: postgresql://${DATABASE_SERVICE_NAME}:5432/
+
+  The password and user are in the Secret "${DATABASE_SERVICE_NAME}" (keys
+  database-user, database-password, database-name).
+labels:
+  template: postgresql-demo
+parameters:
+  - name: DATABASE_SERVICE_NAME
+    displayName: Database Service Name
+    description: Name of the Service, Deployment, Secret and volume claim.
+    value: postgresql
+    required: true
+  - name: APPLICATION
+    displayName: Application
+    description: Application group shown in the Topology view.
+    value: guestbook
+    required: true
+  - name: POSTGRESQL_USER
+    displayName: PostgreSQL Connection Username
+    description: Username for the PostgreSQL user that will be used for accessing the database.
+    generate: expression
+    from: user[A-Z0-9]{3}
+    required: true
+  - name: POSTGRESQL_PASSWORD
+    displayName: PostgreSQL Connection Password
+    description: Password for the PostgreSQL connection user.
+    generate: expression
+    from: "[a-zA-Z0-9]{16}"
+    required: true
+  - name: POSTGRESQL_DATABASE
+    displayName: PostgreSQL Database Name
+    value: guestbook
+    required: true
+  - name: VOLUME_CAPACITY
+    displayName: Volume Capacity
+    value: 1Gi
+    required: true
+  - name: MEMORY_LIMIT
+    displayName: Memory Limit
+    value: 512Mi
+    required: true
+  - name: POSTGRESQL_VERSION
+    displayName: Version of PostgreSQL Image
+    description: Tag of the postgresql image stream in the openshift namespace.
+    value: 15-el9
+    required: true
+objects:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: ${DATABASE_SERVICE_NAME}
+      labels:
+        app.kubernetes.io/part-of: ${APPLICATION}
+    stringData:
+      database-user: ${POSTGRESQL_USER}
+      database-password: ${POSTGRESQL_PASSWORD}
+      database-name: ${POSTGRESQL_DATABASE}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: ${DATABASE_SERVICE_NAME}
+      labels:
+        app: ${DATABASE_SERVICE_NAME}
+        app.kubernetes.io/part-of: ${APPLICATION}
+    spec:
+      selector:
+        app: ${DATABASE_SERVICE_NAME}
+      ports:
+        - name: postgresql
+          port: 5432
+          targetPort: 5432
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: ${DATABASE_SERVICE_NAME}
+      labels:
+        app.kubernetes.io/part-of: ${APPLICATION}
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources:
+        requests:
+          storage: ${VOLUME_CAPACITY}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ${DATABASE_SERVICE_NAME}
+      labels:
+        app: ${DATABASE_SERVICE_NAME}
+        app.kubernetes.io/part-of: ${APPLICATION}
+        app.kubernetes.io/component: database
+        app.openshift.io/runtime: postgresql
+      annotations:
+        template.alpha.openshift.io/wait-for-ready: "true"
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate          # one RWO volume - never two database pods at once
+      selector:
+        matchLabels:
+          app: ${DATABASE_SERVICE_NAME}
+      template:
+        metadata:
+          labels:
+            app: ${DATABASE_SERVICE_NAME}
+        spec:
+          containers:
+            - name: postgresql
+              image: image-registry.openshift-image-registry.svc:5000/openshift/postgresql:${POSTGRESQL_VERSION}
+              ports:
+                - containerPort: 5432
+              env:
+                - name: POSTGRESQL_USER
+                  valueFrom:
+                    secretKeyRef: {name: "${DATABASE_SERVICE_NAME}", key: database-user}
+                - name: POSTGRESQL_PASSWORD
+                  valueFrom:
+                    secretKeyRef: {name: "${DATABASE_SERVICE_NAME}", key: database-password}
+                - name: POSTGRESQL_DATABASE
+                  valueFrom:
+                    secretKeyRef: {name: "${DATABASE_SERVICE_NAME}", key: database-name}
+              readinessProbe:
+                exec:
+                  command: ["/usr/libexec/check-container"]
+                initialDelaySeconds: 5
+                timeoutSeconds: 1
+              livenessProbe:
+                exec:
+                  command: ["/usr/libexec/check-container", "--live"]
+                initialDelaySeconds: 120
+                timeoutSeconds: 10
+              resources:
+                requests: {cpu: 50m, memory: 128Mi}
+                limits:
+                  memory: ${MEMORY_LIMIT}
+              volumeMounts:
+                - name: data
+                  mountPath: /var/lib/pgsql/data
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: ${DATABASE_SERVICE_NAME}

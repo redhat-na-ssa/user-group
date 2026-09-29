@@ -70,10 +70,11 @@ Admin user: peter (the active user setting up the demo)
 Demo user: user1 - has edit rights to the project
 Demo user: user2 - has view rights to the project
 
-App: a guestbook (Python/Flask frontend + PostgreSQL). Every page shows the version, the serving pod and a banner colour (APP_COLOR), so new versions, load balancing and config changes are visible in the browser. A new version is a change to `VERSION` in app.py, committed in Gitea (ocpdemo/guestbook). pacman (quay.io/plarsen/pacman) is the "it's this simple" deploy-from-an-image example.
+App: a guestbook (Python/Flask frontend + PostgreSQL). Every page shows the version, the serving pod and a banner colour (APP_COLOR), so new versions, load balancing and config changes are visible in the browser. A new version is a change to `VERSION` in app.py, committed in Gitea (ocpdemo/guestbook). PostgreSQL is deployed live from a project-local template (`postgresql-demo`, "PostgreSQL 15" in the Developer Catalog) - our own because the stock template and Helm chart create the deprecated DeploymentConfig; it creates a Deployment, Service, Secret `postgresql` (keys database-user/-password/-name) and PVC.
 
 Structure of the session:
 - Slides (<= 10 min): "OpenShift architecture 1:1" - define the terms (node, pod, container, deployment, service, route, project/namespace, etc.). Once that's done, dive into the demo.
+- Demo order: 1 deploy PostgreSQL from the catalog, 2 pods, 3 from source code (Import from Git + pipeline), 4 self-healing and scaling, 5 projects and RBAC (deliberately not first), 6 a commit becomes a new version (the EventListener is created live here, not in setup), 7 configuration and rollback.
 - Demo: keep most of it in the OpenShift console, not the CLI. Prep work before the demo (automation) is fine and expected; the console-driven part is what the audience sees.
 
 Builds: use OpenShift Pipelines (Tekton), not a bare S2I BuildConfig - pipelines show better in the console and look less cryptic to non-developers. This means the app source lives in a Git repo the pipeline clones from. The app is created live with the console's Import from Git (Pipelines build option) and **must be named `guestbook`**, because the pre-staged Gitea webhook -> EventListener -> TriggerTemplate starts the pipeline by that name.

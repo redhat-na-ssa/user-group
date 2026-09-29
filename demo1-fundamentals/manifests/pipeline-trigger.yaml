@@ -2,7 +2,9 @@
 #
 # Gitea (webhook on ocpdemo/guestbook, push to main)
 #   -> EventListener el-guestbook (validates the webhook secret)
-#   -> TriggerTemplate: a PipelineRun of the "guestbook" pipeline
+#      created LIVE in Part 5 from guestbook-eventlistener.yaml
+#   -> TriggerBinding + TriggerTemplate (this file): a PipelineRun of the
+#      "guestbook" pipeline
 #
 # The "guestbook" Pipeline itself is created live in the console
 # (Import from Git -> Add pipeline), so these parameters match what the
@@ -67,37 +69,3 @@ spec:
                 resources:
                   requests:
                     storage: 1Gi
----
-apiVersion: triggers.tekton.dev/v1beta1
-kind: EventListener
-metadata:
-  name: guestbook
-  labels:
-    app.kubernetes.io/part-of: guestbook
-spec:
-  serviceAccountName: pipeline
-  triggers:
-    - name: gitea-push-main
-      interceptors:
-        # Gitea sends GitHub-compatible X-GitHub-Event / X-Hub-Signature-256
-        # headers, so the stock github interceptor validates the secret.
-        - ref:
-            name: github
-            kind: ClusterInterceptor
-          params:
-            - name: secretRef
-              value:
-                secretName: guestbook-webhook
-                secretKey: secret
-            - name: eventTypes
-              value: [push]
-        - ref:
-            name: cel
-            kind: ClusterInterceptor
-          params:
-            - name: filter
-              value: body.ref == 'refs/heads/main'
-      bindings:
-        - ref: guestbook-gitea-push
-      template:
-        ref: guestbook

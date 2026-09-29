@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 1 - Projects & RBAC (run as the admin, peter). Read-only: shows who
+# Part 5 - Projects & RBAC (run as the admin, peter). Read-only: shows who
 # can do what in the project.
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"

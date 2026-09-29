@@ -1,0 +1,39 @@
+# Part 5: paste into the console (+Add -> Import YAML) as user1, or
+#   oc apply -f guestbook-eventlistener.yaml
+# Creates el-guestbook: the endpoint Gitea's webhook calls on every push to
+# main. It checks the webhook secret, then runs the guestbook TriggerTemplate
+# (a PipelineRun of the "guestbook" pipeline). Binding, template, secret and
+# the Gitea webhook itself are pre-staged by setup.sh.
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: guestbook
+  labels:
+    app.kubernetes.io/part-of: guestbook
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: gitea-push-main
+      interceptors:
+        # Gitea sends GitHub-compatible X-GitHub-Event / X-Hub-Signature-256
+        # headers, so the stock github interceptor validates the secret.
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+          params:
+            - name: secretRef
+              value:
+                secretName: guestbook-webhook
+                secretKey: secret
+            - name: eventTypes
+              value: [push]
+        - ref:
+            name: cel
+            kind: ClusterInterceptor
+          params:
+            - name: filter
+              value: body.ref == 'refs/heads/main'
+      bindings:
+        - ref: guestbook-gitea-push
+      template:
+        ref: guestbook

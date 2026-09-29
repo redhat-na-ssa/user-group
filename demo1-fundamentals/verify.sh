@@ -31,6 +31,7 @@ check "Python 3.12 builder image exists"  oc get istag python:3.12-ubi9 -n opens
 info "RBAC"
 check "${EDIT_USER} can create deployments"   oc auth can-i create deployments -n "${NS}" --as="${EDIT_USER}"
 check "${EDIT_USER} can create pipelines"     oc auth can-i create pipelines.tekton.dev -n "${NS}" --as="${EDIT_USER}"
+check "${EDIT_USER} can instantiate templates" oc auth can-i create templateinstances.template.openshift.io -n "${NS}" --as="${EDIT_USER}"
 check "${EDIT_USER} cannot manage RBAC"   not oc auth can-i create rolebindings -n "${NS}" --as="${EDIT_USER}"
 check "${VIEW_USER} can list pods"        oc auth can-i list pods -n "${NS}" --as="${VIEW_USER}"
 check "${VIEW_USER} cannot scale"         not oc auth can-i patch deployments/scale -n "${NS}" --as="${VIEW_USER}"
@@ -42,16 +43,18 @@ for u in "${EDIT_USER}" "${VIEW_USER}"; do
 done
 
 info "Starting state"
-check "PostgreSQL is running"             oc rollout status deployment/postgresql -n "${NS}" --timeout=5s
-check "PostgreSQL accepts connections"    oc exec -n "${NS}" deployment/postgresql -- psql -d guestbook -c 'select 1'
+check "PostgreSQL template is staged"     oc get template.template.openshift.io/postgresql-demo -n "${NS}"
+check "PostgreSQL 15 image exists"        oc get istag postgresql:15-el9 -n openshift
+check "No database yet (Part 1)"          not oc get deployment/postgresql -n "${NS}"
+check "No leftover database secret"       not oc get secret/postgresql -n "${NS}"
 check "Repo ${GITEA_ORG}/${GIT_REPO_NAME} is at VERSION 1.0"  repo_at_v1
 check "Repo webhook points at ${EL_URL}"  has_webhook
-check "EventListener is ready"            oc rollout status deployment/el-guestbook -n "${NS}" --timeout=5s
+check "Trigger template is staged"        oc get triggertemplate.triggers.tekton.dev/guestbook -n "${NS}"
+check "No EventListener yet (Part 6)"     not oc get eventlistener.triggers.tekton.dev/guestbook -n "${NS}"
 check "app/app.py is at VERSION 1.0"      grep -q '^VERSION = "1.0"' "${DEMO_DIR}/app/app.py"
 check "No guestbook deployment yet"       not oc get deployment/guestbook -n "${NS}"
 check "No guestbook pipeline yet"         not oc get pipeline.tekton.dev/guestbook -n "${NS}"
 check "No guestbook pipeline runs yet"    test -z "$(oc get pipelinerun.tekton.dev -n "${NS}" -l tekton.dev/pipeline=guestbook -o name)"
-check "No pacman deployment yet"         not oc get deployment/pacman -n "${NS}"
 check "No leftover hello pod"             not oc get pod/hello -n "${NS}"
 
 echo

@@ -166,3 +166,25 @@
 /* diagrams */
 .reveal svg text { font-family: var(--r-main-font); }
 .reveal .diagram { width: 100%; max-height: 700px; }
+
+/* Diagram language (Red Hat OpenShift concept slides): red line-art icons
+   from icons.svg, thin red connectors, small-caps labels, green pod IPs */
+.reveal svg use { color: var(--rh-red); }
+.reveal svg use.grey { color: var(--rh-dim); }
+.reveal svg use.white { color: var(--rh-text); }
+.reveal svg .dg-line { stroke: var(--rh-red); stroke-width: 3; fill: none; }
+.reveal svg .dg-line.grey { stroke: var(--rh-dim); }
+.reveal svg .dg-dash { stroke-dasharray: 9 7; }
+.reveal svg .dg-box { fill: none; stroke: var(--rh-red); stroke-width: 2.5; stroke-dasharray: 10 7; }
+.reveal svg .dg-box.grey { stroke: #5c5f62; }
+.reveal svg .dg-panel { fill: var(--rh-bg-deep); stroke: #4d4d4d; stroke-width: 2; }
+.reveal svg .dg-label { fill: var(--rh-muted); font-size: 17px; letter-spacing: 0.08em; text-anchor: middle; }
+.reveal svg .dg-label.left { text-anchor: start; }
+.reveal svg .dg-title { fill: var(--rh-text); font-size: 22px; text-anchor: middle; }
+.reveal svg .dg-title.left { text-anchor: start; }
+.reveal svg .dg-small { fill: #a3a6a9; font-size: 17px; text-anchor: middle; }
+.reveal svg .dg-small.left { text-anchor: start; }
+.reveal svg .dg-mono { fill: var(--rh-muted); font-family: var(--r-code-font); font-size: 16px; }
+.reveal svg .dg-ip { fill: #7fc460; font-size: 16px; text-anchor: middle; font-family: var(--r-code-font); }
+.reveal svg .dg-in { fill: var(--rh-text); font-size: 16px; letter-spacing: 0.06em; text-anchor: middle; }
+.reveal svg .dg-red { fill: var(--rh-red); }

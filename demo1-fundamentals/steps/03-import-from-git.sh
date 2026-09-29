@@ -8,6 +8,8 @@ source "${DEMO_DIR}/demo.env"
 use_user "${EDIT_USER}"
 oc project -q "${NS}" >/dev/null
 
+# The app needs the database from Part 1
+oc get deployment/postgresql >/dev/null 2>&1 || "${DEMO_DIR}/steps/01-postgresql.sh"
 run oc apply -f <(sed "s|\${GIT_REPO}|${GIT_REPO_URL}|g" "${DEMO_DIR}/manifests/guestbook-app.yaml")
 if ! oc get deployment/guestbook -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -q '@sha256'; then
   # First build: the image doesn't exist yet

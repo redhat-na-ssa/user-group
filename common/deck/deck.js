@@ -12,6 +12,7 @@
  *   <a class="followup-link"></a>, <div class="qr"></div>
  *                                                filled from config.js (follow-up app URL)
  *   <aside class="notes">...</aside>             speaker notes (press "s")
+ *   <use href="#i-pod" .../>                     diagram icons from common/icons.svg
  */
 (function () {
   function chrome(title) {
@@ -67,6 +68,21 @@
     }
   }
 
+  // Shared diagram icons (common/icons.svg): injected once so every inline
+  // diagram can reference them with <use href="#i-pod" .../>
+  function icons() {
+    return fetch("../common/icons.svg")
+      .then((r) => (r.ok ? r.text() : ""))
+      .then((svg) => {
+        const holder = document.createElement("div");
+        holder.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+        holder.setAttribute("aria-hidden", "true");
+        holder.innerHTML = svg;
+        document.body.prepend(holder);
+      })
+      .catch(() => {});
+  }
+
   window.Deck = {
     init() {
       const title = document.body.dataset.deckTitle || document.title;
@@ -74,6 +90,11 @@
       chrome(title);
       screenshots();
       followups(session);
+      return icons().then(() => start());
+    },
+  };
+
+  function start() {
       Reveal.initialize({
         width: 1920,
         height: 1080,
@@ -92,6 +113,5 @@
           "no-chrome", !!Reveal.getCurrentSlide().closest("section.no-chrome"));
       Reveal.on("ready", sync);
       Reveal.on("slidechanged", sync);
-    },
-  };
+  }
 })();
