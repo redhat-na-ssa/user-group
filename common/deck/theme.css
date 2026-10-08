@@ -94,11 +94,13 @@
   font-family: var(--r-main-font); font-size: 16px; color: var(--rh-dim);
   pointer-events: none;
 }
+/* bottom right, right to left: reveal's navigation arrows (~130px wide),
+   the slide number, then the hat - none overlapping */
 .deck-hat {
-  position: fixed; right: 40px; bottom: 18px; width: 40px; z-index: 20; pointer-events: none;
+  position: fixed; right: 240px; bottom: 18px; width: 40px; z-index: 20; pointer-events: none;
 }
 .reveal .slide-number {
-  left: auto; right: 100px; bottom: 22px; top: auto;
+  left: auto; right: 150px; bottom: 22px; top: auto;
   background: transparent; color: var(--rh-dim);
   font-family: var(--r-main-font); font-size: 16px;
 }
