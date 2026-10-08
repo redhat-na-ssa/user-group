@@ -1,0 +1,91 @@
+# Publish the slide decks to GitHub Pages: the same site the faa-demo
+# slides image serves (reveal.js, fonts and QR code from npm, the shared
+# theme from common/deck/, one directory per deck). The deck list and the
+# follow-up URL come from faa-demo/playbook.yml and common/vars.yml.
+name: Slides on GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "common/deck/**"
+      - "faa-demo/playbook.yml"
+      - "faa-demo/templates/**"
+      - "faa-demo/slides-site/**"
+      - "demo*/slides/**"
+      - "demo*/images/**"
+      - "demo*/cheatsheet.sh"
+      - "demo*/manifests/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Runtime assets (reveal.js, fonts, QR code)
+        working-directory: faa-demo/slides-site
+        run: |
+          npm install --omit=dev --no-audit --no-fund
+          out=$GITHUB_WORKSPACE/_site
+          mkdir -p $out/reveal $out/fonts $out/lib
+          cp -r node_modules/reveal.js/dist/. $out/reveal/
+          cp node_modules/qrcode-generator/dist/qrcode.js $out/lib/
+          for f in red-hat-display red-hat-text red-hat-mono; do
+            cp -r node_modules/@fontsource/$f $out/fonts/$f
+          done
+          cp -r site/. $out/
+          cp -r $GITHUB_WORKSPACE/common/deck $out/common
+
+      - name: Decks, index and config
+        run: |
+          pip install --quiet pyyaml jinja2
+          python3 - <<'EOF'
+          import shutil, yaml, jinja2
+          from pathlib import Path
+
+          out = Path("_site")
+          common = yaml.safe_load(open("common/vars.yml"))
+          play = yaml.safe_load(open("faa-demo/playbook.yml"))[0]["vars"]
+          followup_url = f"https://followups-{common['faa_namespace']}.{common['ocp_apps_domain']}"
+          env = jinja2.Environment(loader=jinja2.FileSystemLoader("faa-demo/templates"))
+          for name in ("index.html", "config.js"):
+              (out / name).write_text(env.get_template(name + ".j2").render(
+                  decks=play["decks"], followup_url=followup_url))
+          for deck in play["decks"]:
+              src, dest = Path(deck["name"]), out / deck["name"]
+              (dest / "files").mkdir(parents=True)
+              shutil.copy(src / "slides/index.html", dest / "index.html")
+              shutil.copytree(src / "images", dest / "images")
+              shutil.copy(src / "cheatsheet.sh", dest / "cheatsheet.sh")
+              for f in deck.get("files", []):
+                  shutil.copy(src / f, dest / "files")
+          EOF
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

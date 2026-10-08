@@ -25,6 +25,11 @@ oc delete -n "${NS}" --ignore-not-found \
 oc delete -n "${NS}" --ignore-not-found templateinstance.template.openshift.io --all
 oc get secret -n "${NS}" -o name | { grep '^secret/postgresql-demo-parameters' || true; } \
   | xargs -r oc delete -n "${NS}" --ignore-not-found
+# Objects made by any console "Instantiate Template" carry this label (and no
+# owner references) - covers the stock PostgreSQL template's DeploymentConfig too
+oc delete -n "${NS}" --ignore-not-found \
+  deploymentconfig.apps.openshift.io,deployment,service,route,secret,persistentvolumeclaim \
+  -l template.openshift.io/template-instance-owner
 # ...its objects by label, plus the
 # pre-staged database of older versions of this demo
 oc delete -n "${NS}" --ignore-not-found \

@@ -57,7 +57,7 @@ The shell during a demo is the **OpenShift web terminal in the console**. The de
 
 When a demo uses the GUI, the main pages need a slide with a screen-dump, placed as a vertical slide (reached by pressing down, not right) under the step's slide, so it can be used as a backup if the demo system is having issues. Screen-dumps are taken by hand while the demo script is developed, and stored in the demo's `images/` directory.
 
-Console conventions for demos: use the **Developer perspective** for the demo users; describe navigation as a new user sees it (no pinned items - e.g. reach a Deployment's full page from Topology). Show a change once in the console, then apply it "as code" (a small YAML/patch file) to make the point that the console isn't the tool for real development.
+Console conventions for demos: use the **Developer perspective** for the demo users; describe navigation as a new user sees it (no pinned items - e.g. reach a Deployment's full page from Topology). Show a change once in the console, then apply it "as code" (a small YAML/patch file) to make the point that the console isn't the tool for real development. Point out console side effects when they appear (e.g. Instantiate Template leaves a `<template>-parameters-…` Secret with the form values). Longer term, the demos should steer the audience toward the CLI, Ansible or GitOps (Argo CD) as the way to do real work, with the console for learning and looking around.
 
 ## Demo 1 - OpenShift fundamentals
 

@@ -540,6 +540,18 @@ oc get deployment,service,secret,pvc \
       database-user / -password / -name), PVC (storage that outlives the pod).
       Templates, Helm charts and operators are how a platform team hands out
       approved building blocks.
+      Optional: the template itself ("parameters plus objects"). NOT the
+      Templates page - OpenShift Virtualization owns it (VM templates only).
+      Use the bookmark: Search → Template filtered on label
+      published-by=platform-team (unfiltered, Search also lists the openshift
+      templates) → postgresql-demo → YAML. Or skip and show
+      oc get template postgresql-demo -o yaml in the web terminal.
+      Secrets (left nav) shows TWO secrets: postgresql (what the database uses)
+      and postgresql-demo-parameters-… - "the console saved everything I typed
+      into the form, password included, and left it behind. A side effect of
+      the UI: oc new-app --template=postgresql-demo, Ansible or Argo CD leave
+      no such leftover. The console is for learning; the real definition
+      lives in code."
       Press DOWN for backup screenshots.
     </aside>
   </section>

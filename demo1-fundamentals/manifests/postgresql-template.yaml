@@ -12,6 +12,11 @@ apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   name: postgresql-demo
+  labels:
+    # lets the console's Search page filter to just this template
+    # (Search lists templates from the openshift namespace too):
+    #   /search/ns/demo-intro?kind=template.openshift.io~v1~Template&q=published-by=platform-team
+    published-by: platform-team
   annotations:
     openshift.io/display-name: PostgreSQL 15
     description: >-
