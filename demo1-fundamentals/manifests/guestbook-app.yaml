@@ -1,8 +1,9 @@
 # CATCH-UP ONLY. This is roughly what the console's "Import from Git" (with
-# "Add pipeline") creates for the guestbook. During the demo the presenter
-# creates it live in the console; steps/03b-import-from-git.sh applies this
-# file instead if the console step goes wrong.
-# ${GIT_REPO} is substituted by the script.
+# the Pipelines build option) creates for the guestbook. During the demo the
+# presenter creates it live in the console; steps/03-import-from-git.sh (or
+# the cheat-sheet, part 3) applies this file instead if the console step goes
+# wrong. ${GIT_REPO} is substituted when applying, e.g.
+#   sed "s|\${GIT_REPO}|$GIT_REPO|g" guestbook-app.yaml | oc apply -f -
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata:

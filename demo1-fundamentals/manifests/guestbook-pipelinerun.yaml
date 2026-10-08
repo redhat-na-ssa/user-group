@@ -1,0 +1,16 @@
+# One run of the guestbook pipeline (the console's "Start" button, as code).
+# generateName gives every run a new name, so use "oc create", not "oc apply":
+#   oc create -f guestbook-pipelinerun.yaml
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: guestbook-
+  labels: {tekton.dev/pipeline: guestbook}
+spec:
+  pipelineRef: {name: guestbook}
+  workspaces:
+    - name: workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources: {requests: {storage: 1Gi}}

@@ -73,13 +73,25 @@
       .catch(() => {});
   }
 
+  // Load the Red Hat fonts before reveal.js lays out the first slide, so the
+  // text doesn't jump from the fallback font to the real one (the deck stays
+  // hidden until reveal adds .ready - see theme.css). Never wait more than 2s.
+  function fonts() {
+    if (!document.fonts) return Promise.resolve();
+    const faces = ['400 1em "Red Hat Text"', '500 1em "Red Hat Text"',
+                   '400 1em "Red Hat Display"', '500 1em "Red Hat Display"',
+                   '400 1em "Red Hat Mono"'];
+    const loaded = Promise.all(faces.map((f) => document.fonts.load(f))).catch(() => {});
+    return Promise.race([loaded, new Promise((r) => setTimeout(r, 2000))]);
+  }
+
   window.Deck = {
     init() {
       const title = document.body.dataset.deckTitle || document.title;
       chrome(title);
       screenshots();
       qrcodes();
-      return icons().then(() => start());
+      return Promise.all([icons(), fonts()]).then(() => start());
     },
   };
 

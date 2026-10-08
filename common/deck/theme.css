@@ -25,6 +25,8 @@
 }
 
 .reveal-viewport { background: var(--rh-bg); }
+/* hidden until fonts are loaded and reveal.js has laid out the slide (deck.js) */
+.reveal:not(.ready) { visibility: hidden; }
 .reveal {
   font-family: var(--r-main-font);
   font-size: var(--r-main-font-size);
@@ -89,16 +91,16 @@
   background: linear-gradient(to bottom, var(--rh-red) 0 11%, transparent 11% 89%, var(--rh-red) 89% 100%);
   z-index: 20; pointer-events: none;
 }
+/* bottom left: the hat, then the deck title right after it */
+.deck-hat {
+  position: fixed; left: 72px; bottom: 18px; width: 40px; z-index: 20; pointer-events: none;
+}
 .deck-footer {
-  position: fixed; left: 72px; bottom: 22px; z-index: 20;
+  position: fixed; left: 126px; bottom: 22px; z-index: 20;
   font-family: var(--r-main-font); font-size: 16px; color: var(--rh-dim);
   pointer-events: none;
 }
-/* bottom right, right to left: reveal's navigation arrows (~130px wide),
-   the slide number, then the hat - none overlapping */
-.deck-hat {
-  position: fixed; right: 240px; bottom: 18px; width: 40px; z-index: 20; pointer-events: none;
-}
+/* bottom right: the slide number, clear of reveal's navigation arrows (~130px wide) */
 .reveal .slide-number {
   left: auto; right: 150px; bottom: 22px; top: auto;
   background: transparent; color: var(--rh-dim);

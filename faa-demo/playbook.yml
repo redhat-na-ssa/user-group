@@ -22,6 +22,8 @@
         title: OpenShift Fundamentals
         files:
           - manifests/hello-pod.yaml
+          - manifests/guestbook-app.yaml
+          - manifests/guestbook-pipelinerun.yaml
           - manifests/guestbook-db-env.patch.yaml
           - manifests/guestbook-route-roundrobin.patch.yaml
           - manifests/guestbook-eventlistener.yaml
