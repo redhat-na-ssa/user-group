@@ -14,8 +14,6 @@ on:
       - "faa-demo/slides-site/**"
       - "demo*/slides/**"
       - "demo*/images/**"
-      - "demo*/cheatsheet.sh"
-      - "demo*/manifests/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -69,12 +67,9 @@ jobs:
                   decks=play["decks"], followup_url=followup_url))
           for deck in play["decks"]:
               src, dest = Path(deck["name"]), out / deck["name"]
-              (dest / "files").mkdir(parents=True)
+              dest.mkdir()
               shutil.copy(src / "slides/index.html", dest / "index.html")
               shutil.copytree(src / "images", dest / "images")
-              shutil.copy(src / "cheatsheet.sh", dest / "cheatsheet.sh")
-              for f in deck.get("files", []):
-                  shutil.copy(src / f, dest / "files")
           EOF
           touch _site/.nojekyll
 
