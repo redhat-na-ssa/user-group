@@ -43,9 +43,11 @@ Increase the browser zoom to 125–150%. Keep `manifests/hello-pod.yaml` and `ma
 
 ---
 
-## Slides – OpenShift architecture 1:1 (≤ 10 min)
+## Slides (≤ 10 min)
 
-One idea per slide. The last column is what you point at later in the demo, so the audience sees every term again.
+Going RIGHT: **title** → **About this talk** (introductions, mission) → **What is OpenShift?** → **Live demo: today's application** → the demo parts.
+
+The "OpenShift architecture 1:1" term slides below sit *under* "What is OpenShift?" (press DOWN). Use them only if the audience is new to the vocabulary; otherwise go RIGHT and explain each word as it appears in the demo. One idea per slide. The last column is what you point at later in the demo, so the audience sees every term again.
 
 | # | Term | One-line definition | Where it shows up in the demo |
 |---|---|---|---|
@@ -60,7 +62,7 @@ One idea per slide. The last column is what you point at later in the demo, so t
 | 9 | **ConfigMap / Secret** | Configuration and credentials, kept outside the image | Parts 1, 3 and 7 |
 | 10 | **Pipeline** (Tekton) | Automated steps (clone → build → deploy) that each run in a pod | Parts 3 and 6 |
 
-Close with the picture of today's app: **Gitea → Pipeline → image → Deployment (guestbook) → Service → Route**, with the guestbook talking to **PostgreSQL** (Deployment + PVC + Secret).
+The demo intro slide is the picture of today's app: **Gitea → Pipeline → image → Deployment (guestbook) → Service → Route**, with the guestbook talking to **PostgreSQL** (Deployment + PVC + Secret).
 
 ---
 

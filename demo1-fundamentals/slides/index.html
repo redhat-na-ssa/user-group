@@ -11,36 +11,113 @@
   <link rel="stylesheet" href="../fonts/fonts.css">
   <link rel="stylesheet" href="../common/theme.css">
 </head>
-<!-- deck title shows in every slide's footer; session tags follow-up items -->
-<body data-deck-title="OpenShift Fundamentals · Red Hat User Group for FAA" data-session="demo1-fundamentals">
+<!-- deck title shows in every slide's footer -->
+<body data-deck-title="OpenShift Fundamentals · Red Hat User Group for FAA">
 <div class="reveal"><div class="slides">
 
-<!-- ================================================================ WELCOME -->
+<!-- ================================================================ TITLE -->
 <section class="no-chrome title-slide" data-state="no-chrome">
   <div class="logos">
     <img src="images/redhat-logo.svg" alt="Red Hat">
     <img class="faa" src="images/faa-seal.svg" alt="FAA" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'muted small',textContent:'[FAA logo]'}))">
   </div>
-  <h1>Welcome to the Red Hat User Group for FAA</h1>
-  <p class="sub">OpenShift Fundamentals</p>
-  <p class="meta">[Presentation date]</p>
+  <h1>OpenShift Fundamentals</h1>
+  <p class="sub">Red Hat User Group for FAA</p>
+  <p class="meta">Wednesday, October 14, 2026</p>
   <aside class="notes">
-    Welcome everyone. Introduce yourself and the format: about 10 minutes of
-    "OpenShift architecture 1:1" to agree on the words, then 30 minutes of live
-    demo, mostly in the web console. Questions any time; anything we can't
-    answer goes into the follow-up list (link on the last slide, or scan the QR
-    code) and we'll get back to you.
+    Put this up while people join. Once you start: welcome everyone, thank
+    them for their time, and say what the next 30-40 minutes look like - a
+    couple of minutes on who we are, one slide on what OpenShift is, and then
+    a live demo, mostly in the web console.
+
+    Questions are welcome at any time. Anything we can't answer on the spot
+    gets written down and answered after the session. The deck stays online -
+    link and QR code on the last slide.
   </aside>
 </section>
 
-<!-- ================================================================ ARCHITECTURE 1:1 -->
-<section class="divider">
-  <p class="kicker">Part one</p>
-  <h2>OpenShift architecture 1:1</h2>
-  <p class="sub">Ten words we'll use for the rest of the session</p>
+<!-- ================================================================ ABOUT THIS TALK -->
+<section class="about">
+  <h2>Welcome to the Red Hat User Group for FAA</h2>
+  <!-- One column per Red Hat attendee: replace the placeholder with
+       <img class="photo" src="images/people-<name>.jpg" alt=""> once we have
+       permission, and drop unused columns (the row re-centres). -->
+  <div class="people">
+    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">Chrissy Cianci</p><p class="role">[Title]</p></div>
+    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">Peter Larsen</p><p class="role">Ass. Principal Customer Success Architect"</p></div>
+    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">[Name]</p><p class="role">[Title]</p></div>
+    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">[Name]</p><p class="role">[Title]</p></div>
+    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">[Name]</p><p class="role">[Title]</p></div>
+  </div>
+  <p class="mission">Enable FAA to get more value out of Red Hat technologies</p>
   <aside class="notes">
-    One idea per slide. Every term will show up again in the demo - the small
-    line under each picture says where, so point back to it later.
+    Quick round of introductions - each Red Hat person on the call says their
+    name and role in one sentence. Keep it to about a minute in total.
+
+    Then the mission: this user group exists to help FAA get more value out of
+    the Red Hat technology it already has. Each session is one topic, about
+    half an hour, mostly live demo rather than slides. Today is the
+    foundation - OpenShift itself - and later sessions build on it. Tell us
+    what you'd like to see next.
+  </aside>
+</section>
+
+<!-- ================================================================ WHAT IS OPENSHIFT
+     One horizontal slide. The concept slides sit below it (press DOWN) and
+     are only used if the audience needs them; RIGHT goes straight to the demo. -->
+<section>
+<section>
+  <h2>What is OpenShift?</h2>
+  <p class="subheading">Kubernetes - plus everything you need to run applications on it</p>
+  <svg class="diagram" viewBox="0 0 1600 660" style="max-width:1500px" aria-label="OpenShift layers: infrastructure, RHEL CoreOS, Kubernetes, platform services, applications">
+    <!-- your apps -->
+    <rect class="dg-box" x="200" y="10" width="1200" height="130" rx="12"/>
+    <text class="dg-label left" x="225" y="42">YOUR APPLICATIONS</text>
+    <use href="#i-pod" x="560" y="38" width="90" height="90"/>
+    <use href="#i-pod" x="680" y="38" width="90" height="90"/>
+    <use href="#i-pod" x="800" y="38" width="90" height="90"/>
+    <use href="#i-pod-new" class="grey" x="920" y="38" width="90" height="90"/>
+    <!-- platform services -->
+    <rect class="dg-panel" x="200" y="160" width="1200" height="200" rx="12" style="stroke:#ee0000"/>
+    <text class="dg-label left" x="225" y="192">OPENSHIFT PLATFORM SERVICES</text>
+    <use href="#i-browser" x="245" y="208" width="100" height="100"/>
+    <text class="dg-small" x="295" y="336">console</text>
+    <use href="#i-task" x="415" y="208" width="100" height="100"/>
+    <text class="dg-small" x="465" y="336">pipelines</text>
+    <use href="#i-registry" x="585" y="208" width="100" height="100"/>
+    <text class="dg-small" x="635" y="336">registry</text>
+    <use href="#i-hex" x="755" y="208" width="100" height="100"/>
+    <text class="dg-small" x="805" y="336">router</text>
+    <use href="#i-doc" x="925" y="208" width="100" height="100"/>
+    <text class="dg-small" x="975" y="336">catalog</text>
+    <use href="#i-lock" x="1095" y="208" width="100" height="100"/>
+    <text class="dg-small" x="1145" y="336">security · RBAC</text>
+    <use href="#i-user" class="white" x="1265" y="208" width="100" height="100"/>
+    <text class="dg-small" x="1315" y="336">projects</text>
+    <!-- kubernetes -->
+    <rect class="dg-panel" x="200" y="380" width="1200" height="80" rx="12"/>
+    <text class="dg-title" x="800" y="430">Kubernetes</text>
+    <!-- os -->
+    <rect class="dg-panel" x="200" y="480" width="1200" height="70" rx="12"/>
+    <text class="dg-title" x="800" y="523">Red Hat Enterprise Linux CoreOS</text>
+    <!-- infra -->
+    <rect class="dg-box grey" x="200" y="570" width="1200" height="80" rx="12"/>
+    <text class="dg-small" x="800" y="618">bare metal · virtual machines · private and public cloud</text>
+  </svg>
+  <aside class="notes">
+    One slide, one idea: OpenShift is Kubernetes, packaged and supported by
+    Red Hat, with the pieces you'd otherwise have to choose, install and glue
+    together yourself - the web console, pipelines, an image registry, the
+    router that publishes apps, a curated catalog, and security and access
+    control built in. It runs on Red Hat Enterprise Linux CoreOS, on bare
+    metal, virtual machines or any major cloud, and it looks the same
+    everywhere.
+
+    Everything we're about to do in the demo is a standard Kubernetes object
+    under the hood - the console just makes it visible. If the audience is new
+    to the vocabulary (pod, Deployment, Service, Route...), press DOWN for one
+    slide per term; otherwise go RIGHT straight into the demo and explain the
+    words as they appear on screen.
   </aside>
 </section>
 
@@ -435,14 +512,19 @@
     A pipeline is a series of tasks - clone the code, build an image, deploy
     it - and every task runs as a pod in the cluster, like any other workload.
     OpenShift Pipelines is based on the Tekton project. A commit can start it
-    automatically; you'll see that in Part 5.
+    automatically; you'll see that in Part 6.
+
+    Last concept slide: press RIGHT to go to the demo.
   </aside>
 </section>
 
-<!-- Today's app -->
+</section>
+
+<!-- ================================================================ DEMO
+     Demo intro: the picture of what we'll build. Switch to the browser after this. -->
 <section>
-  <h2>Today's application</h2>
-  <p class="subheading">Every box is a word from the last ten slides</p>
+  <h2>Live demo: today's application</h2>
+  <p class="subheading">A guestbook and its database - built live, mostly in the web console</p>
   <svg class="diagram" viewBox="0 0 1600 640" style="max-width:1600px" aria-label="Guestbook architecture">
       <rect class="dg-box" x="10" y="10" width="1580" height="620" rx="16"/>
       <text class="dg-label left" x="36" y="46">PROJECT DEMO-INTRO</text>
@@ -487,26 +569,21 @@
       <text class="dg-label" x="1470" y="560" style="text-anchor:start">PVC</text>
     </svg>
   <aside class="notes">
-    This is what we'll build in the next 30 minutes. Top row: code in Gitea, a
-    pipeline turns it into an image. Bottom row: the browser reaches a Route,
-    the Route a Service, the Service the pods of the guestbook Deployment,
-    which talk to PostgreSQL - through its Service - with credentials from a
-    Secret. The database's data sits on persistent storage.
-  </aside>
-</section>
+    This is what we'll build in the next 30 minutes. Top row: the code lives
+    in Gitea, and a pipeline turns it into an image. Bottom row: the browser
+    reaches a Route, the Route a Service, the Service the pods of the
+    guestbook Deployment, which talk to PostgreSQL - through its own Service -
+    with credentials from a Secret. The database's data sits on persistent
+    storage. Each box is a word from the concept slides; we'll meet them one
+    at a time.
 
-<!-- ================================================================ DEMO -->
-<section class="divider">
-  <p class="kicker">Part two</p>
-  <h2>Live demo</h2>
-  <p class="sub">Mostly in the web console - with the CLI one click away</p>
-  <aside class="notes">
-    Switch to the browser. Browser A = user1 (Developer perspective), Browser B
-    (private window) = user2, Browser C = peter. Terminal: the web terminal in
-    the console, with the cheat-sheet:
+    Now switch to the browser. Browser A = user1 (Developer perspective),
+    Browser B (private window) = user2, Browser C = peter. Terminal: the web
+    terminal in the console, with the cheat-sheet:
     curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh
   </aside>
 </section>
+
 
 <!-- Part 1 -->
 <section>
@@ -891,11 +968,19 @@ Topology → guestbook → the Deployment name (full page) → Environment →
 <section class="no-chrome qa">
   <h1>Q&amp;A</h1>
   <div class="banner"></div>
-  <p class="followup">Questions for later, or ideas for the next session:<br><a class="followup-link" href="#">follow-up list</a></p>
-  <div class="qr"></div>
+  <p class="slides-url">The slides, commands included:<br><a href="https://redhat-na-ssa.github.io/user-group/demo1-fundamentals/" target="_blank">redhat-na-ssa.github.io/user-group/demo1-fundamentals</a></p>
+  <p class="next">See you next time: <b>Developer workspaces with OpenShift Dev Spaces</b></p>
+  <div class="qr" data-url="https://redhat-na-ssa.github.io/user-group/demo1-fundamentals/"></div>
   <aside class="notes">
-    Open the follow-up link in another tab and type questions in as they come.
-    The audience can scan the QR code to add their own.
+    Take questions. Anything we can't answer now goes into the follow-up app -
+    open it from your own bookmark in a separate tab; it is not linked from
+    the deck, so the audience's questions stay private. Answer those after the
+    session.
+
+    Close by pointing at the next session - the developer inner loop with
+    OpenShift Dev Spaces, building on today's guestbook - and at the slides
+    link: the deck, including the backup screenshots and the commands on
+    every demo slide, stays online for anyone who wants to repeat the steps.
   </aside>
 </section>
 
@@ -904,7 +989,6 @@ Topology → guestbook → the Deployment name (full page) → Environment →
 <script src="../reveal/plugin/notes.js"></script>
 <script src="../reveal/plugin/highlight.js"></script>
 <script src="../lib/qrcode.js"></script>
-<script src="../config.js"></script>
 <script src="../common/deck.js"></script>
 <script>Deck.init();</script>
 </body>

@@ -1,7 +1,7 @@
 # Publish the slide decks to GitHub Pages: the same site the faa-demo
 # slides image serves (reveal.js, fonts and QR code from npm, the shared
-# theme from common/deck/, one directory per deck). The deck list and the
-# follow-up URL come from faa-demo/playbook.yml and common/vars.yml.
+# theme from common/deck/, one directory per deck). The deck list comes
+# from faa-demo/playbook.yml. The follow-up app is private: never published here.
 name: Slides on GitHub Pages
 
 on:
@@ -50,7 +50,7 @@ jobs:
           cp -r site/. $out/
           cp -r $GITHUB_WORKSPACE/common/deck $out/common
 
-      - name: Decks, index and config
+      - name: Decks and index
         run: |
           pip install --quiet pyyaml jinja2
           python3 - <<'EOF'
@@ -58,13 +58,10 @@ jobs:
           from pathlib import Path
 
           out = Path("_site")
-          common = yaml.safe_load(open("common/vars.yml"))
           play = yaml.safe_load(open("faa-demo/playbook.yml"))[0]["vars"]
-          followup_url = f"https://followups-{common['faa_namespace']}.{common['ocp_apps_domain']}"
           env = jinja2.Environment(loader=jinja2.FileSystemLoader("faa-demo/templates"))
-          for name in ("index.html", "config.js"):
-              (out / name).write_text(env.get_template(name + ".j2").render(
-                  decks=play["decks"], followup_url=followup_url))
+          (out / "index.html").write_text(
+              env.get_template("index.html.j2").render(decks=play["decks"]))
           for deck in play["decks"]:
               src, dest = Path(deck["name"]), out / deck["name"]
               dest.mkdir()

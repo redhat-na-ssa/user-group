@@ -159,8 +159,8 @@
 .reveal section.qa { text-align: left; padding-left: 110px; }
 .qa h1 { font-size: 4em; }
 .qa .banner { width: 180px; height: 8px; background: var(--rh-red); margin: 30px 0 50px; }
-.qa .followup { font-size: 0.85em; color: var(--rh-muted); }
-.qa .followup a { font-size: 1.05em; word-break: break-all; }
+.qa .slides-url { font-size: 0.85em; color: var(--rh-muted); }
+.qa .slides-url a { font-size: 1.05em; word-break: break-all; }
 .qa .qr { position: absolute; right: 120px; top: 50%; transform: translateY(-50%); width: 340px; background: #fff; padding: 16px; }
 
 /* diagrams */
@@ -188,3 +188,22 @@
 .reveal svg .dg-ip { fill: #7fc460; font-size: 16px; text-anchor: middle; font-family: var(--r-code-font); }
 .reveal svg .dg-in { fill: var(--rh-text); font-size: 16px; letter-spacing: 0.06em; text-anchor: middle; }
 .reveal svg .dg-red { fill: var(--rh-red); }
+
+/* About this talk: one column per presenter, mission underneath */
+.about .people { display: flex; justify-content: center; gap: 56px; margin: 70px 0 60px; }
+.about .person { width: 260px; }
+.about .photo {
+  width: 190px; height: 190px; margin: 0 auto 24px; border-radius: 50%;
+  border: 3px solid var(--rh-red); background: var(--rh-bg-deep);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.about .photo svg { width: 55%; height: 55%; }
+.about img.photo { display: block; object-fit: cover; padding: 0; }
+.about .name { font-family: var(--r-heading-font); font-size: 0.9em; margin: 0; }
+.about .role { font-size: 0.62em; color: var(--rh-muted); margin: 0.3em 0 0; }
+.about .mission {
+  display: inline-block; font-family: var(--r-heading-font); font-size: 1.05em;
+  border-top: 2px solid var(--rh-red); padding-top: 0.8em; margin-top: 0.4em;
+}
+
+.qa .next { font-size: 0.8em; margin-top: 1.6em; }

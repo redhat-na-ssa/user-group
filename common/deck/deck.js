@@ -1,16 +1,15 @@
 /* Shared deck bootstrap for all demo decks.
  *
- * A deck's index.html loads reveal.js, this file and ../config.js, sets
- * <body data-deck-title="..." data-session="demo1-fundamentals"> and calls
- * Deck.init().
+ * A deck's index.html loads reveal.js, ../lib/qrcode.js and this file, sets
+ * <body data-deck-title="..."> and calls Deck.init().
  *
  * Conventions inside a deck:
  *   <section class="no-chrome">                 title/closing slide: no footer, hat or rule
  *   <div class="shot" data-src="images/x.png" data-caption="...">
  *                                                console screenshot; shows a
  *                                                placeholder until the file exists
- *   <a class="followup-link"></a>, <div class="qr"></div>
- *                                                filled from config.js (follow-up app URL)
+ *   <div class="qr" data-url="https://..."></div>
+ *                                                QR code for the URL (Q&A: the deck's public URL)
  *   <aside class="notes">...</aside>             speaker notes (press "s")
  *   <use href="#i-pod" .../>                     diagram icons from common/icons.svg
  */
@@ -49,23 +48,14 @@
     });
   }
 
-  function followups(session) {
-    const cfg = window.DECK_CONFIG || {};
-    if (!cfg.followupUrl) return;
-    const url = cfg.followupUrl.replace(/\/$/, "") + "/?session=" + encodeURIComponent(session);
-    document.querySelectorAll("a.followup-link").forEach((a) => {
-      a.href = url;
-      a.target = "_blank";
-      a.textContent = url.replace(/^https?:\/\//, "");
+  function qrcodes() {
+    if (!window.qrcode) return;
+    document.querySelectorAll(".qr[data-url]").forEach((el) => {
+      const qr = window.qrcode(0, "M");
+      qr.addData(el.dataset.url);
+      qr.make();
+      el.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
     });
-    if (window.qrcode) {
-      document.querySelectorAll(".qr").forEach((el) => {
-        const qr = window.qrcode(0, "M");
-        qr.addData(url);
-        qr.make();
-        el.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
-      });
-    }
   }
 
   // Shared diagram icons (common/icons.svg): injected once so every inline
@@ -86,10 +76,9 @@
   window.Deck = {
     init() {
       const title = document.body.dataset.deckTitle || document.title;
-      const session = document.body.dataset.session || "";
       chrome(title);
       screenshots();
-      followups(session);
+      qrcodes();
       return icons().then(() => start());
     },
   };

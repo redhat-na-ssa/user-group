@@ -90,13 +90,10 @@
         src: "{{ repo_root }}/common/deck/"
         dest: "{{ work.path }}/faa-slides/site/common/"
 
-    - name: Slides site - deck list and config
+    - name: Slides site - deck list
       ansible.builtin.template:
-        src: "{{ item.src }}"
-        dest: "{{ work.path }}/faa-slides/site/{{ item.dest }}"
-      loop:
-        - {src: templates/index.html.j2, dest: index.html}
-        - {src: templates/config.js.j2, dest: config.js}
+        src: templates/index.html.j2
+        dest: "{{ work.path }}/faa-slides/site/index.html"
 
     - name: Slides site - deck directories
       ansible.builtin.file:
