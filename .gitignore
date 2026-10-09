@@ -14,3 +14,6 @@ __pycache__/
 .venv/
 # Ansible collections installed from requirements.yml
 collections/
+
+# Local slide preview (faa-demo/preview.sh)
+.preview/

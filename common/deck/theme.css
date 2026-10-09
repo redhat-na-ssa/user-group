@@ -170,7 +170,13 @@
 .qa .banner { width: 180px; height: 8px; background: var(--rh-red); margin: 30px 0 50px; }
 .qa .slides-url { font-size: 0.85em; color: var(--rh-muted); }
 .qa .slides-url a { font-size: 1.05em; word-break: break-all; }
-.qa .qr { position: absolute; right: 120px; top: 50%; transform: translateY(-50%); width: 340px; background: #fff; padding: 16px; }
+.qa .qr-box { position: absolute; right: 120px; top: 50%; transform: translateY(-50%); width: 340px; margin: 0; text-align: center; }
+.qa .qr { background: #fff; padding: 16px; }
+.qa .qr-box figcaption {
+  margin-top: 18px; font-size: 0.6em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rh-muted);
+}
+.qa .thanks { font-family: var(--r-heading-font); font-size: 1.05em; margin: 0 0 0.3em; }
+.qa ul.discuss { font-size: 0.85em; margin: 0 0 1.4em; }
 
 /* diagrams */
 .reveal svg text { font-family: var(--r-main-font); }
@@ -215,4 +221,3 @@
   border-top: 2px solid var(--rh-red); padding-top: 0.8em; margin-top: 0.4em;
 }
 
-.qa .next { font-size: 0.8em; margin-top: 1.6em; }
