@@ -38,7 +38,7 @@ oc get secret postgresql -o jsonpath='{.data}'     # keys: database-user, -passw
 oc get pods -o wide                                # the database pod, and its node
 oc logs deployment/postgresql --tail=20
 oc rsh deployment/postgresql psql -c '\l'          # inside the running container
-oc apply -f hello-pod.yaml
+oc create -f hello-pod.yaml
 oc get pod hello -o wide
 oc exec hello -- ps -ef
 oc exec hello -- id
@@ -59,7 +59,7 @@ oc get pods -o wide                                # ...with a new IP; the Servi
 #   Build option:    Pipelines        Resource type: Deployment, Create a route
 # Repo in the browser: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook
 # ...or as code instead of the form (also the catch-up if the form went wrong):
-sed "s|\${GIT_REPO}|$GIT_REPO|g" guestbook-app.yaml | oc apply -f -   # ImageStream, Pipeline, Deployment, Service, Route
+sed "s|\${GIT_REPO}|$GIT_REPO|g" guestbook-app.yaml | oc create -f -   # ImageStream, Pipeline, Deployment, Service, Route
 oc create -f guestbook-pipelinerun.yaml            # first build (create, not apply)
 # Either way:
 oc get pipeline guestbook -o yaml                  # the pipeline definition
@@ -79,7 +79,7 @@ oc get endpointslices -l kubernetes.io/service-name=guestbook
 oc patch route/guestbook --patch-file=guestbook-route-roundrobin.patch.yaml
 for i in 1 2 3 4 5 6; do curl -ks https://$(oc get route guestbook -o jsonpath='{.spec.host}')/healthz; done
 oc set resources deployment/guestbook --requests=cpu=50m,memory=320Mi --limits=memory=512Mi   # the HPA needs a CPU request
-oc apply -f guestbook-hpa.yaml                     # 2-6 pods at 50% CPU (or Actions -> Add HorizontalPodAutoscaler)
+oc apply -f guestbook-hpa.yaml                     # apply, not create: updates the HPA the console just made (2-6 pods, 50% CPU)
 ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/   # laptop; keep -c at 10
 oc get hpa guestbook -w                            # second terminal: 2 -> 6 pods, back to 2 a minute after
 
@@ -92,15 +92,27 @@ oc auth can-i patch deployments/scale -n demo-intro --as=user2   # admin only: n
 oc auth can-i get secrets -n demo-intro --as=user2               # admin only: no
 
 # ---------------------------------------------------------------- 6 - A commit becomes a new version
-oc apply -f guestbook-eventlistener.yaml           # the listener Gitea's webhook calls
+oc create -f guestbook-eventlistener.yaml          # the listener Gitea's webhook calls
 oc get eventlistener,pods -l eventlistener=guestbook
 oc get pipelineruns -w                             # after committing in Gitea
 oc rollout status deployment/guestbook
-oc rollout history deployment/guestbook
+oc rollout history deployment/guestbook            # one revision per change; CHANGE-CAUSE stays <none>
+R=$(oc get deployment guestbook -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')   # newest revision
+diff <(oc rollout history deployment/guestbook --revision=$((R-1))) <(oc rollout history deployment/guestbook --revision=$R)
+#   -> only the image digest differs: this revision came from a build
 
 # ---------------------------------------------------------------- 7 - Configuration and rollback
 oc set env deployment/guestbook APP_COLOR='#0066cc' APP_TITLE='Guestbook - config change'
+#   APP_COLOR takes CSS colour names too - let the audience pick one (all readable with the white title):
+#   navy  purple  teal  darkgreen  crimson  darkorange  steelblue  indigo  black
+#   e.g. oc set env deployment/guestbook APP_COLOR=purple APP_TITLE='Guestbook - colour by Sam'
+#   (a misspelt name is ignored: no banner colour, title vanishes - check the spelling)
 oc set env deployment/guestbook --list
-oc rollout history deployment/guestbook
-oc rollout undo deployment/guestbook
-oc rollout restart deployment/guestbook            # the Deployment equivalent of "rollout latest"
+R=$(oc get deployment guestbook -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')   # newest revision
+diff <(oc rollout history deployment/guestbook --revision=$((R-1))) <(oc rollout history deployment/guestbook --revision=$R)
+#   -> same image, APP_COLOR/APP_TITLE added: a configuration change
+oc rollout undo deployment/guestbook               # back to the previous revision - nothing else needed
+
+# Not part of the demo - for anyone used to DeploymentConfigs' "oc rollout latest dc/...":
+# redeploy the same configuration (new pods, new revision) with
+#   oc rollout restart deployment/guestbook

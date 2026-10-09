@@ -2,7 +2,7 @@
 # Part 7 - Configuration change rolls out a new ReplicaSet; then roll back.
 # Runs as user1.
 #
-# Usage: 06-config-rollback.sh [COLOR]    (default #0066cc)
+# Usage: 07-config-rollback.sh [COLOR]    (default #0066cc)
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"
 source "${DEMO_DIR}/demo.env"

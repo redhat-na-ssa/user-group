@@ -47,4 +47,14 @@ for d in decks:
 EOF
 
 echo "Slides: http://localhost:${PORT}/   (Ctrl-C to stop)"
-exec "${REPO}/.venv/bin/python" -m http.server "${PORT}" --bind 127.0.0.1 --directory "${OUT}"
+# Like "python -m http.server", but tells the browser not to cache: a normal
+# refresh then always shows the latest edit (no forced reload needed)
+cd "${OUT}"
+exec "${REPO}/.venv/bin/python" - "${PORT}" <<'PY'
+import http.server, sys
+class NoCache(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), NoCache).serve_forever()
+PY

@@ -39,7 +39,7 @@ cd demo1-fundamentals
 | **Slides** | – | `https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo1-fundamentals/`, press **S** for the speaker view |
 | **Web terminal** (in A) | `user1` | `>_` icon: `curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh && source cheatsheet.sh` |
 
-Increase the browser zoom to 125–150%. Keep `manifests/hello-pod.yaml` and `manifests/guestbook-eventlistener.yaml` open in an editor, ready to copy.
+Increase the browser zoom to 125–150%. Keep `manifests/hello-pod.yaml` open in an editor, ready to paste into Import YAML (Part 2).
 
 ---
 
@@ -217,14 +217,28 @@ Talking points: roles are standard (`admin`, `edit`, `view`) and bound per proje
 
 **Point to make:** a commit becomes a rolling update, with no tickets and no manual redeploy.
 
-1. **Give the pipeline an ear: the EventListener.** **+Add → Import YAML**, paste `manifests/guestbook-eventlistener.yaml` → **Create**. `el-guestbook` appears in Topology. *"This is the endpoint Gitea calls on every push. It checks the webhook's secret and starts our pipeline. It's part of OpenShift Pipelines (Tekton Triggers), and it's just another Deployment."* Wait until its ring is blue (about 15 seconds).
+1. **Give the pipeline an ear: the EventListener.** In the terminal: `oc create -f guestbook-eventlistener.yaml` (from `manifests/`). `el-guestbook` appears in Topology. *"This is the endpoint Gitea calls on every push. It checks the webhook's secret and starts our pipeline. It's part of OpenShift Pipelines (Tekton Triggers), and it's just another Deployment."* Wait until its ring is blue (about 15 seconds).
    (Gitea's webhook, and the template the listener runs, were staged beforehand. In Gitea, **Settings → Webhooks** shows where the push goes.)
 2. In Gitea: open `app.py` → **Edit** (the pencil icon) → change `VERSION = "1.0"` to `VERSION = "2.0"` → commit to `main`.
 3. **Pipelines**: a new PipelineRun has **started by itself**: Gitea's webhook called `el-guestbook`, which started the run. Open it: clone → build → deploy again.
 4. Watch Topology while the build finishes: new pods come up, and old ones drain only after the new ones pass the readiness check from Part 4.
 5. Refresh the app: the badge reads **v2.0**, and the guestbook entries are all still there, because the data is in PostgreSQL.
+6. *What changed?* In the terminal: `oc rollout history deployment/guestbook` lists one revision per change, but `CHANGE-CAUSE` stays `<none>`: Deployments don't record why. Diff the newest two revisions (both lines are in `cheat 6`): the only difference is the **image digest**. *"A new digest means a build triggered this rollout; the reason itself is the commit message in Git."*
 
 If the pipeline doesn't start within about 10 seconds, check that `el-guestbook` is running (blue ring). Otherwise go to **Pipelines → guestbook → Actions → Start** (the defaults build `main`), and check Gitea → repo **Settings → Webhooks → Recent deliveries** afterwards.
+
+*If someone asks "can't the console do this?"* - yes: **Pipelines → guestbook → Actions → Add Trigger**. It builds a simpler trigger than ours:
+
+| | Add Trigger dialog | `guestbook-eventlistener.yaml` |
+|---|---|---|
+| Git provider | GitHub, GitLab, Bitbucket - no Gitea type; you'd pick **GitHub push** (Gitea sends GitHub-style payloads) | Gitea, through the GitHub-compatible check |
+| Webhook secret check | None: anyone who can reach its Route can start a build | Rejects calls without the shared secret |
+| Branch filter | None: every push builds | `main` only |
+| Commit to build | Type `$(tt.params.git-revision)` into GIT_REVISION yourself | Wired in |
+| Listener name | Generated - the pre-staged Gitea webhook (aimed at `el-guestbook`) wouldn't find it | `guestbook`, matching the webhook |
+| Build workspace | Reuses the first run's PVC for every run | A fresh volume per run |
+
+*"The console can make a quick trigger, but not a safe one. That's why the real one is a file."*
 
 *Catch-up:* `steps/06-new-version.sh` (creates the EventListener if it's missing, commits through the Gitea API, then waits for the pipeline and the rollout)
 
@@ -236,8 +250,7 @@ If the pipeline doesn't start within about 10 seconds, check that `el-guestbook`
 
 1. Topology → guestbook → the Deployment name (full page) → **Environment** → **Add more**: `APP_COLOR` = `#0066cc`, `APP_TITLE` = `Guestbook - config change` → **Save**.
 2. Refresh the app: the banner is blue. A config change is a rollout too, with no rebuild.
-3. **ReplicaSets** tab: one ReplicaSet per revision.
-4. Roll back, in the web terminal:
+3. *"The Deployment keeps its previous versions - that's what we compared in Part 6 - so going back is one command."* Roll back, in the terminal:
    ```bash
    oc rollout undo deployment/guestbook
    ```

@@ -726,7 +726,7 @@ oc get deployment,service,secret,pvc \
       <div>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc rsh deployment/postgresql psql -c '\l'
-oc apply -f hello-pod.yaml
+oc create -f hello-pod.yaml
 oc exec hello -- getent hosts postgresql
 oc delete pod hello
 oc delete pod -l app=postgresql
@@ -759,12 +759,28 @@ Topology → postgresql → the pod. Details: pod IP and Node (tie back to
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Pod details</h3>
-    <div class="shot" data-src="images/demo1-pods-details.webp" data-caption="Database pod details (IP, node)"></div>
+    <span class="backup-tag">Backup</span><h3>The database pod: its own IP, on a node in the cluster</h3>
+    <div class="shot" data-src="images/demo1-pods-details.webp" data-caption="Pod details: the pod's own IP (Pod IP) and the worker it runs on (Node)"></div>
+    <aside class="notes">
+      The database pod's Details tab - just two fields matter here. Node: the
+      pod is running on one of the cluster's workers (tie back to the Cluster
+      and Node slides) - the scheduler picked it, we didn't. Pod IP: every pod
+      gets its own address, and a new one each time it's replaced - which is
+      why, in a minute, other pods will reach it by its Service name instead.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Pod terminal</h3>
-    <div class="shot" data-src="images/demo1-pods-terminal.webp" data-caption="Pod Terminal tab running psql / id"></div>
+    <span class="backup-tag">Backup</span><h3>Inside the running container: PID 1 is the database</h3>
+    <div class="shot" data-src="images/demo1-pods-terminal.webp" data-caption="The pod's Terminal tab: ps axf shows postgres as PID 1, its own worker processes, and the shell we just opened"></div>
+    <aside class="notes">
+      The Terminal tab opens a shell inside the running container - no SSH, no
+      login to a server. ps axf shows what a container really is: PID 1 is
+      postgres itself, the application, not an operating system's init or
+      systemd. The other postgres lines are its own worker processes, and the
+      sh / ps at the top is the shell we just opened, living alongside them.
+      When PID 1 exits, the container is done - which is exactly what the
+      Deployment watches for.
+    </aside>
   </section>
 </section>
 
@@ -818,16 +834,57 @@ Git Repo URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdem
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Import from Git</h3>
-    <div class="shot" data-src="images/demo1-source-import-from-git.webp" data-caption="Import from Git form (Python, guestbook, Pipelines)"></div>
+    <span class="backup-tag">Backup</span><h3>Import from Git: a Git URL, a name - and build with a pipeline</h3>
+    <!-- the form, top and scrolled down, cropped to the form column (800x971
+         each); max-width keeps the pair within the slide's height -->
+    <div class="shot-pair" style="--a: 1fr; --b: 1fr; max-width: 1350px">
+      <figure><div class="shot" data-src="images/demo1-source-import-from-git.webp" data-caption="Import from Git, top: the Gitea repo URL is validated and the Python builder detected"></div><figcaption>1 · Git URL → validated, Python detected</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo1-source-import-from-git-2.webp" data-caption="Import from Git, scrolled down: Application and Name guestbook, Build using pipelines, Deployment"></div><figcaption>2 · Name guestbook · Build using pipelines · Deployment</figcaption></figure>
+    </div>
+    <aside class="notes">
+      All the developer brings is a Git URL - the same address as the Gitea
+      page, plus .git. The console reads the repository, sees a Python app
+      (requirements.txt) and recommends the Python builder image: no
+      Dockerfile, nobody writing build instructions.
+      Right: further down the form. Application guestbook, Name guestbook -
+      it must be exactly that, the push trigger in Part 6 uses it - Build
+      option "Build using pipelines" (it picks the s2i-python-deployment
+      pipeline template), resource type Deployment, and Create a route
+      (below). Then Create.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>PipelineRun</h3>
-    <div class="shot" data-src="images/demo1-source-pipelinerun.webp" data-caption="PipelineRun graph: fetch-repository → build → deploy"></div>
+    <span class="backup-tag">Backup</span><h3>The pipeline the form created: fetch → build → deploy</h3>
+    <div class="shot" data-src="images/demo1-source-pipelinerun.webp" data-caption="Pipelines → guestbook: three tasks - fetch-repository (git-clone), build (s2i-python), deploy (openshift-client)"></div>
+    <aside class="notes">
+      Import from Git didn't just build once - it created a reusable Pipeline
+      called guestbook. Three tasks: fetch-repository clones the code from
+      Gitea, build turns it into a container image with the Python builder
+      (no Dockerfile), deploy rolls the new image out to the Deployment. Each
+      task runs as its own pod on the cluster, like any other workload.
+      Every run of this pipeline is a PipelineRun (the PipelineRuns tab) - the
+      first one started as soon as we pressed Create.
+      Spoiler for Part 6: the TriggerTemplate on the right is what will start
+      this pipeline when someone pushes to Git.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Environment from the Secret</h3>
-    <div class="shot" data-src="images/demo1-source-environment.webp" data-caption="Deployment → Environment tab, one row mapped"></div>
+    <span class="backup-tag">Backup</span><h3>The database credentials: three variables, read from one Secret</h3>
+    <div class="shot" data-src="images/demo1-source-environment.webp" data-caption="Deployment → Environment: POSTGRESQL_USER, _PASSWORD and _DATABASE, each taken from a key in the Secret postgresql"></div>
+    <aside class="notes">
+      The guestbook Deployment's Environment tab after the credentials patch.
+      Each row: on the left the name the app reads (POSTGRESQL_USER...), on
+      the right where the value comes from - the Secret postgresql that the
+      catalog template created in Part 1, and the key inside it
+      (database-user...). The names and the keys don't have to match. The
+      password is never typed or shown; the pod gets it when it starts.
+      Live, we fill in one row here to show the idea, then apply all three as
+      code (oc patch with guestbook-db-env.patch.yaml) - this is the result.
+      If asked about the section below ("All values from ... envFrom"): it
+      imports every key of a Secret at once, but uses the key names as
+      variable names - database-user isn't what the app expects, so we map
+      them one by one.
+    </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>The guestbook v1.0 - at its Route, talking to the database</h3>
@@ -909,21 +966,66 @@ Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Health checks</h3>
-    <div class="shot" data-src="images/demo1-scale-health-checks.webp" data-caption="Add Health Checks form"></div>
-  </section>
-  <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Three replicas</h3>
-    <div class="shot" data-src="images/demo1-scale-replicas.webp" data-caption="Deployment details scaled to 3 pods"></div>
-  </section>
-  <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Autoscaling under load: 2 → 6 pods</h3>
-    <div class="shot" data-src="images/demo1-scale-hpa.webp" data-caption="Topology (or oc get hpa -w) while ab runs: CPU far above the 50% target, six guestbook pods"></div>
+    <span class="backup-tag">Backup</span><h3>Health checks: readiness and liveness</h3>
+    <!-- text instead of a screenshot: the Add Health Checks form is too long
+         to read on a slide -->
+<pre class="big-code"><code class="language-bash">oc set probe deployment/guestbook --readiness \
+  --get-url=http://:8080/readyz --period-seconds=5
+
+oc set probe deployment/guestbook --liveness \
+  --get-url=http://:8080/healthz --initial-delay-seconds=10</code></pre>
     <aside class="notes">
-      Backup for the autoscaling step: under ab load the HorizontalPodAutoscaler
-      sees CPU far above its 50% target and grows the Deployment from 2 to 6
-      pods within about 30 seconds; a minute after the load stops it is back
-      to 2. Nobody touched the replica count - the autoscaler owns it now.
+      Two questions OpenShift now asks every guestbook pod. Readiness
+      (/readyz, every 5 s): can you take traffic - the app answers yes only
+      once it can reach the database; until then the Service sends it no
+      requests. Liveness (/healthz, every 10 s, starting after 10 s): are you
+      still alive - after 3 failures in a row the container is restarted.
+      Defaults not on the slide: 3 failures in a row count as failed, each
+      check times out after 1 s.
+      In the console these are the Readiness and Liveness sections of
+      Actions → Add Health Checks (path /readyz for readiness, /healthz for
+      liveness, port 8080). Adding them changes the pod template, so it's
+      another rollout.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Scaling by hand: one click, three pods</h3>
+    <div class="shot shot-zoom" data-src="images/demo1-scale-replicas.webp" data-caption="Deployment details: the pod ring at 3 Pods, with the up and down arrows that change the replica count"></div>
+    <aside class="notes">
+      The guestbook Deployment's Details tab after pressing the up arrow
+      twice: 3 pods. The arrows change one number - replicas - and the
+      Deployment makes it true, starting pods (on different workers) until
+      the ring is full. The Service now spreads requests over all three.
+      As code: oc scale deployment/guestbook --replicas=3.
+      Once the autoscaler is added later in this part, these arrows
+      disappear and the ring says "Autoscaled to N Pods": the autoscaler owns
+      the number from then on.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Three pods, three different workers</h3>
+    <div class="shot" data-src="images/demo1-scale-pods-nodes.webp" data-caption="Deployment → Pods: the three guestbook pods, all Running and Ready, on ocpnode3, ocpnode4 and ocpnode1"></div>
+    <aside class="notes">
+      The Deployment's Pods tab right after scaling (Node column added with
+      the column picker). Three pods, each with its own name, all Running and
+      Ready - one created a couple of minutes ago by the scale-up. The Node
+      column is the point: the scheduler put each pod on a different worker,
+      so one machine failing doesn't take the app down. Same picture as the
+      Cluster slide at the start.
+      As code: oc get pods -l deployment=guestbook -o wide
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Autoscaling under load: 2 → 6 pods, and back to 2</h3>
+    <div class="shot shot-zoom" data-src="images/demo1-scale-hpa.webp" data-caption="oc get hpa guestbook -w while ab runs: CPU jumps to 4448% of the target, replicas go from 2 to 6; a minute after the load stops, back to 2"></div>
+    <aside class="notes">
+      oc get hpa guestbook -w during the ab run. Read it top to bottom: idle
+      at 6-8% of the CPU target with 2 pods; ab starts and CPU jumps to 4448%
+      of the target (each pod using far more than its 50m request); the
+      autoscaler grows the Deployment to 6 pods (the maximum); as the load is
+      spread and then stops, CPU falls back to single digits; a minute later
+      (the scale-down window in guestbook-hpa.yaml) it's back to 2. Nobody
+      touched the replica count - the autoscaler owns it now.
     </aside>
   </section>
 </section>
@@ -977,10 +1079,6 @@ oc auth can-i get secrets \
       platform team, but aren't today's topic.
     </aside>
   </section>
-  <section class="backup">
-    <span class="backup-tag">Backup</span><h3>user2: read-only</h3>
-    <div class="shot" data-src="images/demo1-rbac-user2.webp" data-caption="Topology or Secrets as user2"></div>
-  </section>
 </section>
 
 <!-- Part 6 -->
@@ -990,23 +1088,23 @@ oc auth can-i get secrets \
     <p class="subheading">No tickets, no manual redeploy</p>
     <div class="steps">
       <ol>
-        <li><b>+Add → Import YAML</b>: the EventListener</li>
+        <li>Terminal: create the <b>EventListener</b></li>
         <li>Gitea: <code>VERSION = "2.0"</code> → commit</li>
         <li><b>Pipelines</b>: a run started by itself</li>
         <li>Refresh: <b>v2.0</b> - the data is still there</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">oc apply -f guestbook-eventlistener.yaml
+<pre><code class="language-bash">oc create -f guestbook-eventlistener.yaml
 git commit -am "Release v2.0" &amp;&amp; git push
 oc get pipelineruns -w
 oc rollout status deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-First the listener: +Add → Import YAML, paste
-      manifests/guestbook-eventlistener.yaml, Create. el-guestbook appears in
-      Topology: "the endpoint Gitea calls on every push - it checks the
+First the listener, in the terminal:
+      oc create -f guestbook-eventlistener.yaml
+      el-guestbook appears in Topology: "the endpoint Gitea calls on every push - it checks the
       webhook secret and starts our pipeline. Part of OpenShift Pipelines
       (Tekton Triggers); just another Deployment." Wait for the blue ring.
       In Gitea (ocpdemo/guestbook): app.py → Edit → VERSION = "2.0" → commit to
@@ -1014,26 +1112,70 @@ First the listener: +Add → Import YAML, paste
       own - Gitea called el-guestbook, which started the run.
       Watch Topology: new pods only take traffic after the readiness check
       from Part 4 passes. Refresh: v2.0, all entries still there.
+      What changed? oc rollout history deployment/guestbook - one revision per
+      change, CHANGE-CAUSE <none> (Deployments don't record why). Diff the
+      newest two revisions (cheat 6): only the image digest differs - "a new
+      digest means a build caused this rollout; the why is the commit message
+      in Git".
       Fallback if nothing starts in ~10 s: Pipelines → guestbook → Actions →
       Start. Afterwards check Gitea → Settings → Webhooks → Recent deliveries.
       Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>EventListener in Topology</h3>
-    <div class="shot" data-src="images/demo1-commit-eventlistener.webp" data-caption="Topology with el-guestbook after Import YAML"></div>
+    <span class="backup-tag">Backup</span><h3>The EventListener: an ear for Git pushes</h3>
+    <div class="shot shot-zoom" data-src="images/demo1-commit-eventlistener.webp" data-caption="Topology after oc create -f guestbook-eventlistener.yaml: el-guestbook running in its own Triggers group, next to postgresql and guestbook"></div>
+    <aside class="notes">
+      Right after oc create -f guestbook-eventlistener.yaml: el-guestbook is
+      running (dark blue ring). It's the endpoint Gitea calls on every push -
+      it checks the webhook's secret, keeps only pushes to main, and starts
+      the guestbook pipeline. It's part of OpenShift Pipelines (Tekton
+      Triggers) and, as you can see, just another Deployment with a pod.
+      Topology puts it in its own "Triggers" group: it belongs to the
+      pipeline machinery, not to the app. The guestbook itself (left) is the
+      app we built - next, a commit in Gitea gives it a new version.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Commit in Gitea</h3>
-    <div class="shot" data-src="images/demo1-commit-gitea-edit.webp" data-caption="Gitea web editor: VERSION = 2.0"></div>
+    <span class="backup-tag">Backup</span><h3>The new version: one line changed in Git</h3>
+    <div class="shot" data-src="images/demo1-commit-gitea-diff.webp" data-caption="The commit in Gitea (ocpdemo/guestbook, main): one changed line in app.py - VERSION &quot;1.0&quot; becomes &quot;2.0&quot;"></div>
+    <aside class="notes">
+      The whole "release": one line in app.py, VERSION = "1.0" → "2.0" (red
+      out, green in), edited in Gitea's web editor (the pencil icon) and
+      committed to main - commit message, author and commit ID at the top.
+      No ticket, no build request, no deploy step - the commit is the only
+      thing a person does. Gitea's webhook tells el-guestbook about the push,
+      and the pipeline takes it from there: clone, build a new image, roll it
+      out. The next slides show that run and the result.
+      In a real team this would be a pull request with a review - the
+      trigger is the same.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Triggered PipelineRun</h3>
-    <div class="shot" data-src="images/demo1-commit-pipelinerun.webp" data-caption="PipelineRun guestbook-push-… started by the webhook"></div>
+    <span class="backup-tag">Backup</span><h3>Started by the push: the pipeline built v2.0 by itself</h3>
+    <div class="shot shot-zoom" data-src="images/demo1-commit-pipelinerun.webp" data-caption="PipelineRun guestbook-push-wb4f4: fetch-repository, build and deploy all green - Succeeded"></div>
+    <aside class="notes">
+      The run nobody started by hand. Its name, guestbook-push-..., comes
+      from the TriggerTemplate: Gitea's webhook called el-guestbook, which
+      started it with the pushed commit. Same three tasks as the first build:
+      fetch the new code, build a new image, deploy it - all green. Then the
+      Deployment rolls out the new pods, and they only get traffic once
+      their readiness check passes.
+      If nothing had started: Pipelines → guestbook → Actions → Start, and
+      check Gitea → Settings → Webhooks → Recent deliveries afterwards.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>The guestbook, v2.0</h3>
-    <div class="shot" data-src="images/demo1-commit-app-v2.webp" data-caption="Guestbook page v2.0"></div>
+    <span class="backup-tag">Backup</span><h3>v2.0 is live - and the data is still there</h3>
+    <div class="shot" data-src="images/demo1-commit-app-v2.webp" data-caption="The guestbook after the push: badge v2.0, served by a new pod; the entries written earlier by the v1.0 pod are all still there"></div>
+    <aside class="notes">
+      The result of one commit: the badge says v2.0, and "served by pod"
+      shows a new pod name - the rollout replaced the old pods. The entries
+      below were written before the change, by the v1.0 pod (see the right
+      column), and they're all still there: the data lives in PostgreSQL, on
+      its own storage, not in the app's pods. Nobody built, copied or
+      deployed anything by hand - Git, the webhook and the pipeline did it.
+    </aside>
   </section>
 </section>
 
@@ -1046,23 +1188,24 @@ First the listener: +Add → Import YAML, paste
       <ol>
         <li>Environment: <code>APP_COLOR</code>, <code>APP_TITLE</code></li>
         <li>Refresh - blue banner, no rebuild</li>
-        <li>ReplicaSets: one per revision</li>
-        <li>Roll back</li>
+        <li>The old version is still there</li>
+        <li>Roll back - red again</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc set env deployment/guestbook \
   APP_COLOR='#0066cc' \
   APP_TITLE='Guestbook - config change'
-oc rollout history deployment/guestbook
 oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
 Topology → guestbook → the Deployment name (full page) → Environment →
       Add more: APP_COLOR = #0066cc, APP_TITLE = Guestbook - config change →
-      Save. Refresh: blue. ReplicaSets tab: one per revision.
-      Roll back in the web terminal: oc rollout undo deployment/guestbook.
+      Save. Refresh: blue - a configuration change is a rollout too, no
+      rebuild. "The Deployment keeps its previous versions - that's what we
+      compared in Part 6 - so going back is one command."
+      Roll back in the terminal: oc rollout undo deployment/guestbook.
       Refresh: red v2.0 again.
       (Env vars roll out automatically; a ConfigMap change would not - that's
       one reason we use env here.)
@@ -1070,12 +1213,17 @@ Topology → guestbook → the Deployment name (full page) → Environment →
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Blue banner</h3>
-    <div class="shot" data-src="images/demo1-config-banner.webp" data-caption="Guestbook with APP_COLOR #0066cc"></div>
-  </section>
-  <section class="backup">
-    <span class="backup-tag">Backup</span><h3>ReplicaSets</h3>
-    <div class="shot" data-src="images/demo1-config-replicasets.webp" data-caption="Deployment → ReplicaSets tab"></div>
+    <span class="backup-tag">Backup</span><h3>A configuration change: new colour and title, same v2.0 code</h3>
+    <div class="shot" data-src="images/demo1-config-banner.webp" data-caption="The guestbook after setting APP_COLOR=#0066cc and APP_TITLE: blue banner, new title, still v2.0, served by a new pod - the entries untouched"></div>
+    <aside class="notes">
+      Two environment variables changed on the Deployment - APP_COLOR=#0066cc
+      and APP_TITLE="Guestbook - config change" - and nothing else. The badge
+      still says v2.0: same image, no rebuild. "served by pod" shows a new pod
+      name: changing the configuration rolled out new pods, which read the new
+      values when they start. The entries are untouched.
+      Then one command goes back: oc rollout undo deployment/guestbook - the
+      banner is red again and the title back to OpenShift Guestbook.
+    </aside>
   </section>
 </section>
 

@@ -60,7 +60,7 @@ app/                 guestbook source; setup/reset push it to Gitea (VERSION in 
 manifests/
   postgresql-template.yaml  the "PostgreSQL 15" catalog template (applied by setup, used in Part 1)
   pipeline-trigger.yaml  TriggerBinding, TriggerTemplate (applied by setup)
-  guestbook-eventlistener.yaml  Part 6: the EventListener, pasted into Import YAML
+  guestbook-eventlistener.yaml  Part 6: the EventListener (oc create -f)
   hello-pod.yaml         pasted into the console in Part 2
   guestbook-db-env.patch.yaml  Part 3: DB credentials as code (POSTGRESQL_* <- secret postgresql, database-* keys)
   guestbook-route-roundrobin.patch.yaml  Part 4: route round robin, no sticky cookie

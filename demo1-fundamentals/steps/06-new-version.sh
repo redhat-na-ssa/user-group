@@ -4,7 +4,7 @@
 # web editor). The webhook starts the pipeline, which builds
 # a new image; the image change rolls out the Deployment. Runs as user1.
 #
-# Usage: 05-new-version.sh [VERSION]    (default 2.0)
+# Usage: 06-new-version.sh [VERSION]    (default 2.0)
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"
 source "${DEMO_DIR}/demo.env"
