@@ -36,29 +36,52 @@
   </aside>
 </section>
 
-<!-- ================================================================ ABOUT THIS TALK -->
+<!-- ================================================================ WHO ARE WE -->
 <section class="about">
-  <h2>Welcome to the Red Hat User Group for FAA</h2>
-  <!-- One column per Red Hat attendee: replace the placeholder with
+  <h2>Who are we</h2>
+  <!-- One column per Red Hat presenter: replace the placeholder with
        <img class="photo" src="images/people-<name>.jpg" alt=""> once we have
-       permission, and drop unused columns (the row re-centres). -->
+       permission. Add or drop columns freely (the row re-centres). -->
   <div class="people">
     <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">Chrissy Cianci</p><p class="role">Customer Success Executive</p></div>
-    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">Peter Larsen</p><p class="role">Ass. Principal Customer Success Architect"</p></div>
-    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">[Name]</p><p class="role">[Title]</p></div>
-    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">[Name]</p><p class="role">[Title]</p></div>
-    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">[Name]</p><p class="role">[Title]</p></div>
+    <div class="person"><div class="photo"><svg viewBox="0 0 100 100"><use href="#i-user" class="white"/></svg></div><p class="name">Peter Larsen</p><p class="role">Ass. Principal Customer Success Architect</p></div>
   </div>
   <p class="mission">Enable FAA to get more value out of Red Hat technologies</p>
   <aside class="notes">
-    Quick round of introductions - each Red Hat person on the call says their
-    name and role in one sentence. Keep it to about a minute in total.
+    Quick introductions - Chrissy and Peter each say their name and role in
+    one sentence. Keep it to about a minute in total.
 
     Then the mission: this user group exists to help FAA get more value out of
     the Red Hat technology it already has. Each session is one topic, about
     half an hour, mostly live demo rather than slides. Today is the
     foundation - OpenShift itself - and later sessions build on it. Tell us
     what you'd like to see next.
+  </aside>
+</section>
+
+<!-- ================================================================ AGENDA
+     The wrap-up slide ("What we just did") says the same in OpenShift terms. -->
+<section>
+  <h2>What we will cover today</h2>
+  <p class="subheading">From an empty project to a running, self-updating application</p>
+  <ul>
+    <li>Run a predefined application using the service catalog (database)</li>
+    <li>A look inside a running application - logs, configurations and more</li>
+    <li>From source code to a live app using automation</li>
+    <li>Apps that repair themselves and grow on demand</li>
+    <li>Who can see and change what</li>
+    <li>A code change goes live by itself - and rolls back</li>
+  </ul>
+  <aside class="notes">
+    The plan for the next half hour, in plain words. We start with an empty
+    project and a catalog of ready-made services, and end with a web
+    application and its database that rebuild and redeploy themselves
+    whenever the code changes.
+
+    No need to know the OpenShift vocabulary yet - each word is explained
+    when it shows up on screen, and the wrap-up slide at the end lists the
+    same six points again in OpenShift terms. Most of it happens live in the
+    web console, with the command line one click away.
   </aside>
 </section>
 
@@ -696,8 +719,8 @@ Topology → postgresql → the pod. Details: pod IP and Node (tie back to
     <p class="subheading">Import from Git - with a pipeline</p>
     <div class="steps">
       <ol>
-        <li><b>+Add → Import from Git</b> - Gitea Service URL</li>
-        <li>Python 3.12 · app <b>guestbook</b> · build: <b>Pipelines</b></li>
+        <li><b>+Add → Import from Git</b> - the Gitea repo URL</li>
+        <li>Python (detected) · app <b>guestbook</b> · build: <b>Pipelines</b></li>
         <li>Watch the pipeline: fetch → build → deploy</li>
         <li>"Database unavailable" → map the <b>Secret</b></li>
       </ol>
@@ -715,10 +738,9 @@ Topology → postgresql → the pod. Details: pod IP and Node (tie back to
       </div>
     </div>
     <aside class="notes">
-Git Repo URL: http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
-      - the yellow "repository is unreachable" warning is expected: the console
-      checks from outside the cluster, the pipeline clones from inside. Choose
-      Builder Image → Python 3.12-ubi9 by hand. Application guestbook, Name
+Git Repo URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
+      (the Gitea tab's address plus .git). The console reads the repo and
+      detects Python by itself - keep the suggested builder version. Application guestbook, Name
       guestbook (must be exactly that - the push trigger uses it). Build option
       Pipelines. Resource type Deployment. Create.
       Talk through the build (~90 s): PipelineRun graph (each box is a pod on a
@@ -950,17 +972,25 @@ Topology → guestbook → the Deployment name (full page) → Environment →
 <!-- Wrap-up -->
 <section>
   <h2>What we just did</h2>
-  <p class="subheading">Every word from part one - live</p>
+  <p class="subheading">The plan from the start - in OpenShift terms</p>
   <ul>
-    <li>Catalog - a database in one form</li>
-    <li>Pod → Deployment - declared, kept true</li>
-    <li>Service &amp; Route - names inside, HTTPS outside</li>
-    <li>Pipeline - commit → image → rolling update</li>
+    <li>Catalog &amp; template - a database in one form</li>
+    <li>Pod - logs, terminal, events</li>
+    <li>Pipeline - source → image → Deployment, Service, Route</li>
+    <li>Deployment - self-healing, scaling, health checks</li>
     <li>Project &amp; RBAC - who can do what</li>
+    <li>Webhook → pipeline → rollout - and rollback</li>
   </ul>
   <aside class="notes">
-    Go back to "Today's application" if there's time and point at each box.
-    Next session: the developer inner loop with Dev Spaces.
+    The same six points as "What we will cover today", now with the names
+    you saw on screen: a template from the catalog gave us the database; we
+    looked inside its pod; a pipeline turned source code into an image and a
+    Deployment, with a Service and a Route in front; the Deployment healed
+    and scaled itself; the project and its roles decided who could do what;
+    and a commit in Git rolled out a new version, which we rolled back.
+
+    Go back to "Live demo: today's application" if there's time and point at
+    each box. Next session: the developer inner loop with Dev Spaces.
   </aside>
 </section>
 

@@ -11,7 +11,7 @@ The presenter's talk track is in **[DEMO-SCRIPT.md](DEMO-SCRIPT.md)**.
 | Developer | `user1` – `edit` role, drives the demo in the console |
 | Viewer | `user2` – `view` role |
 | Source repo (browser) | `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook` (Gitea user `demo`) |
-| Clone URL (pipelines) | `http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git`: the in-cluster Service, so pipelines never depend on the ingress certificate |
+| Clone URL (Import from Git, pipelines) | `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git`: task pods trust the route's certificate through `common/manifests/tektonconfig-git-ca.patch.yaml` (applied by `faa-demo/playbook.yml`) |
 | App URL (after Part 3) | `https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org` |
 
 ## Lifecycle
@@ -21,7 +21,7 @@ oc login -u peter https://api.homeocp.ocp4.peterlarsen.org:6443
 ./setup.sh      # one time: project, RBAC, PostgreSQL template, Gitea repo, trigger pieces
 ./verify.sh     # pre-flight: run before every presentation
 #   ... present ...
-./reset.sh      # back to the start state (removes everything created live, resets the repo to v1.0)
+./reset.sh      # back to the start state: deletes the project, then re-runs setup (repo back to v1.0)
 ./teardown.sh   # delete the project and the Gitea repo
 ```
 

@@ -1,0 +1,25 @@
+# Make git in every pipeline task trust the cluster's CA bundle.
+#
+# OpenShift Pipelines mounts the trusted CA bundle (public CAs + the cluster
+# proxy's trustedCA) into every task pod as /tekton-custom-certs/ca-bundle.crt,
+# but only advertises it through SSL_CERT_DIR. That variable is for a directory
+# of hashed per-CA files: Go tools read the bundle anyway, git (libcurl +
+# OpenSSL) does not, so cloning over an ingress route fails with "unable to get
+# local issuer certificate". GIT_SSL_CAINFO points git at the same file. No CA
+# is added; the file is already there.
+#
+# Goes into the default pod template (config-defaults in openshift-pipelines),
+# so it applies to every PipelineRun/TaskRun on the cluster - including the
+# pipeline the console's Import from Git creates.
+#
+#   oc patch tektonconfig config --type=merge --patch-file=tektonconfig-git-ca.patch.yaml
+spec:
+  pipeline:
+    options:
+      configMaps:
+        config-defaults:
+          data:
+            default-pod-template: |
+              env:
+                - name: GIT_SSL_CAINFO
+                  value: /tekton-custom-certs/ca-bundle.crt

@@ -13,7 +13,7 @@ for f in hello-pod.yaml guestbook-app.yaml guestbook-pipelinerun.yaml guestbook-
   curl -sfO "$BASE/$f" || echo "could not download $f"
 done
 oc project demo-intro >/dev/null 2>&1
-GIT_REPO=http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
+GIT_REPO=https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
 CHEATSHEET=$(realpath "${BASH_SOURCE[0]:-cheatsheet.sh}")
 # cheat: every part from the first section header on; cheat N: part N only
 cheat() {
@@ -46,9 +46,8 @@ oc delete pod -l app=postgresql                    # comes back - it has a Deplo
 
 # ---------------------------------------------------------------- 3 - From source code
 # Console: +Add -> Import from Git
-#   Git Repo URL:    http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
-#                    ("repository is unreachable" warning is expected)
-#   Import Strategy: Builder Image -> Python, 3.12-ubi9
+#   Git Repo URL:    https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
+#   Import Strategy: detected (Builder Image -> Python) - keep the suggested version
 #   Application:     guestbook        Name: guestbook (exactly - Part 6 needs it)
 #   Build option:    Pipelines        Resource type: Deployment, Create a route
 # Repo in the browser: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook

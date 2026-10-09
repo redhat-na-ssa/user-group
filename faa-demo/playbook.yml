@@ -57,6 +57,41 @@
         password: "{{ gitea_password }}"
         force_basic_auth: true
 
+    # The console's "Import from Git" checks a Gitea repo from the browser
+    # (fetch of /api/v1/repos/...), which Gitea's CORS default blocks: the form
+    # then says "repository is unreachable". A simple GET, so this one header
+    # is enough. The Gitea operator owns the route and may revert this on a
+    # resync; re-running the playbook puts it back. Only helps for the public
+    # route URL: the browser can't resolve the in-cluster Service URL at all.
+    - name: Gitea - let the console read the API (CORS)
+      kubernetes.core.k8s:
+        state: patched
+        kind: Route
+        api_version: route.openshift.io/v1
+        name: local-gitea
+        namespace: gitea
+        definition:
+          spec:
+            httpHeaders:
+              actions:
+                response:
+                  - name: Access-Control-Allow-Origin
+                    action:
+                      type: Set
+                      set:
+                        value: "{{ ocp_console }}"
+
+    # Lets pipelines clone over the public Gitea route: git in task pods then
+    # trusts the cluster CA bundle (see the comment in the patch file).
+    - name: Pipelines - git trusts the cluster CA bundle
+      kubernetes.core.k8s:
+        state: patched
+        merge_type: merge
+        kind: TektonConfig
+        api_version: operator.tekton.dev/v1alpha1
+        name: config
+        definition: "{{ lookup('file', repo_root + '/common/manifests/tektonconfig-git-ca.patch.yaml') | from_yaml }}"
+
     # ------------------------------------------------------------ namespace
     - name: Namespace {{ faa_namespace }}
       kubernetes.core.k8s:

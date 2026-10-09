@@ -47,20 +47,11 @@ spec:
       spec:
         pipelineRef:
           name: guestbook
+        # Only the pushed commit: the repo URL, builder version and image come
+        # from the pipeline's own defaults - whatever Import from Git chose.
         params:
-          - name: APP_NAME
-            value: guestbook
-          - name: GIT_REPO
-            # in-cluster Service, not the webhook's clone_url (the public route)
-            value: http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git
           - name: GIT_REVISION
             value: $(tt.params.git-revision)
-          - name: IMAGE_NAME
-            value: image-registry.openshift-image-registry.svc:5000/demo-intro/guestbook
-          - name: PATH_CONTEXT
-            value: .
-          - name: VERSION
-            value: 3.12-ubi9
         workspaces:
           - name: workspace
             volumeClaimTemplate:

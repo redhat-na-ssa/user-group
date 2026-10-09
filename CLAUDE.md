@@ -10,14 +10,15 @@ A 5-10 minute slide deck using **reveal.js** needs to be created - this will be 
 
 One reveal.js deck per demo, at `<demo>/slides/index.html`. The site root (`faa-demo/templates/index.html.j2`) is a page that lists the decks to pick from. Time budget: aim for 30 minutes for the whole session (slides + demo) - not much less, and never more than 40; slides take no more than 10 minutes of it. If a run-through comes in well under 30, add depth to the demo (or plan to use the optional down slides) rather than leave the time empty.
 
-Horizontal flow (RIGHT arrow), 4-5 slides before the demo starts:
+Horizontal flow (RIGHT arrow), about 5 slides before the demo starts:
 1. **Title** - the demo's name, the presentation date, the Red Hat and FAA logos (no footer).
-2. **About this talk** - title "Welcome to the Red Hat User Group for FAA"; one column per Red Hat person on the call (photo once permission is given, name, title); under them the mission statement "Enable FAA to get more value out of Red Hat technologies".
-3. **Concepts covered** - one overview slide (demo 1: "What is OpenShift?"). The detailed concept slides are vertical slides under it (DOWN arrow), used only when the audience needs them; RIGHT goes straight on to the demo.
-4. **Demo steps** - an intro slide (the picture of what gets built), then one slide per demo step showing the steps taken and the commands ("The same, as code"), so it's easy to show later what was done. Console screenshots of the step go in vertical backup slides under it (see "Demo scripts").
-5. A short wrap-up, then the **Q&A** slide (last): a "Q&A" banner, a link and QR code to the deck on GitHub Pages (https://redhat-na-ssa.github.io/user-group/<demo>/), and "See you next time: <next demo>". The follow-up app is **not** linked from any deck or public page (the decks are public on GitHub Pages; the audience's questions must not be) - the presenter opens it from a bookmark.
+2. **Who are we** - one column per Red Hat presenter (photo once permission is given, name, title); under them the mission statement "Enable FAA to get more value out of Red Hat technologies".
+3. **What we will cover today** - the demo's steps in plain, non-technical words (no Kubernetes terms; those are explained during the demo). It mirrors the wrap-up slide, which says the same in product terms.
+4. **Concepts covered** - one overview slide (demo 1: "What is OpenShift?"). The detailed concept slides are vertical slides under it (DOWN arrow), used only when the audience needs them; RIGHT goes straight on to the demo.
+5. **Demo steps** - an intro slide (the picture of what gets built), then one slide per demo step showing the steps taken and the commands ("The same, as code"), so it's easy to show later what was done. Console screenshots of the step go in vertical backup slides under it (see "Demo scripts").
+6. A short wrap-up, then the **Q&A** slide (last): a "Q&A" banner, a link and QR code to the deck on GitHub Pages (https://redhat-na-ssa.github.io/user-group/<demo>/), and "See you next time: <next demo>". The follow-up app is **not** linked from any deck or public page (the decks are public on GitHub Pages; the audience's questions must not be) - the presenter opens it from a bookmark.
 
-Every slide except title and Q&A shows the demo/workshop title in the footer and a page number.
+Every slide except title and Q&A shows the demo/workshop title in the footer and a page number. The page number only appears when the mouse hovers over it (bottom right): the total includes the backup slides, which the audience shouldn't count.
 
 ### Look and content
 
@@ -48,7 +49,7 @@ Git: https://gitlab.peterlarsen.org (exists, but not trusted enough to be in the
   Demo source repos: Gitea on the cluster, installed just for demos.
     URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org (service local-gitea:3000, namespace gitea; managed by the RHPDS Gitea operator)
     User: demo / welcome1 (member of org ocpdemo; ocpdemo is an org, not a login). No user1..user10 in Gitea. Demo repos live in the ocpdemo org. Settings are in common/env.sh.
-    Pipelines clone over the in-cluster Service (http://local-gitea.gitea.svc:3000/...), not the public route: task pods don't trust the ingress CA. Gitea allows webhooks to cluster-internal addresses (ALLOWED_HOST_LIST = external,private).
+    Import from Git and the pipelines use the public route URL (https://local-gitea-gitea.apps.../ocpdemo/<repo>.git). Two cluster settings make that work, both applied by faa-demo/playbook.yml: (1) git in task pods trusts the cluster CA bundle - OpenShift Pipelines mounts it at /tekton-custom-certs/ca-bundle.crt but only advertises it via SSL_CERT_DIR (a hashed-directory lookup git ignores), so `common/manifests/tektonconfig-git-ca.patch.yaml` sets GIT_SSL_CAINFO in the TektonConfig default pod template, cluster-wide; (2) a CORS header on the Gitea route, because the console checks the repo from the browser. The in-cluster Service URL (http://local-gitea.gitea.svc:3000/...) still works for clones, but the console then shows "The Gitea repository is unreachable". Gitea allows webhooks to cluster-internal addresses (ALLOWED_HOST_LIST = external,private).
   Note: the cluster has a leftover GitLab CRD but no GitLab operator or instance - it is not an option without reinstalling.
 Container repo: quay2.peterlarsen.org
 
@@ -88,7 +89,7 @@ Demo user: user2 - has view rights to the project
 App: a guestbook (Python/Flask frontend + PostgreSQL). Every page shows the version, the serving pod and a banner colour (APP_COLOR), so new versions, load balancing and config changes are visible in the browser. A new version is a change to `VERSION` in app.py, committed in Gitea (ocpdemo/guestbook). PostgreSQL is deployed live from a project-local template (`postgresql-demo`, "PostgreSQL 15" in the Developer Catalog) - our own because the stock template and Helm chart create the deprecated DeploymentConfig; it creates a Deployment, Service, Secret `postgresql` (keys database-user/-password/-name) and PVC.
 
 Structure of the session:
-- Slides (<= 10 min): title, About this talk, "What is OpenShift?" (the "OpenShift architecture 1:1" term slides - node, pod, container, deployment, service, route, project/namespace, etc. - are vertical slides under it, optional), then the demo intro "Live demo: today's application".
+- Slides (<= 10 min): title, Who are we, What we will cover today, "What is OpenShift?" (the "OpenShift architecture 1:1" term slides - node, pod, container, deployment, service, route, project/namespace, etc. - are vertical slides under it, optional), then the demo intro "Live demo: today's application".
 - Demo order: 1 deploy PostgreSQL from the catalog, 2 pods, 3 from source code (Import from Git + pipeline), 4 self-healing and scaling, 5 projects and RBAC (deliberately not first), 6 a commit becomes a new version (the EventListener is created live here, not in setup), 7 configuration and rollback.
 - Demo: keep most of it in the OpenShift console, not the CLI. Prep work before the demo (automation) is fine and expected; the console-driven part is what the audience sees.
 

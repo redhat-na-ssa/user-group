@@ -16,7 +16,7 @@ The project isn't created during the demo; that's prep work. The demo starts fro
 | Situation | Run |
 |---|---|
 | First time, or after `./teardown.sh` (the project `demo-intro` doesn't exist) | `./setup.sh`: creates the project, RBAC (user1 edit, user2 view), the PostgreSQL template, the Gitea repo at v1.0 and the push trigger's hidden pieces (~1 min) |
-| After a rehearsal or a previous run | `./reset.sh`: removes everything the demo created and resets the Git repo to v1.0 |
+| After a rehearsal or a previous run | `./reset.sh`: deletes the project and rebuilds it with `setup.sh`, Git repo back to v1.0 (a minute or two) |
 | Always, right before presenting | `./verify.sh`: must end with "All good - ready to present Demo 1" |
 
 The slides and the follow-up app live in their own namespace, `faa-demo` (`ansible-playbook faa-demo/playbook.yml`), and are not touched by these scripts.
@@ -45,7 +45,7 @@ Increase the browser zoom to 125–150%. Keep `manifests/hello-pod.yaml` and `ma
 
 ## Slides (≤ 10 min)
 
-Going RIGHT: **title** → **About this talk** (introductions, mission) → **What is OpenShift?** → **Live demo: today's application** → the demo parts.
+Going RIGHT: **title** → **Who are we** (introductions, mission) → **What we will cover today** → **What is OpenShift?** → **Live demo: today's application** → the demo parts.
 
 The "OpenShift architecture 1:1" term slides below sit *under* "What is OpenShift?" (press DOWN). Use them only if the audience is new to the vocabulary; otherwise go RIGHT and explain each word as it appears in the demo. One idea per slide. The last column is what you point at later in the demo, so the audience sees every term again.
 
@@ -114,9 +114,8 @@ Talking points:
 
 1. Show the Gitea repo tab briefly: a plain Python app, `app.py`, `VERSION = "1.0"`.
 2. **+Add → Import from Git**:
-   - **Git Repo URL:** `http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git`. This is Gitea's in-cluster **Service** address, the same idea as the guestbook reaching `postgresql`.
-   - The console shows a yellow warning: *"The Gitea repository is unreachable"*. **That is expected.** The console checks the repo from outside the cluster, where Service names don't resolve; the pipeline runs inside the cluster, so it can clone. (Talking point: the Service concept, from the other side.)
-   - Because the console couldn't read the repo, it can't detect the language. Choose **Import Strategy → Builder Image → Python**, version **3.12-ubi9**.
+   - **Git Repo URL:** `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git` (the same address as the Gitea tab, plus `.git`).
+   - The console reads the repo and detects **Python** on its own (Import Strategy: Builder Image, Python). Keep the version it suggests.
    - **Application:** `guestbook` (the group PostgreSQL is already in). **Name:** `guestbook`. *The name must be `guestbook`: the push trigger in Part 6 starts the pipeline by that name.*
    - **Build option: Pipelines.** Resource type: **Deployment**. Keep **Create a route** checked.
    - **Create**.
@@ -237,7 +236,7 @@ Go back to the architecture picture and point at each box: you touched every one
 ## After the demo
 
 ```bash
-./reset.sh      # ready to present again: removes the database, app, pipeline and listener; resets the Git repo to v1.0
+./reset.sh      # ready to present again: deletes the project, re-runs setup, Git repo back to v1.0
 ./teardown.sh   # removes the project and the Gitea repo
 ```
 
@@ -246,8 +245,8 @@ Go back to the architecture picture and point at each box: you touched every one
 | Symptom | Fix |
 |---|---|
 | PostgreSQL isn't in the Developer Catalog | The template wasn't staged: run `./setup.sh` (or `./verify.sh` to see what's missing) |
-| The fetch-repository task fails with a TLS or certificate error | The Git URL is the public `https://local-gitea-gitea...` route. Use `http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git` |
-| Import from Git can't detect the language | Expected with the Service URL: pick the **Python** builder by hand |
+| The fetch-repository task fails with a TLS or certificate error | The TektonConfig CA patch is missing (it makes git in task pods trust the route's certificate): re-run `ansible-playbook faa-demo/playbook.yml`. Fallback: `http://local-gitea.gitea.svc:3000/ocpdemo/guestbook.git` |
+| Import from Git says "The Gitea repository is unreachable" | Expected with the in-cluster Service URL (the browser does the check). With the public URL, the Gitea route's CORS header is missing: re-run the playbook, or pick **Builder Image → Python** by hand |
 | The app shows "Database unavailable … password authentication failed" | Expected until the credentials patch in Part 3, step 5 |
 | The app shows "Database unavailable … could not translate host name" | PostgreSQL from Part 1 is missing: run `steps/01-postgresql.sh` |
 | The pipeline's build task fails on pip | The build needs outbound access to PyPI. Rerun it (**Actions → Rerun**) |
