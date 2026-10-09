@@ -79,9 +79,10 @@ The demo intro slide is the picture of today's app: **Gitea → Pipeline → ima
    - a **Service**, `postgresql:5432`, the name our app will use;
    - a **Secret**, `postgresql`, with the generated credentials (open it and reveal the values: keys `database-user`, `database-password`, `database-name`);
    - a **PersistentVolumeClaim**: 1Gi of storage that outlives the pod.
-4. *Optional:* show the template itself: *"this is what the platform team published - parameters plus objects."* On this cluster the console's **Templates** page belongs to OpenShift Virtualization and lists only VM templates, so use one of:
+4. *Optional:* show the template itself: *"this is what the platform team published - parameters plus objects."* Use one of:
    - Bookmark: `https://console-openshift-console.apps.homeocp.ocp4.peterlarsen.org/search/ns/demo-intro?kind=template.openshift.io%7Ev1%7ETemplate&q=published-by%3Dplatform-team` → **postgresql-demo** → **YAML**. That's **Search → Template** filtered on the label `published-by=platform-team`: without the filter, Search also lists all the `openshift` namespace's templates. *"Labels are how you find things - the platform team tags what it publishes."*
    - Or skip it here, and show `oc get template postgresql-demo -o yaml` in the web terminal later.
+   - *Needs the OpenShift Virtualization console plugin (`kubevirt-plugin`) disabled:* while it's enabled it takes over every Template page, including Search, and shows only VM templates. `verify.sh` checks this.
 
 Talking points:
 - Templates (and Helm charts, and operators) are how a platform team hands out approved building blocks. Everything it created is a normal object you can look at, change or delete.

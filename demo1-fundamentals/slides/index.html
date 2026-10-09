@@ -640,12 +640,12 @@ oc get deployment,service,secret,pvc \
       database-user / -password / -name), PVC (storage that outlives the pod).
       Templates, Helm charts and operators are how a platform team hands out
       approved building blocks.
-      Optional: the template itself ("parameters plus objects"). NOT the
-      Templates page - OpenShift Virtualization owns it (VM templates only).
-      Use the bookmark: Search → Template filtered on label
-      published-by=platform-team (unfiltered, Search also lists the openshift
-      templates) → postgresql-demo → YAML. Or skip and show
-      oc get template postgresql-demo -o yaml in the web terminal.
+      Optional: the template itself ("parameters plus objects"). Use the
+      bookmark: Search → Template filtered on label published-by=platform-team
+      (unfiltered, Search also lists the openshift templates) →
+      postgresql-demo → YAML. Or show oc get template postgresql-demo -o yaml
+      in the web terminal. (Needs the kubevirt console plugin disabled -
+      verify.sh checks it.)
       Secrets (left nav) shows TWO secrets: postgresql (what the database uses)
       and postgresql-demo-parameters-… - "the console saved everything I typed
       into the form, password included, and left it behind. A side effect of
@@ -656,16 +656,57 @@ oc get deployment,service,secret,pvc \
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Developer Catalog: PostgreSQL 15</h3>
-    <div class="shot" data-src="images/demo1-postgres-catalog.png" data-caption="+Add → Developer Catalog → Databases"></div>
+    <span class="backup-tag">Backup</span><h3>+Add → Database → PostgreSQL 15</h3>
+    <!-- two screenshots side by side, same height: grid columns follow
+         their aspect ratios (1642x760 and 1642x1004) -->
+    <div class="shot-pair" style="--a: 2.16fr; --b: 1.64fr">
+      <figure><div class="shot" data-src="images/demo1-postgres-add.webp" data-caption="+Add: Software Catalog → Database"></div><figcaption>1 · +Add → Database</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo1-postgres-catalog.webp" data-caption="Databases: PostgreSQL 15"></div><figcaption>2 · PostgreSQL 15 (Red Hat User Group for FAA)</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Backup for Part 1 if the console misbehaves. Left: the project's +Add
+      page - Database in the Software Catalog card is the shortcut into the
+      catalog's Databases category. Right: the Databases list. Pick
+      "PostgreSQL 15", provided by Red Hat User Group for FAA - our own
+      template, which creates a Deployment. Not the plain "PostgreSQL" from
+      Red Hat, Inc.: that older template still creates a DeploymentConfig.
+
+      Point out that the catalog offers the same database several ways
+      (templates, ephemeral variants, a Helm chart): the platform team decides
+      what shows up here, and developers pick from that menu.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Instantiate Template</h3>
-    <div class="shot" data-src="images/demo1-postgres-template-form.png" data-caption="The PostgreSQL 15 template form"></div>
+    <span class="backup-tag">Backup</span><h3>Instantiate Template: one form, four objects</h3>
+    <div class="shot" data-src="images/demo1-postgres-template-form.webp" data-caption="The PostgreSQL 15 form: service name, application, generated credentials, storage - and the Deployment, PVC, Secret and Service it creates"></div>
+    <aside class="notes">
+      The form the template produces. Left: its parameters - service name
+      postgresql (the name the app will use), application guestbook (the
+      Topology group), user and password left empty so they're generated,
+      database guestbook, 1Gi of storage, 512Mi of memory, image tag 15-el9.
+      Right: the four objects one click creates - Deployment,
+      PersistentVolumeClaim, Secret and Service.
+
+      The point: the platform team decided what a "PostgreSQL" is here; the
+      developer only fills in what's theirs to choose, and doesn't even pick
+      the password.
+    </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>PostgreSQL in Topology</h3>
-    <div class="shot" data-src="images/demo1-postgres-topology.png" data-caption="Topology with postgresql running"></div>
+    <span class="backup-tag">Backup</span><h3>Topology: the database running, inside the guestbook application</h3>
+    <div class="shot" data-src="images/demo1-postgres-topology.webp" data-caption="Topology with the postgresql Deployment (D) running in the guestbook application group"></div>
+    <aside class="notes">
+      Seconds after Create. The grey box is the application group "guestbook"
+      (the Application field of the form) - the frontend will join it in
+      Part 3. Inside it, the postgresql Deployment: the "D" badge means
+      Deployment, and the dark blue ring means its one pod is running (light
+      blue while it starts, red if it fails).
+
+      Click the circle for the side panel: the pod, the Service postgresql on
+      port 5432, and from there the Secret and the storage claim - the four
+      objects from the form. The elephant comes from the Deployment's
+      app.openshift.io/runtime label, separate from the catalog icon.
+    </aside>
   </section>
 </section>
 
@@ -704,11 +745,11 @@ Topology → postgresql → the pod. Details: pod IP and Node (tie back to
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Pod details</h3>
-    <div class="shot" data-src="images/demo1-pods-details.png" data-caption="Database pod details (IP, node)"></div>
+    <div class="shot" data-src="images/demo1-pods-details.webp" data-caption="Database pod details (IP, node)"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Pod terminal</h3>
-    <div class="shot" data-src="images/demo1-pods-terminal.png" data-caption="Pod Terminal tab running psql / id"></div>
+    <div class="shot" data-src="images/demo1-pods-terminal.webp" data-caption="Pod Terminal tab running psql / id"></div>
   </section>
 </section>
 
@@ -763,19 +804,19 @@ Git Repo URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdem
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Import from Git</h3>
-    <div class="shot" data-src="images/demo1-source-import-from-git.png" data-caption="Import from Git form (Python, guestbook, Pipelines)"></div>
+    <div class="shot" data-src="images/demo1-source-import-from-git.webp" data-caption="Import from Git form (Python, guestbook, Pipelines)"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>PipelineRun</h3>
-    <div class="shot" data-src="images/demo1-source-pipelinerun.png" data-caption="PipelineRun graph: fetch-repository → build → deploy"></div>
+    <div class="shot" data-src="images/demo1-source-pipelinerun.webp" data-caption="PipelineRun graph: fetch-repository → build → deploy"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Environment from the Secret</h3>
-    <div class="shot" data-src="images/demo1-source-environment.png" data-caption="Deployment → Environment tab, one row mapped"></div>
+    <div class="shot" data-src="images/demo1-source-environment.webp" data-caption="Deployment → Environment tab, one row mapped"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>The guestbook, v1.0</h3>
-    <div class="shot" data-src="images/demo1-source-app-v1.png" data-caption="Guestbook page v1.0 with entries"></div>
+    <div class="shot" data-src="images/demo1-source-app-v1.webp" data-caption="Guestbook page v1.0 with entries"></div>
   </section>
 </section>
 
@@ -816,11 +857,11 @@ Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Health checks</h3>
-    <div class="shot" data-src="images/demo1-scale-health-checks.png" data-caption="Add Health Checks form"></div>
+    <div class="shot" data-src="images/demo1-scale-health-checks.webp" data-caption="Add Health Checks form"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Three replicas</h3>
-    <div class="shot" data-src="images/demo1-scale-replicas.png" data-caption="Deployment details scaled to 3 pods"></div>
+    <div class="shot" data-src="images/demo1-scale-replicas.webp" data-caption="Deployment details scaled to 3 pods"></div>
   </section>
 </section>
 
@@ -861,15 +902,15 @@ oc auth can-i get secrets \
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Nodes (Administrator perspective)</h3>
-    <div class="shot" data-src="images/demo1-rbac-nodes.png" data-caption="Compute → Nodes as peter"></div>
+    <div class="shot" data-src="images/demo1-rbac-nodes.webp" data-caption="Compute → Nodes as peter"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Project access</h3>
-    <div class="shot" data-src="images/demo1-rbac-project-access.png" data-caption="Project → Project access as peter"></div>
+    <div class="shot" data-src="images/demo1-rbac-project-access.webp" data-caption="Project → Project access as peter"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>user2: read-only</h3>
-    <div class="shot" data-src="images/demo1-rbac-user2.png" data-caption="Topology or Secrets as user2"></div>
+    <div class="shot" data-src="images/demo1-rbac-user2.webp" data-caption="Topology or Secrets as user2"></div>
   </section>
 </section>
 
@@ -911,19 +952,19 @@ First the listener: +Add → Import YAML, paste
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>EventListener in Topology</h3>
-    <div class="shot" data-src="images/demo1-commit-eventlistener.png" data-caption="Topology with el-guestbook after Import YAML"></div>
+    <div class="shot" data-src="images/demo1-commit-eventlistener.webp" data-caption="Topology with el-guestbook after Import YAML"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Commit in Gitea</h3>
-    <div class="shot" data-src="images/demo1-commit-gitea-edit.png" data-caption="Gitea web editor: VERSION = 2.0"></div>
+    <div class="shot" data-src="images/demo1-commit-gitea-edit.webp" data-caption="Gitea web editor: VERSION = 2.0"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Triggered PipelineRun</h3>
-    <div class="shot" data-src="images/demo1-commit-pipelinerun.png" data-caption="PipelineRun guestbook-push-… started by the webhook"></div>
+    <div class="shot" data-src="images/demo1-commit-pipelinerun.webp" data-caption="PipelineRun guestbook-push-… started by the webhook"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>The guestbook, v2.0</h3>
-    <div class="shot" data-src="images/demo1-commit-app-v2.png" data-caption="Guestbook page v2.0"></div>
+    <div class="shot" data-src="images/demo1-commit-app-v2.webp" data-caption="Guestbook page v2.0"></div>
   </section>
 </section>
 
@@ -961,11 +1002,11 @@ Topology → guestbook → the Deployment name (full page) → Environment →
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Blue banner</h3>
-    <div class="shot" data-src="images/demo1-config-banner.png" data-caption="Guestbook with APP_COLOR #0066cc"></div>
+    <div class="shot" data-src="images/demo1-config-banner.webp" data-caption="Guestbook with APP_COLOR #0066cc"></div>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>ReplicaSets</h3>
-    <div class="shot" data-src="images/demo1-config-replicasets.png" data-caption="Deployment → ReplicaSets tab"></div>
+    <div class="shot" data-src="images/demo1-config-replicasets.webp" data-caption="Deployment → ReplicaSets tab"></div>
   </section>
 </section>
 

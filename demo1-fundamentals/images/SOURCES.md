@@ -11,4 +11,6 @@ Logos are extracted from the internal brand packs in `../../branding/`
 | `faa-gov-brandmark.svg` | supplied by Peter | FAA brandmark: seal + navy "Federal Aviation Administration" wordmark (original, not used directly - the navy text doesn't read on the dark theme) |
 | `faa-logo.webp` | supplied by Peter | FAA seal, black line art on transparent (not used - invisible on dark) |
 | `faa-seal.svg` | derived from `faa-gov-brandmark.svg` | seal only: wordmark removed, cropped to the seal; colours unchanged. **Used on the title slide.** |
-Console screenshots for backup slides also go in this directory.
+Console screenshots for backup slides also go in this directory, as lossless
+WebP (`demo1-<part>-<what>.webp`, converted from the original PNG - see the
+"Demo scripts" section of the root CLAUDE.md).

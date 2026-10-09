@@ -153,6 +153,16 @@
 /* Backup screenshot slides (vertical, "press down") */
 .reveal section.backup h3 { font-size: 0.8em; color: var(--rh-muted); margin-bottom: 0.4em; }
 .reveal section.backup img.shot { max-height: 820px; max-width: 1640px; border: 1px solid #444; margin: 0; }
+/* Two screenshots side by side at the same height: set the columns to the
+   images' aspect ratios, e.g. style="--a: 2.16fr; --b: 1.64fr" */
+.reveal .shot-pair {
+  display: grid; grid-template-columns: var(--a, 1fr) var(--b, 1fr); gap: 32px;
+  align-items: start; max-width: 1760px; margin: 0 auto;
+}
+.reveal .shot-pair figure { margin: 0; }
+.reveal .shot-pair img.shot { width: 100%; max-width: none; max-height: none; }
+.reveal .shot-pair .shot-missing { width: 100%; height: 400px; }
+.reveal .shot-pair figcaption { margin-top: 14px; font-size: 0.55em; color: var(--rh-muted); text-align: left; }
 .shot-missing {
   width: 1400px; height: 700px; margin: 0 auto; border: 2px dashed #555;
   display: flex; flex-direction: column; justify-content: center; align-items: center;

@@ -15,6 +15,12 @@ not() { ! "$@"; }
 repo_at_v1() {
   curl -sf "${GITEA_URL}/${GITEA_ORG}/${GIT_REPO_NAME}/raw/branch/main/app.py" | grep -q '^VERSION = "1.0"'
 }
+# OpenShift Virtualization's console plugin takes over every Template page
+# (list, details and Search) and shows only VM templates
+kubevirt_plugin_enabled() {
+  oc get consoles.operator.openshift.io cluster -o json \
+    | jq -e '(.spec.plugins // []) | index("kubevirt-plugin") != null'
+}
 has_webhook() {
   gitea_api GET "/repos/${GITEA_ORG}/${GIT_REPO_NAME}/hooks" \
     | jq -e --arg u "${EL_URL}" 'any(.[]; .config.url==$u and .active)'
@@ -27,6 +33,7 @@ check "Console reachable"                 curl -ksf -o /dev/null "${OCP_CONSOLE}
 check "Project ${NS} exists"              oc get project "${NS}"
 check "Gitea login as ${GITEA_USER}"      gitea_api GET /user
 check "Python 3.12 builder image exists"  oc get istag python:3.12-ubi9 -n openshift
+check "kubevirt console plugin disabled (Template pages work)" not kubevirt_plugin_enabled
 
 info "RBAC"
 check "${EDIT_USER} can create deployments"   oc auth can-i create deployments -n "${NS}" --as="${EDIT_USER}"

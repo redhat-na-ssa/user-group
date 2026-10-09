@@ -27,7 +27,9 @@ metadata:
       stored on persistent storage; the credentials are generated and kept in
       a Secret named after the service.
     openshift.io/provider-display-name: Red Hat User Group for FAA
-    iconClass: icon-postgresql
+    # Not icon-postgresql: the stock templates use that, and the tiles would
+    # look identical. Names: the console's icon set (icon-openshift, icon-redhat, ...)
+    iconClass: icon-openshift
     tags: database,postgresql
 message: |-
   The following service has been created in your project: ${DATABASE_SERVICE_NAME}.

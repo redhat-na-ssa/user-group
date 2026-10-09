@@ -5,7 +5,7 @@
  *
  * Conventions inside a deck:
  *   <section class="no-chrome">                 title/closing slide: no footer, hat or rule
- *   <div class="shot" data-src="images/x.png" data-caption="...">
+ *   <div class="shot" data-src="images/x.webp" data-caption="...">
  *                                                console screenshot; shows a
  *                                                placeholder until the file exists
  *   <div class="qr" data-url="https://..."></div>
@@ -114,5 +114,10 @@
           "no-chrome", !!Reveal.getCurrentSlide().closest("section.no-chrome"));
       Reveal.on("ready", sync);
       Reveal.on("slidechanged", sync);
+      // T: from a down slide (backup screenshot, concept) back to the top
+      // of its stack in one press; listed in the "?" help overlay
+      Reveal.addKeyBinding(
+        { keyCode: 84, key: "T", description: "Top of this vertical stack" },
+        () => Reveal.slide(Reveal.getIndices().h, 0));
   }
 })();
