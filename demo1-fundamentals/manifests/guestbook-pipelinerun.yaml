@@ -4,6 +4,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
+  namespace: demo-intro
   generateName: guestbook-
   labels: {tekton.dev/pipeline: guestbook}
 spec:

@@ -8,8 +8,10 @@
 #
 # Every command below is copy/paste ready.
 
-BASE=http://slides.faa-demo.svc:8080/demo1-fundamentals/files
-for f in hello-pod.yaml guestbook-app.yaml guestbook-pipelinerun.yaml guestbook-db-env.patch.yaml guestbook-route-roundrobin.patch.yaml guestbook-eventlistener.yaml; do
+# BASE=http://slides.faa-demo.svc:8080/demo1-fundamentals/files
+BASE=https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo1-fundamentals/files
+
+for f in hello-pod.yaml guestbook-app.yaml guestbook-pipelinerun.yaml guestbook-db-env.patch.yaml guestbook-route-roundrobin.patch.yaml guestbook-hpa.yaml guestbook-eventlistener.yaml; do
   curl -sfO "$BASE/$f" || echo "could not download $f"
 done
 oc project demo-intro >/dev/null 2>&1
@@ -40,9 +42,14 @@ oc apply -f hello-pod.yaml
 oc get pod hello -o wide
 oc exec hello -- ps -ef
 oc exec hello -- id
+oc exec hello -- getent hosts postgresql           # the name -> the Service's 172.30 address
+oc exec hello -- bash -c 'echo > /dev/tcp/postgresql/5432 && echo "postgresql:5432 is reachable"'
+oc get svc postgresql                              # same CLUSTER-IP, however often the pod changes
 oc delete pod hello
 oc get pods                                        # gone - nothing manages it
 oc delete pod -l app=postgresql                    # comes back - it has a Deployment
+oc get pods -o wide                                # ...with a new IP; the Service address stays
+# Desktop tool? On your laptop (not the web terminal): oc port-forward svc/postgresql 5432:5432
 
 # ---------------------------------------------------------------- 3 - From source code
 # Console: +Add -> Import from Git
@@ -71,6 +78,10 @@ oc scale deployment/guestbook --replicas=3
 oc get endpointslices -l kubernetes.io/service-name=guestbook
 oc patch route/guestbook --patch-file=guestbook-route-roundrobin.patch.yaml
 for i in 1 2 3 4 5 6; do curl -ks https://$(oc get route guestbook -o jsonpath='{.spec.host}')/healthz; done
+oc set resources deployment/guestbook --requests=cpu=50m,memory=320Mi --limits=memory=512Mi   # the HPA needs a CPU request
+oc apply -f guestbook-hpa.yaml                     # 2-6 pods at 50% CPU (or Actions -> Add HorizontalPodAutoscaler)
+ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/   # laptop; keep -c at 10
+oc get hpa guestbook -w                            # second terminal: 2 -> 6 pods, back to 2 a minute after
 
 # ---------------------------------------------------------------- 5 - Projects and RBAC
 oc auth can-i create deployments                   # as yourself (user1: yes)

@@ -11,6 +11,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
+  namespace: demo-intro
   name: postgresql-demo
   labels:
     # lets the console's Search page filter to just this template

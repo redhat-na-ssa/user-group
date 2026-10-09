@@ -2,6 +2,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
+  namespace: demo-intro
   name: hello
   labels:
     app: hello

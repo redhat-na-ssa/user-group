@@ -1,0 +1,27 @@
+# Part 4: scale the guestbook between 2 and 6 pods, aiming for 50% of the
+# CPU request (50m) per pod. Same as the console's "Add HorizontalPodAutoscaler".
+#   oc apply -f guestbook-hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  namespace: demo-intro
+  name: guestbook
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guestbook
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+  behavior:
+    # Default is to wait 5 minutes before scaling down; 1 minute lets the
+    # audience see the pods go away again before the demo moves on
+    scaleDown:
+      stabilizationWindowSeconds: 60

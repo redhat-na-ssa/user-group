@@ -34,7 +34,7 @@ cd demo1-fundamentals
 |---|---|---|
 | **Browser A – main** | `user1` / `welcome1` | Developer perspective → project **demo-intro** → Topology (empty) |
 | **Browser B – private window** | `user2` / `welcome1` | Developer perspective → project **demo-intro** → Topology |
-| **Browser C – other profile** | `peter` | Administrator perspective → Compute → Nodes |
+| **Browser C – other profile** | `peter` | Developer perspective → Project → Project access |
 | **Browser tab (in A)** | `demo` in Gitea | `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook` |
 | **Slides** | – | `https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo1-fundamentals/`, press **S** for the speaker view |
 | **Web terminal** (in A) | `user1` | `>_` icon: `curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh && source cheatsheet.sh` |
@@ -51,7 +51,7 @@ The "OpenShift architecture 1:1" term slides below sit *under* "What is OpenShif
 
 | # | Term | One-line definition | Where it shows up in the demo |
 |---|---|---|---|
-| 1 | **Cluster** | Control plane nodes (API, scheduler, etcd) plus worker nodes that run the workloads | Part 5: the admin's **Nodes** page |
+| 1 | **Cluster** | Control plane nodes (API, scheduler, etcd) plus worker nodes that run the workloads | Part 4: after scaling, the pods are spread across the worker nodes (the Node field on each pod) |
 | 2 | **Node** | A machine (VM or bare metal) that runs pods | Part 2: the "Node" field on a pod |
 | 3 | **Container image** | The app plus its dependencies, packaged and immutable. It is stored in a **registry** | Part 3: the pipeline builds one |
 | 4 | **Pod** | One or more containers sharing an IP and storage. The smallest unit you run, and disposable | Part 2 |
@@ -94,7 +94,7 @@ Talking points:
 
 ## Part 2 – Containers and pods (4 min) · *Browser A*
 
-**Point to make:** a pod is the smallest unit. It is useful to look at, but on its own it is fragile.
+**Point to make:** a pod is the smallest unit. It is useful to look at, but on its own it is fragile. Other pods reach it through a **Service** name, not its IP.
 
 1. Topology → `postgresql` → the pod. On the pod page:
    - **Details:** the pod IP, and the **Node** it landed on (tie back to the slide).
@@ -102,8 +102,17 @@ Talking points:
    - **Terminal:** run `psql -c '\l'`. You're inside the running container. Run `id`: a random high UID, not root.
    - **Events:** scheduled → volume attached → image pulled → started.
 2. A pod on its own: **+Add → Import YAML**, paste `manifests/hello-pod.yaml` → **Create**. *"This is all a pod is: a name and an image."*
-3. **Actions → Delete Pod** on `hello`. It is gone, and nothing brings it back.
-4. Contrast: delete the PostgreSQL pod. A new one appears within seconds, because its **Deployment** replaces it. The data survives on the PVC.
+3. **The Service, seen from another pod.** On the `hello` pod, open the **Terminal** tab:
+   ```bash
+   getent hosts postgresql
+   # 172.30.x.x  postgresql.demo-intro.svc.cluster.local
+   echo > /dev/tcp/postgresql/5432 && echo "postgresql:5432 is reachable"
+   ```
+   *"Any pod in the project can use the name `postgresql`. It resolves to 172.30…, the Service's stable address, not the database pod's 10.x address we saw on its Details tab, and the connection goes through. The guestbook will use exactly that name in Part 3."*
+4. **Actions → Delete Pod** on `hello`. It is gone, and nothing brings it back.
+5. Contrast: delete the PostgreSQL pod. A new one appears within seconds, because its **Deployment** replaces it. It has a **new** 10.x IP (Details), while the Service keeps the same 172.30 address. The data survives on the PVC.
+
+*If someone asks about connecting a tool on their desktop:* `oc port-forward svc/postgresql 5432:5432` on the laptop, then point the tool at `localhost:5432`. It needs `oc` on the laptop; the web terminal runs inside the cluster, so it can't forward to your desktop.
 
 *Catch-up:* `steps/02-pod.sh`
 
@@ -152,22 +161,37 @@ Talking points:
 
 ---
 
-## Part 4 – Self-healing, health checks and scaling (5 min) · *Browser A*
+## Part 4 – Self-healing, health checks and scaling (8 min) · *Browser A* + laptop terminal
 
-**Point to make:** you declare the state you want, and OpenShift keeps it true.
+**Point to make:** you declare the state you want, and OpenShift keeps it true - including how many pods, depending on load.
 
 1. Topology → guestbook → **Actions → Add Health Checks**:
    - **Readiness:** HTTP GET `/readyz`, port 8080. *"Only send traffic once the pod can reach the database."*
    - **Liveness:** HTTP GET `/healthz`, port 8080, initial delay 10. *"Restart the container if the process hangs."*
    - **Add** (this is another rollout).
 2. Delete the guestbook pod. The ring shows the replacement starting straight away.
-3. **Details** tab → the **up arrow** → 3 pods. Open the Service's pods: three endpoints behind one name.
+3. **Details** tab → the **up arrow** → 3 pods. Open the Service's pods: three endpoints behind one name, and each pod's **Node** shows they landed on different workers. *"The scheduler spreads them, so one machine failing doesn't take the app down."*
 4. Refresh the app: "served by pod" doesn't change. *Sticky sessions, in 10 seconds:* "The router sets a cookie, so your browser keeps hitting the same pod. That's good for apps that keep session state in memory. Ours keeps everything in the database, so any pod can answer." Switch the route to round robin, again as code:
    ```bash
    cat guestbook-route-roundrobin.patch.yaml
    oc patch route/guestbook --patch-file=guestbook-route-roundrobin.patch.yaml
    ```
    Refresh in a new private window a few times: the pod name changes. Sign the book again: each entry records which pod wrote it, but they all share one database.
+5. **Autoscaling needs a CPU request.** In the terminal:
+   ```bash
+   oc set resources deployment/guestbook --requests=cpu=50m,memory=320Mi --limits=memory=512Mi
+   ```
+   *"The autoscaler measures CPU as a percentage of what the pod asked for, so it needs a request."* Another rollout. The same fields are in the console under the Deployment's **Actions → Edit resource limits**. (No CPU limit: it isn't needed for the demo, and a tight one slows the app under load.)
+6. **Add the autoscaler in the console:** Topology → guestbook → **Actions → Add HorizontalPodAutoscaler**: minimum **2**, maximum **6**, CPU utilization **50%** → **Save**. *"From now on the autoscaler owns the replica count: my manual 3 will drop to 2."* Then the same as code, which can say more than the form:
+   ```bash
+   oc apply -f guestbook-hpa.yaml         # adds a 1-minute scale-down window (default: 5 minutes)
+   ```
+7. **Load.** In the laptop terminal:
+   ```bash
+   ab -k -c 10 -t 120 https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org/
+   ```
+   and `oc get hpa guestbook -w` in a second terminal, with Topology on screen. CPU jumps far above 50%, and within about 30 seconds the ring grows from 2 to 6 pods. When `ab` stops after 2 minutes, CPU drops, and about a minute later the Deployment is back to 2.
+   - Keep `-c` at **10**. With 50 concurrent requests, the health checks queue behind the load, the pods turn Not Ready, and the autoscaler ignores them (it shows `<unknown>`) until the load is over.
 
 *Catch-up:* `steps/04-scale.sh`
 
@@ -177,9 +201,8 @@ Talking points:
 
 **Point to make:** everything so far happened in a project, as a developer with the `edit` role. The admin decides who can see or change what in each project.
 
-1. **Browser C (peter, Administrator perspective):** **Compute → Nodes**. These are the nodes from the slides: control plane and workers. *"Developers never need this page, and user1 can't even see it."*
-2. **Browser C (peter, Developer perspective):** **Project** (left nav) → **Project access** tab: peter is `admin`, user1 is `edit`, user2 is `view`, and the `pipeline` **service account** has `edit` too. *"Roles aren't only for people: the pipeline runs under its own identity."* Only the admin sees this tab.
-3. **Browser B (user2, view):** the same Topology, the same app, but read-only:
+1. **Browser C (peter, Developer perspective):** **Project** (left nav) → **Project access** tab: peter is `admin`, user1 is `edit`, user2 is `view`, and the `pipeline` **service account** has `edit` too. *"Roles aren't only for people: the pipeline runs under its own identity."* Only the admin sees this tab. *"These are project roles. There are also cluster-wide roles, for the platform team that runs the cluster itself - not today's topic."*
+2. **Browser B (user2, view):** the same Topology, the same app, but read-only:
    - the guestbook's scale arrows are missing;
    - **Secrets** (left nav): access denied, so user2 can't read the database password;
    - Actions to edit or delete aren't available.

@@ -1,0 +1,7 @@
+{
+  // *.patch.yaml here are merge patches (objects), not RFC 6902 JSON Patch
+  // lists, which is what SchemaStore assumes for that file name
+  "yaml.schemas": {
+    "./.vscode/merge-patch.schema.json": "*.patch.yaml"
+  }
+}

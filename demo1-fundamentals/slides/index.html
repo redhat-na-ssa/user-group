@@ -150,7 +150,7 @@
     <div>
       <h2>Cluster</h2>
       <p class="def">Control plane runs the cluster.<br>Workers run your apps.</p>
-      <p class="where">In the demo: <b>the admin's Nodes page</b></p>
+      <p class="where">In the demo: <b>pods spread across the workers</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="Cluster: control plane and worker nodes">
       <rect class="dg-box grey" x="10" y="10" width="780" height="500" rx="16"/>
@@ -714,21 +714,23 @@ oc get deployment,service,secret,pvc \
 <section>
   <section>
     <h2>2 · Containers and pods</h2>
-    <p class="subheading">Look inside - then see what a bare pod is worth</p>
+    <p class="subheading">Look inside - reach the database by name - see what a bare pod is worth</p>
     <div class="steps">
       <ol>
         <li>The database pod: Details, <b>Logs</b>, <b>Terminal</b>, Events</li>
         <li><b>+Add → Import YAML</b>: a pod is a name and an image</li>
+        <li>Its Terminal: <code>postgresql</code> → the <b>Service</b></li>
         <li>Delete it - nothing brings it back</li>
-        <li>Delete the database pod - it comes back</li>
+        <li>Delete the database pod - new pod, same Service</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc rsh deployment/postgresql psql -c '\l'
 oc apply -f hello-pod.yaml
+oc exec hello -- getent hosts postgresql
 oc delete pod hello
 oc delete pod -l app=postgresql
-oc get pods</code></pre>
+oc get pods -o wide; oc get svc postgresql</code></pre>
       </div>
     </div>
     <aside class="notes">
@@ -737,9 +739,22 @@ Topology → postgresql → the pod. Details: pod IP and Node (tie back to
       inside the running container; id - a random high UID, not root. Events:
       scheduled → volume attached → pulled → started.
       +Add → Import YAML, paste manifests/hello-pod.yaml, Create: "this is all
-      a pod is - a name and an image". Actions → Delete Pod: gone for good.
+      a pod is - a name and an image".
+      The Service, from another pod: hello → Terminal tab:
+        getent hosts postgresql
+          → 172.30.x.x postgresql.demo-intro.svc.cluster.local
+        echo > /dev/tcp/postgresql/5432 && echo "postgresql:5432 is reachable"
+      "Any pod in the project can use the name postgresql. It resolves to
+      172.30... - the Service's stable address, not the database pod's 10.x
+      address from its Details tab - and the connection goes through. The
+      guestbook will use exactly that name in Part 3."
+      Actions → Delete Pod on hello: gone for good - nothing manages it.
       Contrast: delete the PostgreSQL pod - its Deployment replaces it within
-      seconds, and the data survives on the PVC.
+      seconds, with a NEW 10.x IP (Details), while the Service keeps the same
+      172.30 address. The data survives on the PVC.
+      If someone asks about connecting a desktop tool: oc port-forward
+      svc/postgresql 5432:5432 on the laptop (needs oc locally - the web
+      terminal runs inside the cluster), then the tool uses localhost:5432.
       Press DOWN for backup screenshots.
     </aside>
   </section>
@@ -815,8 +830,19 @@ Git Repo URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdem
     <div class="shot" data-src="images/demo1-source-environment.webp" data-caption="Deployment → Environment tab, one row mapped"></div>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>The guestbook, v1.0</h3>
-    <div class="shot" data-src="images/demo1-source-app-v1.webp" data-caption="Guestbook page v1.0 with entries"></div>
+    <span class="backup-tag">Backup</span><h3>The guestbook v1.0 - at its Route, talking to the database</h3>
+    <div class="shot" data-src="images/demo1-source-app-v1.webp" data-caption="The guestbook at https://guestbook-demo-intro.apps... - version, serving pod and database in the banner; two signed entries"></div>
+    <aside class="notes">
+      The end of Part 3: the app built from source by the pipeline, reached
+      through its Route (the URL in the address bar), and connected to the
+      database through the postgresql Service once the Secret was mapped.
+
+      The banner is there for the rest of the demo: the version (v1.0 - it
+      changes with a commit in Part 6), the pod that served this page (it
+      changes when we scale in Part 4), and the database it uses. The colour
+      comes from APP_COLOR, which we change in Part 7. Each entry records the
+      pod and version that wrote it.
+    </aside>
   </section>
 </section>
 
@@ -831,13 +857,20 @@ Git Repo URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdem
         <li>Delete the pod - a new one starts</li>
         <li>Scale to <b>3</b> - one Service, three endpoints</li>
         <li>Sticky sessions → round robin</li>
+        <li>CPU request, then <b>Add HorizontalPodAutoscaler</b></li>
+        <li>Load with <code>ab</code>: 2 → 6 pods, and back</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc delete pod -l deployment=guestbook
 oc scale deployment/guestbook --replicas=3
 oc patch route/guestbook \
-  --patch-file=guestbook-route-roundrobin.patch.yaml</code></pre>
+  --patch-file=guestbook-route-roundrobin.patch.yaml
+oc set resources deployment/guestbook \
+  --requests=cpu=50m,memory=320Mi --limits=memory=512Mi
+oc apply -f guestbook-hpa.yaml
+ab -k -c 10 -t 120 https://guestbook-demo-intro.apps…/
+oc get hpa guestbook -w</code></pre>
       </div>
     </div>
     <aside class="notes">
@@ -845,13 +878,33 @@ Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
       /readyz port 8080 ("only send traffic once the pod can reach the
       database"). Liveness: HTTP GET /healthz port 8080, initial delay 10
       ("restart it if the process hangs"). Add → another rollout.
-      Delete the pod → replacement straight away. Details → up arrow → 3 pods.
+      Delete the pod → replacement straight away. Details → up arrow → 3 pods,
+      on different worker nodes (each pod's Node field) - one machine failing
+      doesn't take the app down.
       Refresh: same pod every time. Sticky sessions in 10 seconds: "the router
       sets a cookie so your browser keeps hitting the same pod - good for apps
       with in-memory sessions; ours keeps everything in the database, so any
       pod can answer." Then:
       oc patch route/guestbook --patch-file=guestbook-route-roundrobin.patch.yaml
       Refresh in a new private window a few times - the pod name changes.
+      Autoscaling. First, what each pod asks for:
+      oc set resources deployment/guestbook --requests=cpu=50m,memory=320Mi --limits=memory=512Mi
+      "The autoscaler measures CPU as a percentage of the request, so it needs
+      one." Another rollout. (Same fields in the console: the Deployment's
+      Actions → Edit resource limits.)
+      Then in the console: Topology → guestbook → Actions → Add
+      HorizontalPodAutoscaler: min 2, max 6, CPU utilization 50% → Save.
+      "From now on the autoscaler owns the replica count - my manual 3 will
+      drop to 2." Then the same as code, which can say more than the form:
+      oc apply -f guestbook-hpa.yaml (adds a 1-minute scale-down window
+      instead of the default 5, so we see the pods go away again).
+      Load, from the laptop terminal (not the web terminal - ab is local):
+      ab -k -c 10 -t 120 https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org/
+      oc get hpa guestbook -w   in a second terminal, and watch Topology:
+      CPU jumps far above 50%, and within ~30 s the ring goes from 2 to 6
+      pods. When ab ends (2 min), CPU drops and about a minute later it's back
+      to 2. Keep -c at 10: 50 concurrent requests queue behind the health
+      checks, pods turn Not Ready, and the autoscaler stops seeing them.
       Press DOWN for backup screenshots.
     </aside>
   </section>
@@ -863,6 +916,16 @@ Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
     <span class="backup-tag">Backup</span><h3>Three replicas</h3>
     <div class="shot" data-src="images/demo1-scale-replicas.webp" data-caption="Deployment details scaled to 3 pods"></div>
   </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Autoscaling under load: 2 → 6 pods</h3>
+    <div class="shot" data-src="images/demo1-scale-hpa.webp" data-caption="Topology (or oc get hpa -w) while ab runs: CPU far above the 50% target, six guestbook pods"></div>
+    <aside class="notes">
+      Backup for the autoscaling step: under ab load the HorizontalPodAutoscaler
+      sees CPU far above its 50% target and grows the Deployment from 2 to 6
+      pods within about 30 seconds; a minute after the load stops it is back
+      to 2. Nobody touched the replica count - the autoscaler owns it now.
+    </aside>
+  </section>
 </section>
 
 <!-- Part 5 -->
@@ -872,7 +935,6 @@ Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
     <p class="subheading">Who may do what - per project</p>
     <div class="steps">
       <ol>
-        <li>peter: <b>Nodes</b> - the machines from the slides</li>
         <li>peter: <b>Project access</b> - admin / edit / view</li>
         <li>user2: same app, read-only</li>
         <li>user2: no scaling, no <b>Secrets</b></li>
@@ -888,11 +950,11 @@ oc auth can-i get secrets \
     </div>
     <aside class="notes">
 "Everything so far happened in a project, as a developer with the edit
-      role." Browser C (peter, Administrator perspective): Compute → Nodes -
-      "developers never need this page, and user1 can't even see it".
-      Browser C (peter, Developer perspective): Project → Project access -
-      peter admin, user1 edit, user2 view, and the pipeline service account
-      edit: "roles aren't only for people". Only the admin sees this tab.
+      role." Browser C (peter, Developer perspective): Project → Project
+      access - peter admin, user1 edit, user2 view, and the pipeline service
+      account edit: "roles aren't only for people". Only the admin sees this
+      tab. These are project roles; there are also cluster-wide roles, for the
+      platform team that runs the cluster itself - not today's topic.
       Browser B (user2): the same app, read-only - no scale arrows, Secrets →
       access denied (can't read the database password), no edit actions.
       Roles are standard and bound per project: user1 could be admin in a
@@ -901,12 +963,19 @@ oc auth can-i get secrets \
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Nodes (Administrator perspective)</h3>
-    <div class="shot" data-src="images/demo1-rbac-nodes.webp" data-caption="Compute → Nodes as peter"></div>
-  </section>
-  <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Project access</h3>
-    <div class="shot" data-src="images/demo1-rbac-project-access.webp" data-caption="Project → Project access as peter"></div>
+    <span class="backup-tag">Backup</span><h3>Project access: who may do what in demo-intro</h3>
+    <div class="shot" data-src="images/demo1-rbac-project-access.webp" data-caption="Project → Project access as peter: peter Admin, the pipeline service account Edit, user1 Edit, user2 View"></div>
+    <aside class="notes">
+      The project's access list, as the project admin sees it (Project → Project
+      access - only an admin has this tab). peter is Admin, user1 (who built
+      everything so far) is Edit, user2 is View. The pipeline ServiceAccount
+      also has Edit in this project: the builds run under their own identity,
+      and need it to update the Deployment. Roles aren't only for people.
+
+      Each row is a RoleBinding: oc get rolebindings -n demo-intro shows the
+      same. These are project roles; cluster-wide roles exist for the
+      platform team, but aren't today's topic.
+    </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>user2: read-only</h3>

@@ -26,6 +26,7 @@
           - manifests/guestbook-pipelinerun.yaml
           - manifests/guestbook-db-env.patch.yaml
           - manifests/guestbook-route-roundrobin.patch.yaml
+          - manifests/guestbook-hpa.yaml
           - manifests/guestbook-eventlistener.yaml
     apps:
       - name: slides

@@ -7,6 +7,7 @@
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata:
+  namespace: demo-intro
   name: guestbook
   labels:
     app: guestbook
@@ -17,6 +18,7 @@ metadata:
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
+  namespace: demo-intro
   name: guestbook
   labels:
     app.kubernetes.io/instance: guestbook
@@ -91,6 +93,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: demo-intro
   name: guestbook
   labels:
     app: guestbook
@@ -126,6 +129,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: demo-intro
   name: guestbook
   labels:
     app: guestbook
@@ -141,6 +145,7 @@ spec:
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
+  namespace: demo-intro
   name: guestbook
   labels:
     app: guestbook

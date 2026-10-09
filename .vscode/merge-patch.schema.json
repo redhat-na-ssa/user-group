@@ -1,0 +1,6 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Kubernetes merge / strategic-merge patch",
+  "description": "This repo's *.patch.yaml files are merge patches (oc patch --type=merge or the default strategic merge): a partial object, not an RFC 6902 JSON Patch list. SchemaStore maps *.patch.yaml to JSON Patch, which flags them with 'Expected array'; .vscode/settings.json points them here instead.",
+  "type": "object"
+}

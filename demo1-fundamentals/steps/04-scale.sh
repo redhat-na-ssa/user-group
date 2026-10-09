@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 4 - Self-healing, health probes and scaling. Runs as user1, then
+# Part 4 - Self-healing, health probes, scaling and autoscaling. Runs as user1, then
 # shows that user2 (view) is not allowed to scale.
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"
@@ -28,6 +28,13 @@ sleep 3   # give the router a moment to reload
 url=$(route_url guestbook "${NS}")
 info "Requests are spread across the pods:"
 for i in 1 2 3 4 5 6; do curl -ks "${url}/healthz"; done
+
+# Autoscaling: the HPA needs a CPU request to measure against
+run oc set resources deployment/guestbook --requests=cpu=50m,memory=320Mi --limits=memory=512Mi
+wait_rollout deployment/guestbook "${NS}"
+run oc apply -f "${DEMO_DIR}/manifests/guestbook-hpa.yaml"
+info "Generate load from the laptop to see it scale (2 -> 6 pods):"
+echo "  ab -k -c 10 -t 120 ${url}/"
 
 echo
 info "Now as ${VIEW_USER} (view role):"

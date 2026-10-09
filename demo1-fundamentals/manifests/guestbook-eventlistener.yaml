@@ -1,4 +1,4 @@
-# Part 5: paste into the console (+Add -> Import YAML) as user1, or
+# Part 6: paste into the console (+Add -> Import YAML) as user1, or
 #   oc apply -f guestbook-eventlistener.yaml
 # Creates el-guestbook: the endpoint Gitea's webhook calls on every push to
 # main. It checks the webhook secret, then runs the guestbook TriggerTemplate
@@ -7,6 +7,7 @@
 apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
+  namespace: demo-intro
   name: guestbook
   labels:
     app.kubernetes.io/part-of: guestbook

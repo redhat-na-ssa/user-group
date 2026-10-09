@@ -12,5 +12,7 @@ run oc apply -f "${DEMO_DIR}/manifests/hello-pod.yaml"
 run oc wait --for=condition=Ready pod/hello --timeout=90s
 run oc get pod hello -o wide
 run oc exec hello -- ps -ef   # PID 1 is the app, running as a random UID
+# The Service from another pod: the name resolves to its stable 172.30 address
+oc get service/postgresql >/dev/null 2>&1 && run oc exec hello -- getent hosts postgresql
 run oc delete pod hello
 run oc get pods               # gone for good - nothing is managing it
