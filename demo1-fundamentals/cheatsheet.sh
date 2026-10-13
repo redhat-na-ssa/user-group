@@ -6,13 +6,18 @@
 #   cheat                       # all demo commands (no setup lines)
 #   cheat 4                     # only part 4
 #
+# On the presenter's laptop instead: common/workspace.sh demo1-fundamentals
+# puts this file, the YAML files and one session per user in
+# ~/faa-demo/demo1-fundamentals; open a tab per user with
+#   bash --rcfile ~/faa-demo/demo1-fundamentals/user1.rc
+#
 # Every command below is copy/paste ready.
 
 # BASE=http://slides.faa-demo.svc:8080/demo1-fundamentals/files
 BASE=https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo1-fundamentals/files
 
 for f in hello-pod.yaml guestbook-app.yaml guestbook-pipelinerun.yaml guestbook-db-env.patch.yaml guestbook-route-roundrobin.patch.yaml guestbook-hpa.yaml guestbook-eventlistener.yaml; do
-  curl -sfO "$BASE/$f" || echo "could not download $f"
+  [ -f "$f" ] || curl -sfO "$BASE/$f" || echo "could not download $f"   # kept if already here
 done
 oc project demo-intro >/dev/null 2>&1
 GIT_REPO=https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
@@ -33,6 +38,9 @@ oc process postgresql-demo --parameters            # what the catalog form asks 
 oc new-app --template=postgresql-demo              # the CLI version of "Instantiate Template"
 oc get deployment,service,secret,pvc -l template=postgresql-demo
 oc get secret postgresql -o jsonpath='{.data}'     # keys: database-user, -password, -name
+
+Add SSL
+oc annotate service postgresql  service.beta.openshift.io/serving-cert-secret-name=pgsqlssl
 
 # ---------------------------------------------------------------- 2 - Containers and pods
 oc get pods -o wide                                # the database pod, and its node

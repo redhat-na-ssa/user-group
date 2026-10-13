@@ -256,3 +256,19 @@
 .services .card p { font-size: 0.75em; color: var(--rh-muted); margin: 0; }
 
 .services .nowrap { white-space: nowrap; }
+/* What to expect: the same cards without icons, a lead line and a session
+   bar (clock, length | who runs it); .time is the red duration label */
+.services .lead { font-size: 0.85em; color: var(--rh-muted); max-width: 1450px; margin: -0.3em 0 1.2em; }
+.services .bar {
+  display: inline-flex; align-items: center; gap: 24px; margin: 0 0 56px;
+  background: var(--rh-bg-deep); border: 1px solid #4d4d4d; border-radius: 10px;
+  padding: 18px 36px; font-size: 0.75em;
+}
+.services .bar svg { width: 40px; height: 40px; }
+.services .bar b { font-family: var(--r-heading-font); font-weight: 500; }
+.services .bar .sep { color: var(--rh-dim); }
+.services .card .time {
+  color: var(--rh-red); font-family: var(--r-heading-font); font-size: 0.65em;
+  letter-spacing: 0.04em; text-transform: uppercase; margin: -0.3em 0 1em;
+}
+.services .card p strong { color: var(--rh-text); font-weight: 500; }

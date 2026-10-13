@@ -19,6 +19,8 @@
 : "${DEMO_USER_PASSWORD:=welcome1}"
 # Where per-user kubeconfigs are kept (see login_user in lib.sh)
 : "${DEMO_KUBECONFIG_DIR:=${HOME}/.kube/demo-users}"
+# Presenter terminal workspaces, one per demo (see workspace.sh)
+: "${DEMO_WORKSPACE_DIR:=${HOME}/faa-demo}"
 # Extra flags for oc login, e.g. "--insecure-skip-tls-verify=true"
 : "${OCP_LOGIN_FLAGS:=}"
 
