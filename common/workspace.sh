@@ -56,7 +56,10 @@ for u in "${ADMIN_USER}" "${EDIT_USER}" "${VIEW_USER}"; do
 export KUBECONFIG=${WS}/${u}.kubeconfig
 cd ${WS}
 . ./cheatsheet.sh
-PS1='\[\e[1;31m\]${u}\[\e[0m\] \W \\$ '
+# Prompt: [command number] live 'oc whoami' (follows any oc login/logout) dir $
+__demo_whoami() { __demo_user=\$(oc whoami --request-timeout=3s 2>/dev/null) || __demo_user='(not logged in)'; }
+PROMPT_COMMAND="__demo_whoami\${PROMPT_COMMAND:+; \$PROMPT_COMMAND}"
+PS1='\[\e[2m\][\#]\[\e[0m\] \[\e[1;31m\]\${__demo_user}\[\e[0m\] \W \\$ '
 EOF
 done
 ok "Wrote ${ADMIN_USER}.rc ${EDIT_USER}.rc ${VIEW_USER}.rc"
