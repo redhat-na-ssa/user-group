@@ -28,6 +28,19 @@
           - manifests/guestbook-route-roundrobin.patch.yaml
           - manifests/guestbook-hpa.yaml
           - manifests/guestbook-eventlistener.yaml
+      - name: demo4-storage
+        title: OpenShift Storage
+        files:
+          - manifests/logbook-ephemeral.yaml
+          - manifests/logbook-data-pvc.yaml
+          - manifests/logbook-rwo.yaml
+          - manifests/logbook-rwx.yaml
+          - manifests/logbook-sts.yaml
+          - manifests/logbook-volume-alert.yaml
+          - manifests/logbook-snapshot.yaml
+          - manifests/logbook-data-restored-pvc.yaml
+          - manifests/demo-storage-backup.yaml
+          - manifests/demo-storage-restore.yaml
     apps:
       - name: slides
         repo: faa-slides

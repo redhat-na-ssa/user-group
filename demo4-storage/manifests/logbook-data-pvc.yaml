@@ -1,0 +1,12 @@
+# Part 2: the claim the console form creates - 1 GiB of RWO block storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logbook-data
+spec:
+  storageClassName: ocs-storagecluster-ceph-rbd
+  accessModes: [ReadWriteOnce]
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi

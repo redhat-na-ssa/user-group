@@ -1,0 +1,9 @@
+# Part 7: a point-in-time snapshot of logbook-data
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: logbook-data-snap
+spec:
+  volumeSnapshotClassName: ocs-storagecluster-rbdplugin-snapclass
+  source:
+    persistentVolumeClaimName: logbook-data

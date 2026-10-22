@@ -1,0 +1,11 @@
+# Part 8 (as peter): back up the whole project - objects and, with data
+# mover, the volumes' data - to the default BackupStorageLocation (ODF bucket)
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  name: demo-storage
+  namespace: openshift-adp
+spec:
+  includedNamespaces: [demo-storage]
+  snapshotMoveData: true
+  ttl: 72h0m0s

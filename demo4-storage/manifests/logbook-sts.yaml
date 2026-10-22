@@ -1,0 +1,65 @@
+# Part 4: a StatefulSet - each replica gets its own RWO claim from the
+# template (data-logbook-sts-0, -1, -2), kept when pods go away
+apiVersion: v1
+kind: Service
+metadata:
+  name: logbook-sts
+  labels: {app: logbook-sts}
+spec:
+  clusterIP: None
+  selector: {app: logbook-sts}
+  ports:
+    - name: http
+      port: 8080
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: logbook-sts
+  labels: {app: logbook-sts, app.kubernetes.io/part-of: logbook}
+spec:
+  serviceName: logbook-sts
+  replicas: 3
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels: {app: logbook-sts}
+  template:
+    metadata:
+      labels: {app: logbook-sts}
+    spec:
+      containers:
+        - name: logbook
+          # Writes a line every 5 s (time, pod, node) to /data/logbook.txt and
+          # serves /data over HTTP - the "app" of this demo
+          image: registry.access.redhat.com/ubi9/python-312:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "$(date -u +%H:%M:%S)  $POD_NAME  on  $NODE_NAME" >> /data/logbook.txt
+                sleep 5
+              done &
+              exec python3 -m http.server 8080 --directory /data
+          env:
+            - name: POD_NAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: {cpu: 10m, memory: 64Mi}
+            limits: {memory: 128Mi}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels: {app: logbook-sts}
+      spec:
+        storageClassName: ocs-storagecluster-ceph-rbd
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 1Gi

@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OpenShift Storage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="images/redhat-hat.svg">
+  <link rel="stylesheet" href="../reveal/reset.css">
+  <link rel="stylesheet" href="../reveal/reveal.css">
+  <link rel="stylesheet" href="../reveal/plugin/highlight/monokai.css">
+  <link rel="stylesheet" href="../fonts/fonts.css">
+  <link rel="stylesheet" href="../common/theme.css">
+</head>
+<!-- deck title shows in every slide's footer -->
+<body data-deck-title="OpenShift Storage · Red Hat User Group for FAA">
+<div class="reveal"><div class="slides">
+
+<!-- ================================================================ TITLE -->
+<section class="no-chrome title-slide" data-state="no-chrome">
+  <div class="logos">
+    <img src="images/redhat-logo.svg" alt="Red Hat">
+    <img class="faa" src="images/faa-seal.svg" alt="FAA" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'muted small',textContent:'[FAA logo]'}))">
+  </div>
+  <h1>OpenShift Storage</h1>
+  <p class="sub">Red Hat User Group for FAA</p>
+  <p class="meta">November 12th, 2026</p>
+  <aside class="notes">
+    Put this up while people join. Once you start: welcome everyone, thank
+    them for their time, and say what the next half hour looks like - a few
+    slides on how storage works in OpenShift, then a live demo, mostly in the
+    web console.
+
+    This is the first of the operations-focused sessions the group asked
+    for. Today lays the foundation: where an application's data lives, how
+    it's requested, shared, watched, grown, snapshotted and backed up.
+    Questions are welcome at any time; anything we can't answer on the spot
+    gets written down and answered afterwards. The deck stays online - link
+    and QR code on the last slide.
+  </aside>
+</section>
+
+<!-- ================================================================ WHO WE ARE (TEAM)
+     From branding/"Who We Are - Red Hat Customer Success.odp" -->
+<section class="services">
+  <p class="kicker">Who we are - Red Hat Customer Success</p>
+  <h2>Enable FAA to get more value out of Red Hat technologies</h2>
+  <div class="cards">
+    <div class="card">
+      <svg viewBox="0 0 100 100"><use href="#i-checklist" class="white"/></svg>
+      <h3>Best Practices &amp; Enablement</h3>
+      <p>Operational best practices to build team knowledge and <span class="nowrap">self-sufficiency</span></p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 100 100"><use href="#i-sitemap" class="white"/></svg>
+      <h3>Architecture Review</h3>
+      <p>Validate system design prior to deployment</p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 100 100"><use href="#i-headset" class="white"/></svg>
+      <h3>Remote Advisory-Only Support</h3>
+      <p>Screen-sharing consultation and recommendations without <span class="nowrap">hands-on-keyboard</span> activity</p>
+    </div>
+  </div>
+  <aside class="notes">
+    What Red Hat Customer Success does for FAA, in three parts. Best
+    practices and enablement - sessions like this one, aimed at building the
+    team's own knowledge. Architecture reviews - bring us a design before it
+    goes into production and we'll validate it with you; storage layouts are
+    a classic example. Remote advisory support - we join a screen share, look
+    at the problem with you and recommend what to do, with your hands on the
+    keyboard.
+
+    Keep this short if the audience has seen it in earlier sessions.
+  </aside>
+</section>
+
+<!-- ================================================================ WHAT TO EXPECT
+     From branding/"FAA OpenShift User Group.odp" (light layout, redone dark) -->
+<section class="services">
+  <h2>What to expect - OpenShift User Group</h2>
+  <p class="lead">Fostering collaboration, sharing best practices, and maximizing platform value across engineering and operations</p>
+  <p class="bar"><svg viewBox="0 0 100 100"><use href="#i-clock"/></svg><b>60-minute monthly session</b><span class="sep">|</span><span>Facilitated by Red Hat Customer Success</span></p>
+  <div class="cards">
+    <div class="card">
+      <h3>Product Updates</h3>
+      <p>Roadmap and upcoming features</p>
+    </div>
+    <div class="card">
+      <h3>Operations Best Practices</h3>
+      <p>Practical, tailored best practices. <strong>Suggestions on topics welcome.</strong></p>
+    </div>
+    <div class="card">
+      <h3>Ask the Experts</h3>
+      <p>Q&amp;A, whiteboarding and high-level debugging</p>
+    </div>
+  </div>
+  <aside class="notes">
+    The usual reminder of the format: a few minutes of product news, the
+    main topic as a live demo, then time for your questions and problems.
+
+    Today's topic came straight from your feedback - more operations
+    content. Storage is the first of those sessions; it's the foundation the
+    later ones (backup strategy, disaster recovery, virtualization) build on.
+  </aside>
+</section>
+
+<!-- ================================================================ AGENDA
+     The wrap-up slide ("What we just did") says the same in OpenShift terms. -->
+<section>
+  <h2>What we will cover today</h2>
+  <p class="subheading">Where an application keeps its data - and how we keep it safe</p>
+  <ul>
+    <li>Why an application forgets everything when it restarts</li>
+    <li>Asking for storage - self-service, in seconds</li>
+    <li>A disk for one server, and a share for many</li>
+    <li>What the storage platform adds on top</li>
+    <li>A warning before a disk fills up - and more room without downtime</li>
+    <li>An undo button and a safety net: snapshots and backups</li>
+  </ul>
+  <aside class="notes">
+    The plan, in plain words. We start with an application that loses its
+    data every time it restarts, give it storage that survives, and then look
+    at the different kinds of storage: a disk only one server can use at a
+    time, and a shared one many servers use together.
+
+    Then the operations side: what OpenShift Data Foundation gives us on top
+    of "just a disk" - dashboards and alerts - a disk that fills up, warns
+    us, and gets bigger without stopping the app, and finally snapshots to
+    undo a mistake and backups to recover a whole project. The wrap-up slide
+    lists the same six points again in OpenShift terms.
+  </aside>
+</section>
+
+<!-- ================================================================ PERSISTENT STORAGE
+     One horizontal slide. The concept slides sit below it (press DOWN) and
+     are only used if the audience needs them; RIGHT goes straight to the demo. -->
+<section>
+<section>
+  <h2>Persistent storage in OpenShift</h2>
+  <p class="subheading">Developers ask for storage - the platform provides it</p>
+  <svg class="diagram" viewBox="0 0 1600 620" style="max-width:1560px" aria-label="Pod, PVC, StorageClass, CSI driver, storage backend, PV">
+    <rect class="dg-box" x="10" y="10" width="560" height="600" rx="16"/>
+    <text class="dg-label left" x="36" y="46">PROJECT · DEVELOPER</text>
+    <rect class="dg-box grey" x="600" y="10" width="990" height="600" rx="16"/>
+    <text class="dg-label left" x="626" y="46">CLUSTER · PLATFORM TEAM</text>
+    <!-- pod -->
+    <use href="#i-pod" x="60" y="150" width="150" height="150"/>
+    <text class="dg-label" x="135" y="335">POD</text>
+    <text class="dg-small" x="135" y="360">mounts /data</text>
+    <path class="dg-line" d="M215,225 H318" marker-end="url(#dg-arrow)"/>
+    <!-- pvc -->
+    <use href="#i-doc" x="325" y="150" width="150" height="150"/>
+    <text class="dg-mono" x="362" y="212" style="font-size:14px">1Gi</text>
+    <text class="dg-mono" x="362" y="236" style="font-size:14px">RWO</text>
+    <text class="dg-mono" x="362" y="260" style="font-size:14px">class</text>
+    <text class="dg-label" x="400" y="335">PVC</text>
+    <text class="dg-small" x="400" y="360">the request</text>
+    <path class="dg-line" d="M480,225 H658" marker-end="url(#dg-arrow)"/>
+    <!-- storage class -->
+    <use href="#i-doc" x="665" y="150" width="150" height="150"/>
+    <use href="#i-disk" x="705" y="200" width="70" height="70"/>
+    <text class="dg-label" x="740" y="335">STORAGECLASS</text>
+    <text class="dg-small" x="740" y="360">the menu</text>
+    <path class="dg-line" d="M820,225 H918" marker-end="url(#dg-arrow)"/>
+    <!-- csi -->
+    <use href="#i-plug" x="925" y="150" width="150" height="150"/>
+    <text class="dg-label" x="1000" y="335">CSI DRIVER</text>
+    <text class="dg-small" x="1000" y="360">the adapter</text>
+    <path class="dg-line" d="M1080,225 H1178" marker-end="url(#dg-arrow)"/>
+    <!-- backend -->
+    <rect class="dg-panel" x="1185" y="120" width="370" height="210" rx="12"/>
+    <use href="#i-disk" x="1210" y="150" width="90" height="90"/>
+    <use href="#i-disk" x="1325" y="150" width="90" height="90"/>
+    <use href="#i-bucket" x="1440" y="150" width="90" height="90"/>
+    <text class="dg-small" x="1370" y="290">ODF · SAN / NAS · cloud disks</text>
+    <text class="dg-label" x="1370" y="360">STORAGE</text>
+    <!-- pv, created by the driver and bound to the claim -->
+    <path class="dg-line dg-dash" d="M1000,385 V450" marker-end="url(#dg-arrow)"/>
+    <text class="dg-small left" x="1020" y="425">creates</text>
+    <use href="#i-disk" x="950" y="455" width="100" height="100"/>
+    <text class="dg-label" x="1000" y="585">PV</text>
+    <path class="dg-line dg-dash" d="M945,505 H400 V395" marker-end="url(#dg-arrow)"/>
+    <text class="dg-small" x="680" y="490">bound to the claim</text>
+  </svg>
+  <aside class="notes">
+    One picture for the whole session. On the left, what a developer
+    controls: a pod mounts a volume, and the volume comes from a
+    PersistentVolumeClaim - a request: "1 GiB, mounted by one node at a time,
+    from this class of storage". On the right, what the platform team
+    controls: StorageClasses are the menu of storage on offer; each one
+    names a CSI driver, the adapter between OpenShift and the actual storage
+    - OpenShift Data Foundation today, but just as well a SAN, a NAS or a
+    cloud provider's disks.
+
+    When a claim arrives, the driver creates the volume on the storage, a
+    PersistentVolume object appears to represent it, and it's bound to the
+    claim. Nobody opened a ticket. If the audience is new to these words,
+    press DOWN for one slide per concept; otherwise go RIGHT to the demo and
+    explain them as they show up.
+  </aside>
+</section>
+
+<!-- Ephemeral -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Ephemeral by default</h2>
+      <p class="def">A container's own files - and an <code>emptyDir</code> - live and die with the pod.</p>
+      <p class="where">In the demo: <b>Part 1</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="A pod is replaced and its files are gone">
+      <use href="#i-pod" x="50" y="110" width="180" height="180"/>
+      <text class="dg-label" x="140" y="325">POD</text>
+      <use href="#i-doc" x="215" y="60" width="70" height="70"/>
+      <text class="dg-small" x="250" y="50">logbook.txt</text>
+      <path class="dg-line" d="M270,200 H500" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="385" y="180">deleted · rescheduled · updated</text>
+      <use href="#i-pod-new" x="520" y="110" width="180" height="180"/>
+      <text class="dg-label" x="610" y="325">NEW POD</text>
+      <text class="dg-small" x="610" y="350">starts empty</text>
+      <text class="dg-small" x="400" y="440">fine for caches and scratch space - never for data you want back</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    Every container gets a writable layer on top of its image, and a pod can
+    add an emptyDir volume for scratch space. Both live on the node and are
+    deleted with the pod. And pods get replaced all the time: a rollout, a
+    node drain for an upgrade, a crash, a scale-down. So anything an
+    application writes there is gone at the next restart. That's the default
+    - and it's a feature: stateless pods are what make self-healing and
+    scaling easy. Data you want to keep needs a persistent volume.
+  </aside>
+</section>
+
+<!-- PV / PVC -->
+<section>
+  <div class="term">
+    <div>
+      <h2>PV &amp; PVC</h2>
+      <p class="def">The claim is the request, in your project.<br>The volume is the real thing, cluster-wide.</p>
+      <p class="where">In the demo: <b>Part 2</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="Pod uses a PVC bound to a PV">
+      <rect class="dg-box" x="20" y="60" width="440" height="330" rx="14"/>
+      <text class="dg-label left" x="40" y="92">PROJECT</text>
+      <use href="#i-pod" x="50" y="140" width="140" height="140"/>
+      <text class="dg-label" x="120" y="315">POD</text>
+      <path class="dg-line" d="M195,210 H275" marker-end="url(#dg-arrow)"/>
+      <use href="#i-doc" x="280" y="140" width="140" height="140"/>
+      <text class="dg-label" x="350" y="315">PVC</text>
+      <text class="dg-small" x="350" y="340">logbook-data</text>
+      <path class="dg-line" d="M425,210 H565" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="495" y="190">bound</text>
+      <use href="#i-disk" x="575" y="140" width="140" height="140"/>
+      <text class="dg-label" x="645" y="315">PV</text>
+      <text class="dg-small" x="645" y="340">pvc-3f9c…</text>
+      <text class="dg-small" x="400" y="450">delete the pod - the claim and the data stay</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    A PersistentVolumeClaim is a namespaced object a developer writes: size,
+    access mode, storage class. A PersistentVolume is the cluster-wide object
+    that represents a real piece of storage - a Ceph block image, an NFS
+    export, a cloud disk. Developers normally can't even list PVs; they only
+    see their claims. Binding is one-to-one. Pods mount claims, never PVs
+    directly, so the same pod spec works on any cluster.
+
+    The reclaim policy decides what happens when the claim is deleted:
+    Delete (the default for dynamic storage - the data goes too) or Retain.
+  </aside>
+</section>
+
+<!-- StorageClass -->
+<section>
+  <div class="term">
+    <div>
+      <h2>StorageClass</h2>
+      <p class="def">The menu: which driver, which settings.<br>Volumes are made on demand.</p>
+      <p class="where">In the demo: <b>Part 2</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="A PVC picks one storage class from a menu">
+      <use href="#i-doc" x="20" y="180" width="130" height="130"/>
+      <text class="dg-label" x="85" y="340">PVC</text>
+      <path class="dg-line" d="M155,245 H245" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="255" y="70" width="520" height="370" rx="12" style="stroke:#ee0000"/>
+      <text class="dg-label left" x="280" y="105">STORAGE CLASSES</text>
+      <use href="#i-disk" x="280" y="130" width="70" height="70"/>
+      <text class="dg-mono" x="370" y="160">ocs-…-ceph-rbd ★</text>
+      <text class="dg-small left" x="370" y="186">block · RWO · default</text>
+      <use href="#i-doc" x="280" y="225" width="70" height="70"/>
+      <text class="dg-mono" x="370" y="255">ocs-…-cephfs</text>
+      <text class="dg-small left" x="370" y="281">file · RWX</text>
+      <use href="#i-bucket" x="280" y="320" width="70" height="70"/>
+      <text class="dg-mono" x="370" y="350">openshift-storage.noobaa.io</text>
+      <text class="dg-small left" x="370" y="376">object · buckets</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    A StorageClass names a provisioner (the CSI driver) and its parameters:
+    which pool, which filesystem, encrypted or not, what happens on delete,
+    whether volumes can grow. One class is marked default - a claim that
+    doesn't name a class gets that one. With ODF we get three: Ceph RBD for
+    block volumes, CephFS for shared file volumes, and NooBaa for S3 buckets.
+
+    The point for operations: the platform team decides what's on the menu.
+    Developers pick from it by name; the same claim, unchanged, gets a
+    vSphere disk on one cluster and a Ceph volume on another.
+  </aside>
+</section>
+
+<!-- Access modes -->
+<section>
+  <h2>Access modes</h2>
+  <p class="subheading">Who may mount the volume at the same time</p>
+  <div class="modes">
+    <div class="mode"><code>RWO</code><h3>ReadWriteOnce</h3><p>One <b>node</b> at a time. Block storage. Pods on that same node can share it.</p></div>
+    <div class="mode"><code>RWX</code><h3>ReadWriteMany</h3><p>Many nodes, read and write. Shared file storage: CephFS, NFS.</p></div>
+    <div class="mode dim"><code>ROX</code><h3>ReadOnlyMany</h3><p>Many nodes, read only. Reference data.</p></div>
+    <div class="mode dim"><code>RWOP</code><h3>ReadWriteOncePod</h3><p>Exactly one pod, cluster-wide. The strict RWO.</p></div>
+  </div>
+  <p class="small muted" style="margin-top:50px">In the demo: <b class="red">Parts 3 and 4</b></p>
+  <aside class="notes">
+    The access mode is a promise the storage has to keep. RWO, ReadWriteOnce,
+    is the common one - block storage attached to one node. Note the trap:
+    it's one NODE, not one pod; two pods on the same node can both mount it,
+    which surprises people. ReadWriteOncePod is the strict version. RWX,
+    ReadWriteMany, needs a shared filesystem - CephFS or NFS - so pods on
+    different nodes can all read and write. ReadOnlyMany is for shared
+    reference data.
+
+    Rule of thumb: databases want RWO block storage (and replicate
+    themselves if they need more copies); RWX is for content that several
+    pods really share, like uploads. Raw block volumes in RWX mode exist too
+    - OpenShift Virtualization uses them for live migration.
+  </aside>
+</section>
+
+<!-- CSI -->
+<section>
+  <div class="term">
+    <div>
+      <h2>CSI</h2>
+      <p class="def">Container Storage Interface: one standard plug for every storage vendor.</p>
+      <p class="where">In the demo: <b>every volume</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="CSI driver between OpenShift and storage">
+      <use href="#i-node" x="20" y="160" width="140" height="140"/>
+      <text class="dg-label" x="90" y="325">OPENSHIFT</text>
+      <path class="dg-line" d="M165,230 H245" marker-end="url(#dg-arrow)"/>
+      <use href="#i-plug" x="250" y="40" width="110" height="110"/>
+      <text class="dg-label left" x="370" y="90">CSI DRIVER</text>
+      <rect class="dg-panel" x="250" y="170" width="310" height="80" rx="8"/>
+      <text class="dg-title left" x="270" y="202" style="font-size:19px">controller</text>
+      <text class="dg-small left" x="270" y="232">create · delete · snapshot · expand</text>
+      <rect class="dg-panel" x="250" y="265" width="310" height="80" rx="8"/>
+      <text class="dg-title left" x="270" y="297" style="font-size:19px">node (on every worker)</text>
+      <text class="dg-small left" x="270" y="327">attach · format · mount</text>
+      <path class="dg-line" d="M565,255 H635" marker-end="url(#dg-arrow)"/>
+      <use href="#i-disk" x="645" y="180" width="130" height="130"/>
+      <text class="dg-label" x="710" y="340">STORAGE</text>
+      <text class="dg-small" x="400" y="430">ODF · NetApp Trident · Dell · Pure · vSphere · AWS EBS · Azure Disk …</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    Storage drivers used to be compiled into Kubernetes. CSI moved them out:
+    each vendor ships a driver, installed as an operator, that runs as pods
+    on the cluster. A controller part talks to the storage's API - create,
+    delete, snapshot, expand - and a node part on every worker attaches,
+    formats and mounts the volume for the pods on that node.
+
+    Why ops should care: what you can do with a volume (snapshots, online
+    expansion, RWX, encryption) depends on the driver, not on OpenShift. Read
+    the driver's feature list before you pick storage; "it has a CSI driver"
+    is necessary, not sufficient.
+  </aside>
+</section>
+
+<!-- Local storage -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Local storage</h2>
+      <p class="def">A disk inside one node: fast, but the data can't follow the pod.</p>
+      <p class="where">Use it for: <b>software that replicates its own data</b> - like ODF itself</p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="A pod cannot move off a failed node because its data is local">
+      <rect class="dg-panel" x="30" y="80" width="320" height="300" rx="12" style="stroke:#ee0000"/>
+      <use href="#i-node" class="grey" x="45" y="92" width="44" height="44"/>
+      <text class="dg-title left" x="100" y="122">worker-1</text>
+      <use href="#i-pod" x="70" y="170" width="120" height="120"/>
+      <use href="#i-disk" x="215" y="180" width="100" height="100"/>
+      <path class="dg-line" d="M40,90 L340,370 M340,90 L40,370" style="stroke-width:5"/>
+      <rect class="dg-panel" x="450" y="80" width="320" height="300" rx="12"/>
+      <use href="#i-node" class="grey" x="465" y="92" width="44" height="44"/>
+      <text class="dg-title left" x="520" y="122">worker-2</text>
+      <use href="#i-pod-new" class="grey" x="550" y="170" width="120" height="120"/>
+      <text class="dg-small" x="610" y="325">Pending</text>
+      <path class="dg-line dg-dash" d="M355,230 H440" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small" x="400" y="440">node down = data down · no rescheduling, no node drain</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    Local volumes - the Local Storage Operator, LVM Storage, hostPath - use a
+    disk inside one node. Fast and cheap, but the PV carries node affinity:
+    the pod can only ever run on that node. If the node dies, the pod stays
+    Pending and the data is unreachable; even a planned drain for an upgrade
+    gets stuck. Avoid it for applications.
+
+    It's the right choice for software that keeps its own replicas across
+    nodes - Kafka, some databases, and ODF itself, which builds its
+    replicated storage out of the nodes' local disks. Single-node OpenShift
+    at the edge is the other exception.
+  </aside>
+</section>
+
+<!-- Object storage -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Object storage</h2>
+      <p class="def">Buckets over HTTPS (S3) - not a filesystem.<br>Ask for one with an <code>ObjectBucketClaim</code>.</p>
+      <p class="where">In the demo: <b>backups land in a bucket (Part 8)</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="An ObjectBucketClaim creates a bucket and credentials">
+      <use href="#i-doc" x="60" y="70" width="120" height="120"/>
+      <text class="dg-label" x="120" y="220">OBJECTBUCKETCLAIM</text>
+      <path class="dg-line" d="M185,130 H500" marker-end="url(#dg-arrow)"/>
+      <use href="#i-bucket" x="510" y="60" width="140" height="140"/>
+      <text class="dg-label" x="580" y="230">BUCKET</text>
+      <path class="dg-line dg-dash" d="M120,240 V300" marker-end="url(#dg-arrow)"/>
+      <use href="#i-doc" x="70" y="305" width="100" height="100"/>
+      <use href="#i-lock" x="95" y="340" width="50" height="50"/>
+      <text class="dg-small" x="120" y="435">Secret + ConfigMap</text>
+      <use href="#i-pod" x="320" y="300" width="110" height="110"/>
+      <text class="dg-label" x="375" y="435">APP</text>
+      <path class="dg-line" d="M435,355 C520,355 580,320 580,240" marker-end="url(#dg-arrow)"/>
+      <text class="dg-small left" x="600" y="330">S3 over HTTPS</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    Object storage stores whole objects in buckets, read and written over
+    HTTPS with the S3 API - no mounting, no file locking, practically no
+    size limit. It's where backups, logs, images and data-lake files go.
+    ODF provides it through the Multicloud Object Gateway (NooBaa), and the
+    Ceph object gateway on bare metal.
+
+    A developer asks for a bucket the same self-service way as a volume: an
+    ObjectBucketClaim. In return they get the bucket plus a Secret with the
+    access keys and a ConfigMap with the endpoint, ready to inject into a
+    pod. Today it's where OADP puts our backups.
+  </aside>
+</section>
+
+<!-- Snapshot vs backup -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Snapshot ≠ backup</h2>
+      <p class="def">A snapshot is a point in time, on the same storage.<br>A backup leaves the cluster.</p>
+      <p class="where">In the demo: <b>Parts 7 and 8</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="Snapshots stay on the storage, backups go to a bucket elsewhere">
+      <rect class="dg-box grey" x="20" y="40" width="460" height="300" rx="14"/>
+      <text class="dg-label left" x="40" y="72">SAME STORAGE</text>
+      <use href="#i-disk" x="50" y="110" width="120" height="120"/>
+      <text class="dg-label" x="110" y="260">PVC</text>
+      <path class="dg-line" d="M175,170 H220" marker-end="url(#dg-arrow)"/>
+      <use href="#i-camera" x="225" y="130" width="80" height="80"/>
+      <path class="dg-line" d="M310,170 H340" marker-end="url(#dg-arrow)"/>
+      <use href="#i-disk" class="grey" x="345" y="120" width="100" height="100"/>
+      <text class="dg-label" x="395" y="260">SNAPSHOT</text>
+      <text class="dg-small" x="250" y="310">seconds · undo a mistake</text>
+      <path class="dg-line" d="M480,190 H590" marker-end="url(#dg-arrow)"/>
+      <use href="#i-bucket" x="600" y="110" width="140" height="140"/>
+      <text class="dg-label" x="670" y="280">BACKUP</text>
+      <text class="dg-small" x="670" y="305">objects + data</text>
+      <text class="dg-small" x="400" y="430">lose the storage, lose its snapshots - backups survive</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    A CSI snapshot is a VolumeSnapshot object: a point-in-time copy made by
+    the storage itself, in seconds, usually copy-on-write. Restoring it means
+    creating a new PVC from it. Great for "undo" before an upgrade or after a
+    bad script. But it lives on the same storage: if the storage cluster is
+    lost, so are its snapshots.
+
+    A backup copies data out - to object storage in another place - together
+    with the Kubernetes objects that use it (Deployments, Secrets, Routes...),
+    so you can rebuild a whole project, on this cluster or another one.
+    That's OADP, the OpenShift API for Data Protection, built on the Velero
+    project. You want both.
+  </aside>
+</section>
+
+<!-- ODF -->
+<section>
+  <div class="term">
+    <div>
+      <img src="images/odf-logo.svg" alt="Red Hat OpenShift Data Foundation" style="width:360px;height:auto;margin:0 0 30px">
+      <h2>OpenShift Data Foundation</h2>
+      <p class="def">Block, file and object storage, built from the cluster's own disks - and run like any other operator.</p>
+      <p class="where">In the demo: <b>Part 5</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="ODF: block, file and object on top of Ceph and NooBaa on three nodes">
+      <use href="#i-disk" x="70" y="20" width="100" height="100"/>
+      <text class="dg-label" x="120" y="145">BLOCK · RWO</text>
+      <use href="#i-doc" x="350" y="20" width="100" height="100"/>
+      <text class="dg-label" x="400" y="145">FILE · RWX</text>
+      <use href="#i-bucket" x="630" y="20" width="100" height="100"/>
+      <text class="dg-label" x="680" y="145">OBJECT · S3</text>
+      <rect class="dg-panel" x="30" y="175" width="490" height="80" rx="10" style="stroke:#ee0000"/>
+      <text class="dg-title" x="275" y="223">Ceph (Rook)</text>
+      <rect class="dg-panel" x="540" y="175" width="230" height="80" rx="10" style="stroke:#ee0000"/>
+      <text class="dg-title" x="655" y="213">Multicloud</text>
+      <text class="dg-title" x="655" y="240">Object Gateway</text>
+      <rect class="dg-panel" x="30" y="290" width="230" height="140" rx="10"/>
+      <use href="#i-node" class="grey" x="45" y="300" width="40" height="40"/>
+      <use href="#i-disk" x="110" y="330" width="80" height="80"/>
+      <rect class="dg-panel" x="285" y="290" width="230" height="140" rx="10"/>
+      <use href="#i-node" class="grey" x="300" y="300" width="40" height="40"/>
+      <use href="#i-disk" x="365" y="330" width="80" height="80"/>
+      <rect class="dg-panel" x="540" y="290" width="230" height="140" rx="10"/>
+      <use href="#i-node" class="grey" x="555" y="300" width="40" height="40"/>
+      <use href="#i-disk" x="620" y="330" width="80" height="80"/>
+      <text class="dg-small" x="400" y="475">every block written 3 times, on 3 nodes</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    OpenShift Data Foundation is Red Hat's software-defined storage for
+    OpenShift. Internally it's Ceph, deployed and run by the Rook operator,
+    plus the Multicloud Object Gateway (NooBaa) for S3. In "internal" mode it
+    turns local disks in three or more nodes into one replicated pool -
+    every write lands on three nodes, so losing a node loses no data. In
+    "external" mode it connects OpenShift to an existing Ceph cluster.
+
+    What it adds on top of a plain CSI driver - and what we'll look at in
+    Part 5: all three storage types from one product, snapshots, clones,
+    online expansion, encryption, capacity and performance dashboards in the
+    console, storage health alerts, and disaster recovery across clusters
+    together with Advanced Cluster Management.
+  </aside>
+</section>
+</section>
+
+<!-- ================================================================ DEMO INTRO -->
+<section>
+  <h2>Live demo: today's setup</h2>
+  <p class="subheading">One small app - a logbook - stored three different ways, on ODF</p>
+  <svg class="diagram" viewBox="0 0 1600 640" style="max-width:1600px" aria-label="The logbook app as a Deployment, a DaemonSet and a StatefulSet, on ODF, with alerts and backups">
+    <rect class="dg-box" x="10" y="10" width="1580" height="400" rx="16"/>
+    <text class="dg-label left" x="36" y="46">PROJECT DEMO-STORAGE</text>
+    <!-- deployment -->
+    <rect class="dg-box grey" x="40" y="70" width="440" height="320" rx="12"/>
+    <text class="dg-label" x="260" y="104">DEPLOYMENT LOGBOOK</text>
+    <use href="#i-pod" x="90" y="150" width="120" height="120"/>
+    <path class="dg-line" d="M215,210 H285" marker-end="url(#dg-arrow)"/>
+    <use href="#i-disk" x="295" y="160" width="100" height="100"/>
+    <text class="dg-small" x="345" y="290">logbook-data · RWO</text>
+    <text class="dg-small" x="260" y="360">Parts 1 · 2 · 6 · 7</text>
+    <!-- daemonset -->
+    <rect class="dg-box grey" x="520" y="70" width="520" height="320" rx="12"/>
+    <text class="dg-label" x="780" y="104">DAEMONSET LOGBOOK-RWX</text>
+    <use href="#i-pod" x="560" y="125" width="100" height="100"/>
+    <use href="#i-pod" x="730" y="125" width="100" height="100"/>
+    <use href="#i-pod" x="900" y="125" width="100" height="100"/>
+    <text class="dg-small" x="780" y="243">one pod per node</text>
+    <path class="dg-line" d="M610,228 V255 H950 V228 M780,255 V265" />
+    <use href="#i-disk" x="740" y="262" width="80" height="80"/>
+    <text class="dg-small" x="780" y="358">logbook-shared · RWX · Part 3</text>
+    <!-- statefulset -->
+    <rect class="dg-box grey" x="1080" y="70" width="480" height="320" rx="12"/>
+    <text class="dg-label" x="1320" y="104">STATEFULSET LOGBOOK-STS</text>
+    <use href="#i-pod" x="1115" y="125" width="100" height="100"/>
+    <use href="#i-pod" x="1270" y="125" width="100" height="100"/>
+    <use href="#i-pod" x="1425" y="125" width="100" height="100"/>
+    <path class="dg-line" d="M1165,228 V258 M1320,228 V258 M1475,228 V258"/>
+    <use href="#i-disk" x="1130" y="260" width="70" height="70"/>
+    <use href="#i-disk" x="1285" y="260" width="70" height="70"/>
+    <use href="#i-disk" x="1440" y="260" width="70" height="70"/>
+    <text class="dg-small" x="1320" y="375">a disk per replica · Part 4</text>
+    <!-- odf, monitoring, backup -->
+    <rect class="dg-panel" x="10" y="440" width="1180" height="180" rx="12" style="stroke:#ee0000"/>
+    <text class="dg-label left" x="36" y="476">OPENSHIFT DATA FOUNDATION · PART 5</text>
+    <use href="#i-disk" x="120" y="495" width="80" height="80"/>
+    <text class="dg-mono" x="215" y="545">ceph-rbd</text>
+    <use href="#i-doc" x="480" y="495" width="80" height="80"/>
+    <text class="dg-mono" x="575" y="545">cephfs</text>
+    <use href="#i-bucket" x="820" y="495" width="80" height="80"/>
+    <text class="dg-mono" x="915" y="545">noobaa</text>
+    <use href="#i-bell" x="1235" y="450" width="80" height="80"/>
+    <text class="dg-label" x="1275" y="565">ALERTS</text>
+    <text class="dg-small" x="1275" y="590">Part 6</text>
+    <use href="#i-bucket" x="1430" y="450" width="80" height="80"/>
+    <text class="dg-label" x="1470" y="565">OADP BACKUP</text>
+    <text class="dg-small" x="1470" y="590">Part 8</text>
+  </svg>
+  <aside class="notes">
+    The application doesn't matter today, so it's tiny: a "logbook". Every
+    pod writes a line every five seconds - the time, its own pod name and
+    the node it runs on - into /data/logbook.txt, and serves that directory
+    over HTTP. So in the browser you can see who wrote what, and whether the
+    history survives.
+
+    We run it three ways: a Deployment with one pod (first without storage,
+    then with a block volume), a DaemonSet - one pod on every node - all
+    sharing one file volume, and a StatefulSet that gives each replica its
+    own disk. Underneath, ODF provides the block, file and object storage;
+    on the right, the operations side - an alert when a volume fills up, and
+    a backup of the whole project to an ODF bucket.
+
+    Now switch to the browser: the OpenShift console as peter (Administrator
+    perspective - this is an ops session), and the terminal tabs for peter
+    and user1 (bash --rcfile ~/faa-demo/demo4-storage/user1.rc).
+  </aside>
+</section>
+
+<!-- Part 1 -->
+<section>
+  <section>
+    <h2>1 · Ephemeral by default</h2>
+    <p class="subheading">The app writes - the pod restarts - the history is gone</p>
+    <div class="steps">
+      <ol>
+        <li>Topology: <b>logbook</b> - one pod, a line every 5 s</li>
+        <li>Its Route: <code>/logbook.txt</code></li>
+        <li>The volume: an <b>emptyDir</b></li>
+        <li>Delete the pod</li>
+        <li>Reload - a fresh, empty logbook</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc set volume deployment/logbook
+curl -s $LOGBOOK_URL/logbook.txt | tail -3
+oc delete pod -l app=logbook
+curl -s $LOGBOOK_URL/logbook.txt</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+The logbook Deployment is pre-staged by setup (manifests/logbook-ephemeral.yaml).
+      Topology (Developer perspective, project demo-storage) → logbook → open
+      the Route (arrow icon) and add /logbook.txt: lines like
+      "10:42:05  logbook-7d9f…-x2k4p  on  worker-1". Reload a couple of times -
+      it grows. "This is the app's data."
+      Show where it lives: the Deployment → YAML, volumes: data → emptyDir: {}
+      (or oc set volume deployment/logbook in the terminal). "An emptyDir is a
+      folder on the node, created with the pod and deleted with it."
+      Delete the pod (Topology → pod → Actions → Delete Pod, or
+      oc delete pod -l app=logbook). The Deployment starts a new one within
+      seconds. Reload: only lines from the NEW pod name, starting just now.
+      "Every upgrade, every node drain, every crash - this happens. Stateless
+      pods are a feature; but data you want to keep needs a volume."
+      Press DOWN for the backup screenshot.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Before and after deleting the pod: the history starts over</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-ephemeral-before.webp" data-caption="logbook.txt before: many lines from one pod"></div><figcaption>1 · Before: lines from the first pod</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-ephemeral-after.webp" data-caption="logbook.txt after the pod was deleted: only the new pod's lines"></div><figcaption>2 · After: a new pod name, an empty history</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the logbook through its Route - every line is the time, the pod
+      that wrote it and the node it ran on. Right: the same URL right after
+      the pod was deleted. The Deployment replaced the pod, as it should, but
+      the new pod started with an empty /data: the emptyDir was deleted
+      together with the old pod.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 2 -->
+<section>
+  <section>
+    <h2>2 · Ask for storage: a PVC</h2>
+    <p class="subheading">Pick from the menu - the volume makes itself</p>
+    <div class="steps">
+      <ol>
+        <li><b>Storage → StorageClasses</b>: the menu</li>
+        <li><b>PersistentVolumeClaims → Create</b>: <code>logbook-data</code>, ceph-rbd, 1 GiB, RWO</li>
+        <li>Bound - a <b>PV</b> appeared by itself</li>
+        <li>Swap the emptyDir for the claim</li>
+        <li>Delete the pod - the history stays</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get storageclass
+oc create -f logbook-data-pvc.yaml
+oc get pvc logbook-data
+oc set volume deployment/logbook --add \
+  --overwrite --name=data \
+  --type=pvc --claim-name=logbook-data
+oc delete pod -l app=logbook</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+Administrator perspective. Storage → StorageClasses: three from ODF -
+      ocs-storagecluster-ceph-rbd (block, the default ★), -cephfs (file) and
+      openshift-storage.noobaa.io (object) - plus whatever else the cluster
+      has. Open ceph-rbd: provisioner openshift-storage.rbd.csi.ceph.com,
+      reclaim policy Delete, allow volume expansion true (Part 6 needs it).
+      Storage → PersistentVolumeClaims → Create PersistentVolumeClaim (project
+      demo-storage): StorageClass ocs-storagecluster-ceph-rbd, name
+      logbook-data, access mode Single user (RWO), size 1 GiB, volume mode
+      Filesystem. Create. Status Pending → Bound within seconds. Click the
+      PersistentVolume link: a pvc-… object, cluster-scoped, made by the CSI
+      driver - "nobody filed a ticket".
+      Developers can do this too: in the user1 tab, oc get pvc works, and
+      oc get pv says Forbidden - claims are theirs, volumes are the platform's.
+      Mount it, as code (no console form replaces an existing volume):
+      oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=logbook-data
+      The Deployment rolls out a new pod. The strategy is Recreate on purpose:
+      with RWO, a rolling update could start the new pod on another node while
+      the old one still holds the disk, and it would hang (Part 3 shows that
+      error). Reload the logbook, delete the pod, reload: the old pod's lines
+      are still there, followed by the new pod's. "The pod is disposable; the
+      claim is not."
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The storage classes, and the claim form</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-pvc-storageclasses.webp" data-caption="Storage → StorageClasses: ceph-rbd (default), cephfs and noobaa"></div><figcaption>1 · The menu: the StorageClasses ODF provides</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-pvc-create.webp" data-caption="Create PersistentVolumeClaim: class, name, access mode, size"></div><figcaption>2 · A claim: class, name, access mode, size</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the storage classes on the cluster. The three ODF ones cover
+      block (ceph-rbd, the default), file (cephfs) and object (noobaa). Right:
+      the claim form - everything a developer decides: which class, a name,
+      the access mode and the size. Nothing about disks, LUNs or servers.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Bound: the claim, and the volume made for it</h3>
+    <div class="shot" data-src="images/demo4-pvc-bound.webp" data-caption="PVC logbook-data: Bound to a pvc-... PersistentVolume, 1 GiB, RWO, ceph-rbd"></div>
+    <aside class="notes">
+      The claim seconds after it was created: status Bound, and the
+      PersistentVolume the CSI driver created for it (pvc-…). The PV is
+      cluster-scoped: an administrator can see it, a developer only sees the
+      claim. From now on the Deployment mounts the claim at /data, and the
+      logbook outlives every pod.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 3 -->
+<section>
+  <section>
+    <h2>3 · One volume, many pods: RWO vs RWX</h2>
+    <p class="subheading">A block disk follows one node - a shared file system serves them all</p>
+    <div class="steps">
+      <ol>
+        <li><b>logbook-rwo</b>: 3 pods on 3 nodes, one RWO claim</li>
+        <li>One Running, two stuck: <b>Multi-Attach error</b></li>
+        <li><b>logbook-rwx</b>: a DaemonSet - a pod per node - one <b>CephFS</b> claim</li>
+        <li>Its Route: every node writes to the same logbook</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc create -f logbook-rwo.yaml
+oc get pods -l app=logbook-rwo -o wide
+oc get events \
+  --field-selector reason=FailedAttachVolume
+oc delete -f logbook-rwo.yaml
+
+oc create -f logbook-rwx.yaml
+oc get pods -l app=logbook-rwx -o wide
+curl -s $LOGBOOK_RWX_URL/logbook.txt | tail</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+"What if I scale my logbook to three pods?" In the user1 tab:
+      oc create -f logbook-rwo.yaml - a claim on ceph-rbd (RWO) and a
+      Deployment with 3 replicas that must land on different nodes (pod
+      anti-affinity, so the demo is predictable).
+      oc get pods -l app=logbook-rwo -o wide: one Running, two
+      ContainerCreating, forever. Console: one stuck pod → Events:
+      "Multi-Attach error for volume pvc-… Volume is already used by pod(s)
+      logbook-rwo-…". "RWO means one NODE. A block device can't be mounted
+      read-write by two machines - the filesystem would be corrupted. Note:
+      two pods on the SAME node would both have started - RWO isn't one pod;
+      ReadWriteOncePod is." Clean up: oc delete -f logbook-rwo.yaml.
+      Now shared storage: oc create -f logbook-rwx.yaml - a claim on
+      ocs-storagecluster-cephfs with ReadWriteMany, and a DaemonSet: "one pod
+      on every worker - typically used for agents like log collectors; today
+      it's the clearest way to show many nodes on one volume". Topology shows
+      the DaemonSet (DS) ring with one pod per worker. oc get pods -o wide:
+      each on a different node, all Running.
+      Open the logbook-rwx Route, /logbook.txt: lines from every pod and every
+      node, interleaved, in one file. Reload - the Service sends you to a
+      different pod each time, and the content is the same.
+      When to use which: RWO block for databases (faster, and they handle
+      their own replication); RWX file for content several pods really share
+      - uploads, shared config, CMS content.
+      Press DOWN for backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>RWO on three nodes: one pod runs, the others can't attach</h3>
+    <div class="shot" data-src="images/demo4-rwo-multiattach.webp" data-caption="A logbook-rwo pod stuck in ContainerCreating: Multi-Attach error, volume already used by another pod"></div>
+    <aside class="notes">
+      One of the two stuck logbook-rwo pods. Its Events tab says why: the
+      volume is RWO and already attached to the node of the first pod, so
+      the CSI driver refuses to attach it to a second node. The pod waits
+      forever - it's not a crash, so nothing restarts it. This is the most
+      common storage error people hit when they scale a Deployment that has
+      a block volume.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>RWX: a pod on every node, one shared logbook</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-rwx-pods.webp" data-caption="DaemonSet logbook-rwx: one pod per worker node, all Running"></div><figcaption>1 · One pod per worker, all Running</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-rwx-logbook.webp" data-caption="logbook.txt on the shared CephFS volume: lines from every node"></div><figcaption>2 · One file, written from every node</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the DaemonSet's pods, one on each worker, all Running - all of
+      them mount the same ReadWriteMany claim on CephFS. Right: the shared
+      logbook - lines from every pod and every node in one file. Whichever
+      pod the Route sends you to, it serves the same content.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 4 -->
+<section>
+  <section>
+    <h2>4 · StatefulSet: a disk per replica</h2>
+    <p class="subheading">Stable names, stable disks - how databases scale</p>
+    <div class="steps">
+      <ol>
+        <li><b>logbook-sts</b>: 3 replicas, a claim template</li>
+        <li>Three PVCs: <code>data-logbook-sts-0</code>, <code>-1</code>, <code>-2</code></li>
+        <li>Each pod: its own logbook</li>
+        <li>Delete <code>logbook-sts-1</code> - same name, same disk</li>
+        <li>Scale to 1 - the claims stay</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc create -f logbook-sts.yaml
+oc get pods,pvc -l app=logbook-sts
+oc exec logbook-sts-1 -- \
+  tail -3 /data/logbook.txt
+oc delete pod logbook-sts-1
+oc scale statefulset/logbook-sts \
+  --replicas=1
+oc get pvc -l app=logbook-sts</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+oc create -f logbook-sts.yaml (user1). The StatefulSet has a
+      volumeClaimTemplates section instead of a volume: "a recipe for a
+      claim, used once per replica". Pods come up as logbook-sts-0, -1, -2 -
+      fixed names, not random suffixes - and Storage → PersistentVolumeClaims
+      shows data-logbook-sts-0, -1, -2, all RWO ceph-rbd, each bound to its
+      own PV.
+      Each pod has its own logbook: logbook-sts-1 → Terminal →
+      tail /data/logbook.txt - only logbook-sts-1's lines.
+      Delete logbook-sts-1: it comes back with the SAME name, possibly on
+      another node, and reattaches the SAME claim - tail again: the old lines
+      are still there. "Identity and disk travel together."
+      oc scale statefulset/logbook-sts --replicas=1: pods -2 and -1 go away
+      (highest first), the claims stay - scale back up and they reattach.
+      Deleting the StatefulSet doesn't delete them either (by default):
+      "storage is deleted on purpose, never by accident".
+      This is how PostgreSQL, Kafka or Elasticsearch operators run their
+      members: each replica its own RWO volume, replication in the software.
+      Then, while you go to the dashboards - fill the volume for Part 6 now,
+      it takes a couple of minutes for the alert to fire (cheat 6 shows the
+      lines): oc create -f logbook-volume-alert.yaml, then
+      oc exec deployment/logbook -- dd if=/dev/zero of=/data/ballast bs=1M count=900
+      Press DOWN for the backup screenshot.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Three replicas, three claims - named after the pods</h3>
+    <div class="shot" data-src="images/demo4-sts-pvcs.webp" data-caption="PersistentVolumeClaims: data-logbook-sts-0, -1 and -2, each Bound to its own volume"></div>
+    <aside class="notes">
+      The claims the StatefulSet created from its template: one per replica,
+      named data-logbook-sts-&lt;n&gt; after the pod that uses it. Pod
+      logbook-sts-1 always gets data-logbook-sts-1, wherever it's scheduled.
+      Scaling down or deleting the StatefulSet leaves these claims - and the
+      data - in place.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 5 -->
+<section>
+  <section>
+    <h2>5 · What ODF adds</h2>
+    <p class="subheading">Storage you can see - capacity, performance, health</p>
+    <div class="steps">
+      <ol>
+        <li><b>Storage → Data Foundation</b>: the storage system</li>
+        <li>Block and File: health, capacity, performance, top consumers</li>
+        <li>Object: buckets and their usage</li>
+        <li>A PVC's page: used vs. size, over time</li>
+        <li><b>Observe → Alerting</b>: the storage alert rules ODF ships</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get storagecluster -n openshift-storage
+oc get cephcluster -n openshift-storage
+oc get volumesnapshotclass
+oc get prometheusrules -n openshift-storage
+oc get pods -n openshift-storage \
+  -l app=rook-ceph-osd -o wide</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+As peter, Administrator perspective. Storage → Data Foundation → Storage
+      Systems → ocs-storagecluster-storagesystem. Block and File tab: status
+      (green), raw capacity used vs available, the inventory (nodes, disks),
+      the activity and performance graphs (IOPS, latency, throughput) and
+      "Requested capacity" broken down by project - "which team is using my
+      storage". Object tab: the Multicloud Object Gateway, its buckets (the
+      OADP backup bucket is one of them - Part 8) and their usage.
+      The OSD pods (oc get pods -l app=rook-ceph-osd -o wide): one per disk,
+      spread over the storage nodes - the storage itself runs as pods,
+      managed by an operator, upgraded with the cluster.
+      Back to one volume: Storage → PersistentVolumeClaims → logbook-data →
+      the utilization graph: used vs. capacity. It's rising - we started
+      filling it a minute ago (end of Part 4).
+      Observe → Alerting → Alerting rules, filter "Ceph": CephClusterNearFull
+      (75% raw), CephClusterCriticallyFull, CephOSDDiskNotResponding,
+      CephMonQuorumAtRisk, PersistentVolumeUsageNearFull... "We didn't write
+      any of these - they came with the operator." The platform also has
+      KubePersistentVolumeFillingUp for every PV (fires when under 3% is
+      free, or 15% and trending to full within 4 days).
+      Press DOWN: "plain CSI vs ODF" table and backup screenshots.
+    </aside>
+  </section>
+  <section>
+    <h2>Any CSI driver vs. OpenShift Data Foundation</h2>
+    <table class="compare">
+      <tr><th></th><th>Typical CSI driver</th><th>ODF</th></tr>
+      <tr><td>Dynamic provisioning, RWO block</td><td class="y">✓</td><td class="y">✓</td></tr>
+      <tr><td>Shared file (RWX)</td><td class="n">depends</td><td class="y">✓</td></tr>
+      <tr><td>Object storage (S3) and bucket claims</td><td class="n">-</td><td class="y">✓</td></tr>
+      <tr><td>Snapshots, clones, online expansion</td><td class="n">depends</td><td class="y">✓</td></tr>
+      <tr><td>Data replicated across nodes / zones</td><td class="n">the array's job</td><td class="y">✓</td></tr>
+      <tr><td>Encryption per volume, keys in a KMS (Vault)</td><td class="n">depends</td><td class="y">✓</td></tr>
+      <tr><td>Capacity &amp; performance in the console</td><td class="n">-</td><td class="y">✓</td></tr>
+      <tr><td>Storage health alerts out of the box</td><td class="n">-</td><td class="y">✓</td></tr>
+      <tr><td>Disaster recovery between clusters (with ACM)</td><td class="n">-</td><td class="y">✓</td></tr>
+    </table>
+    <aside class="notes">
+      What a typical external CSI driver gives you versus ODF. Any decent
+      driver does dynamic provisioning of block volumes; the rest "depends"
+      on the vendor and the array - and the visibility and alerting live in
+      the vendor's own tool, not in OpenShift.
+
+      ODF brings all three storage types, the data services (snapshots,
+      clones, expansion, encryption with keys in a KMS such as Vault - a
+      topic for a later session), dashboards and alerts inside the OpenShift
+      console, and Regional/Metro disaster recovery with Advanced Cluster
+      Management. The honest trade-off: it uses the cluster's own nodes and
+      disks (or an external Ceph), and it's a product to size and run. Many
+      sites use both: the SAN's CSI driver for some workloads, ODF for the
+      rest and for object storage.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The ODF dashboard: health, capacity and performance in one place</h3>
+    <div class="shot" data-src="images/demo4-odf-dashboard.webp" data-caption="Storage → Data Foundation → Storage System → Block and File: status, capacity, performance, consumers"></div>
+    <aside class="notes">
+      The ODF storage system overview. Status at the top (the cluster and
+      data resiliency), raw capacity used and available, the capacity
+      breakdown by project, and the performance graphs - IOPS, throughput,
+      latency. This is what the storage team watches, inside the same
+      console as everything else.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Storage alert rules that come with ODF</h3>
+    <div class="shot" data-src="images/demo4-odf-alert-rules.webp" data-caption="Observe → Alerting → Alerting rules filtered on Ceph: rules shipped by ODF"></div>
+    <aside class="notes">
+      Observe → Alerting → Alerting rules, filtered on "Ceph". Every one of
+      these was installed by the ODF operator: the storage cluster nearly or
+      critically full, a disk not responding, monitors losing quorum, and
+      more. They feed the same Alertmanager as the rest of the platform, so
+      they go wherever your alerts already go - e-mail, Slack, PagerDuty.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 6 -->
+<section>
+  <section>
+    <h2>6 · A volume fills up</h2>
+    <p class="subheading">Get warned early - then grow it without downtime</p>
+    <div class="steps">
+      <ol>
+        <li>An alert at 80% full - as code</li>
+        <li>Fill <code>logbook-data</code>: 900 MiB</li>
+        <li><b>Observe → Alerts</b>: <code>VolumeAlmostFull</code> fires</li>
+        <li>PVC → <b>Expand PVC</b>: 2 GiB, online</li>
+        <li>The alert resolves - the pod never restarted</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc create -f logbook-volume-alert.yaml
+oc exec deployment/logbook -- dd \
+  if=/dev/zero of=/data/ballast bs=1M count=900
+oc exec deployment/logbook -- df -h /data
+oc patch pvc logbook-data --type=merge \
+  -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'
+oc exec deployment/logbook -- df -h /data
+oc exec deployment/logbook -- rm /data/ballast</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+The first two lines ran at the end of Part 4 (if not, run them now and
+      talk through the rule while waiting ~2-3 min). Show the rule:
+      logbook-volume-alert.yaml - a PrometheusRule in OUR project:
+      kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.8
+      for 1 minute → VolumeAlmostFull, severity warning. "Alerts are code too
+      - the app team owns this one, in its own namespace, with its own
+      threshold." (User workload monitoring is enabled by setup; user1 has the
+      monitoring-rules-edit role.)
+      oc exec deployment/logbook -- df -h /data: ~92% used.
+      Developer perspective → Observe → Alerts: VolumeAlmostFull firing for
+      logbook-data. (Admin: Observe → Alerting shows it too.) The PVC page's
+      graph shows the jump.
+      Fix it: Administrator → Storage → PersistentVolumeClaims → logbook-data
+      → Actions → Expand PVC → 2 GiB → Expand. Watch the PVC: the size
+      changes in seconds; df -h /data in the pod: 2.0G, ~45% used. The pod
+      was never restarted - the CSI driver grew the Ceph image and the node
+      plugin grew the filesystem online (needs allowVolumeExpansion: true on
+      the class). Within a minute or two the alert resolves.
+      "You can only grow, never shrink." Remove the ballast
+      (oc exec deployment/logbook -- rm /data/ballast) before Part 7.
+      Press DOWN for backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The alert fires - and the volume grows online</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-alert-firing.webp" data-caption="Observe → Alerts: VolumeAlmostFull firing for logbook-data"></div><figcaption>1 · VolumeAlmostFull: logbook-data is over 80% full</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-alert-expand.webp" data-caption="Expand PVC: logbook-data from 1 GiB to 2 GiB"></div><figcaption>2 · Expand PVC: 1 GiB → 2 GiB, the pod keeps running</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the alert the application team wrote, firing in its own project's
+      Observe → Alerts page once logbook-data passed 80%. Right: the fix,
+      Expand PVC on the claim. The storage grows and the filesystem is
+      resized while the pod keeps running; the alert resolves on its own
+      once usage drops below the threshold.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The alert, as code</h3>
+<pre class="big-code"><code class="language-yaml">- alert: VolumeAlmostFull
+  expr: |
+    kubelet_volume_stats_used_bytes
+      / kubelet_volume_stats_capacity_bytes > 0.8
+  for: 1m
+  labels:
+    severity: warning</code></pre>
+    <aside class="notes">
+      The heart of logbook-volume-alert.yaml, a PrometheusRule in the
+      demo-storage project. The kubelet reports every mounted volume's used
+      and total bytes; the rule fires when a volume in this project is more
+      than 80% full for a minute. User workload monitoring evaluates it, and
+      it shows up in the project's Observe → Alerts - and in Alertmanager,
+      routed wherever the team's alerts go.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 7 -->
+<section>
+  <section>
+    <h2>7 · Snapshots: an undo button</h2>
+    <p class="subheading">A point in time, in seconds - restored as a new claim</p>
+    <div class="steps">
+      <ol>
+        <li>PVC <code>logbook-data</code> → <b>Create snapshot</b></li>
+        <li>"Oops": delete the logbook</li>
+        <li>Snapshot → <b>Restore as new PVC</b></li>
+        <li>Point the Deployment at the restored claim</li>
+        <li>The history is back</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc create -f logbook-snapshot.yaml
+oc get volumesnapshot
+oc exec deployment/logbook -- \
+  rm /data/logbook.txt
+oc create -f logbook-data-restored-pvc.yaml
+oc set volume deployment/logbook --add \
+  --overwrite --name=data \
+  --claim-name=logbook-data-restored</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+Storage → PersistentVolumeClaims → logbook-data → Actions → Create
+      snapshot: name logbook-data-snap, snapshot class
+      ocs-storagecluster-rbdplugin-snapclass → Create. Storage →
+      VolumeSnapshots: Ready in a few seconds - "however big the volume, the
+      storage does copy-on-write".
+      The mistake: oc exec deployment/logbook -- rm /data/logbook.txt. Reload
+      the Route: only the last few seconds of lines. "Someone ran the wrong
+      script."
+      Restore: VolumeSnapshots → logbook-data-snap → Actions → Restore as new
+      PVC: name logbook-data-restored, same class, size 2 GiB (at least the
+      snapshot's size) → Restore. Bound.
+      A snapshot never overwrites the original; you get a new claim and point
+      the app at it (as code - same command as Part 2):
+      oc set volume deployment/logbook --add --overwrite --name=data --claim-name=logbook-data-restored
+      New pod, reload: the full history up to the snapshot is back, then new
+      lines. Delete the old claim when happy.
+      For a StatefulSet the claim name is the contract: scale to 0, delete
+      data-logbook-sts-0, create a claim with that name from the snapshot,
+      scale back up.
+      Snapshots are taken by the storage, not the app: for a database, quiesce
+      it or use its own backup tool for a consistent copy (OADP hooks can do
+      that).
+      Press DOWN for the backup screenshot.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Snapshot, then restore as a new claim</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-snapshot-ready.webp" data-caption="VolumeSnapshots: logbook-data-snap, Ready"></div><figcaption>1 · The snapshot: ready in seconds</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-snapshot-restore.webp" data-caption="Restore as new PVC: logbook-data-restored from the snapshot"></div><figcaption>2 · Restore as new PVC: logbook-data-restored</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the VolumeSnapshot of logbook-data, ready a few seconds after it
+      was requested - the storage makes it copy-on-write, whatever the
+      volume's size. Right: Restore as new PVC creates a new claim from the
+      snapshot; the Deployment is then pointed at it, and the logbook is back
+      as it was when the snapshot was taken.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 8 -->
+<section>
+  <section>
+    <h2>8 · Backup and restore with OADP</h2>
+    <p class="subheading">The whole project - objects and data - to a bucket, and back</p>
+    <div class="steps">
+      <ol>
+        <li><b>OADP</b> operator: backups go to an <b>ODF bucket</b></li>
+        <li>Back up <code>demo-storage</code>: one <b>Backup</b></li>
+        <li>Restore it as a new project: <code>demo-storage-restore</code></li>
+        <li>Same apps, same claims, same data</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get backupstoragelocation -n openshift-adp
+oc create -f demo-storage-backup.yaml
+oc get backup demo-storage -n openshift-adp \
+  -o jsonpath='{.status.phase}'
+oc create -f demo-storage-restore.yaml
+oc get pods,pvc -n demo-storage-restore</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+As peter. Operators → Installed Operators → OADP Operator (namespace
+      openshift-adp). DataProtectionApplication (staged by setup): Velero with
+      the OpenShift and CSI plugins, one BackupStorageLocation pointing at an
+      ODF bucket (an ObjectBucketClaim - Part 5's Object tab shows it).
+      Backup tab → Create Backup (or oc create -f demo-storage-backup.yaml):
+      name demo-storage, included namespaces demo-storage, snapshotMoveData
+      true. "Two things go in the bucket: every Kubernetes object in the
+      project as JSON, and - with data mover - a copy of every volume's data,
+      taken from a CSI snapshot." Phase: InProgress → Completed in a minute or
+      two; talk over it.
+      Restore tab → Create Restore (or demo-storage-restore.yaml): backup
+      demo-storage, namespace mapping demo-storage → demo-storage-restore.
+      A new project appears with the logbook Deployment, the DaemonSet, the
+      StatefulSet and their claims; the pods start once the data is restored.
+      Open the restored logbook's Route (new hostname): the history is there.
+      Restoring into a new name is how you test a backup without touching
+      production - and the same Backup can be restored on another cluster
+      pointed at the same bucket.
+      In real life: a Schedule object takes these nightly, with a TTL, and
+      the bucket lives outside the cluster (another site, or a cloud).
+      Press DOWN for the backup screenshot.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Backup completed - restored as a new project</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-oadp-backup.webp" data-caption="OADP Backup demo-storage: Completed"></div><figcaption>1 · Backup demo-storage: Completed</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-oadp-restore.webp" data-caption="Project demo-storage-restore: the same apps and claims, from the backup"></div><figcaption>2 · demo-storage-restore: the project, rebuilt from the bucket</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the Backup of the demo-storage project, completed - the objects
+      and the data of every volume are now in the ODF bucket. Right: the
+      Restore into a new project, demo-storage-restore: the same Deployment,
+      DaemonSet and StatefulSet, with their claims recreated and filled from
+      the backup.
+    </aside>
+  </section>
+</section>
+
+<!-- ================================================================ DIAGNOSTICS -->
+<section>
+  <h2>When storage goes wrong</h2>
+  <p class="subheading">Most problems show up in three places: the claim, the pod's events, the storage</p>
+  <div class="steps">
+    <ol>
+      <li>PVC <b>Pending</b>: no default class, a typo, quota, no capacity</li>
+      <li>Pod stuck <b>ContainerCreating</b>: Multi-Attach, mount errors</li>
+      <li>App errors, <b>disk full</b>: usage metrics, <code>df</code></li>
+      <li>Everything slow or stuck: the <b>ODF</b> health and alerts</li>
+    </ol>
+    <div>
+      <p class="cli-label">First looks</p>
+<pre><code class="language-bash">oc describe pvc &lt;name&gt;
+oc get events --sort-by=.lastTimestamp
+oc describe pod &lt;name&gt;
+oc get volumeattachment | grep &lt;pv&gt;
+oc exec &lt;pod&gt; -- df -h /data
+oc get storagecluster,cephcluster \
+  -n openshift-storage
+oc adm must-gather --image=\
+  registry.redhat.io/odf4/odf-must-gather-rhel9</code></pre>
+    </div>
+  </div>
+  <aside class="notes">
+    A short checklist, built from what we saw today. A claim stuck in
+    Pending: oc describe pvc - its events say why: no default storage class
+    and none named, a misspelled class, a project quota on storage, or the
+    backend out of space. (With a WaitForFirstConsumer class, Pending is
+    normal until a pod uses the claim.)
+
+    A pod stuck in ContainerCreating: describe the pod - Multi-Attach (Part
+    3), a mount or permission error, a node that can't reach the storage.
+    VolumeAttachments show which node holds a volume. An app failing with
+    "no space left": df in the pod, and the usage graph on the PVC page
+    (Part 6). If many volumes misbehave at once, look at the storage itself:
+    the ODF dashboard and its alerts (Part 5). For a support case, run
+    must-gather with the ODF image (match the tag to your ODF version) and
+    attach the result.
+  </aside>
+</section>
+
+<!-- ================================================================ WRAP-UP -->
+<section>
+  <h2>What we just did</h2>
+  <p class="subheading">The plan from the start - in OpenShift terms</p>
+  <ul>
+    <li>Ephemeral by default - <code>emptyDir</code> and the container layer</li>
+    <li>PVC → StorageClass → PV: dynamic provisioning through CSI</li>
+    <li>RWO vs RWX - and StatefulSets for a disk per replica</li>
+    <li>OpenShift Data Foundation: block, file, object, dashboards, alerts</li>
+    <li>A PrometheusRule on volume usage - online PVC expansion</li>
+    <li>VolumeSnapshots to undo, OADP backups to recover</li>
+  </ul>
+  <aside class="notes">
+    The same six points as "What we will cover today", with the names you
+    saw on screen. A pod's own files are ephemeral; a PersistentVolumeClaim
+    asks a StorageClass for a volume, and the CSI driver creates the PV. RWO
+    block volumes belong to one node - StatefulSets give each replica its
+    own - while RWX file volumes are shared. ODF provides all three storage
+    types plus the dashboards and alerts; we added our own alert as code,
+    grew a volume online, undid a mistake with a snapshot and rebuilt the
+    whole project from an OADP backup.
+
+    Go back to "Live demo: today's setup" if there's time and point at each
+    box.
+  </aside>
+</section>
+
+<!-- ================================================================ Q&A -->
+<section class="no-chrome qa">
+  <h1>Q&amp;A</h1>
+  <div class="banner"></div>
+  <p class="thanks">Thank you for attending - let's talk</p>
+  <ul class="discuss">
+    <li>Was this useful?</li>
+    <li>Is the format right?</li>
+    <li>What would you like to see next?</li>
+  </ul>
+  <p class="slides-url">The slides, commands included:<br><a href="https://redhat-na-ssa.github.io/user-group/demo4-storage/" target="_blank">redhat-na-ssa.github.io/user-group/demo4-storage</a></p>
+  <figure class="qr-box">
+    <div class="qr" data-url="https://redhat-na-ssa.github.io/user-group/demo4-storage/"></div>
+    <figcaption>Presentation source</figcaption>
+  </figure>
+  <aside class="notes">
+    Open the floor: questions first, then the prompts on the slide. Storage
+    usually raises site-specific questions - which arrays, which CSI drivers,
+    how backups are done today; note them as candidates for an architecture
+    review or a follow-up session (backup strategy and disaster recovery are
+    natural next steps).
+
+    Write everything down in the follow-up app - open it from your own
+    bookmark in a separate tab; it is not linked from the deck. Finally,
+    point at the QR code: the deck, with the backup screenshots and the
+    commands on every demo slide, stays online.
+  </aside>
+</section>
+
+</div></div>
+<script src="../reveal/reveal.js"></script>
+<script src="../reveal/plugin/notes.js"></script>
+<script src="../reveal/plugin/highlight.js"></script>
+<script src="../lib/qrcode.js"></script>
+<script src="../common/deck.js"></script>
+<script>Deck.init();</script>
+</body>
+</html>

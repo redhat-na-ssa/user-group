@@ -1,0 +1,16 @@
+# Part 7: a new claim filled from the snapshot (at least the snapshot's size:
+# logbook-data was grown to 2Gi in Part 6)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logbook-data-restored
+spec:
+  storageClassName: ocs-storagecluster-ceph-rbd
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+  dataSource:
+    apiGroup: snapshot.storage.k8s.io
+    kind: VolumeSnapshot
+    name: logbook-data-snap

@@ -272,3 +272,21 @@
   letter-spacing: 0.04em; text-transform: uppercase; margin: -0.3em 0 1em;
 }
 .services .card p strong { color: var(--rh-text); font-weight: 500; }
+
+/* Comparison table (e.g. plain CSI vs OpenShift Data Foundation): few rows,
+   a check or a dash per cell */
+.reveal table.compare { margin: 40px auto 0; border-collapse: collapse; font-size: 0.72em; }
+.reveal table.compare th, .reveal table.compare td {
+  padding: 0.45em 1.1em; border: none; border-bottom: 1px solid #444; text-align: left;
+}
+.reveal table.compare th { font-family: var(--r-heading-font); font-weight: 500; color: var(--rh-muted); }
+.reveal table.compare td.y { color: var(--rh-red); font-weight: 500; text-align: center; }
+.reveal table.compare td.n { color: var(--rh-dim); text-align: center; }
+
+/* Access modes: one card per mode, red code word on top */
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; margin: 50px 30px 0; text-align: left; }
+.modes .mode { background: var(--rh-bg-deep); border-left: 6px solid var(--rh-red); padding: 30px 32px; }
+.modes .mode.dim { border-left-color: #5c5f62; }
+.modes .mode code { font-size: 1.1em; color: var(--rh-red); background: none; padding: 0; }
+.modes .mode h3 { font-size: 0.85em; margin: 0.4em 0; }
+.modes .mode p { font-size: 0.62em; color: var(--rh-muted); margin: 0; }

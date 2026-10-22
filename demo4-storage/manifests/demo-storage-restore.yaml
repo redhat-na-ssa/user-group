@@ -1,0 +1,12 @@
+# Part 8 (as peter): restore the backup into a new project, leaving the
+# original alone
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: demo-storage
+  namespace: openshift-adp
+spec:
+  backupName: demo-storage
+  restorePVs: true
+  namespaceMapping:
+    demo-storage: demo-storage-restore

@@ -1,0 +1,20 @@
+# Part 6: the app team's own alert - any volume in this project over 80% full
+# (needs user workload monitoring; the user needs monitoring-rules-edit)
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: logbook-volume
+spec:
+  groups:
+    - name: storage
+      rules:
+        - alert: VolumeAlmostFull
+          expr: |
+            kubelet_volume_stats_used_bytes
+              / kubelet_volume_stats_capacity_bytes > 0.8
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.persistentvolumeclaim }} is {{ $value | humanizePercentage }} full"
+            description: "Expand the claim or clean up before the application runs out of space."

@@ -1,0 +1,119 @@
+# Demo 4 - OpenShift Storage: terminal cheat-sheet
+#
+# On the presenter's laptop: common/workspace.sh demo4-storage puts this
+# file, the YAML files and one session per user in ~/faa-demo/demo4-storage;
+# open a tab per user with
+#   bash --rcfile ~/faa-demo/demo4-storage/user1.rc
+#   cheat                       # all demo commands
+#   cheat 6                     # only part 6
+#
+# Fallback, the console's web terminal (>_ icon):
+#   curl -sO https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo4-storage/cheatsheet.sh
+#   source cheatsheet.sh
+#
+# Parts 1-4, 6, 7: user1 (edit). Parts 5 and 8: peter (admin).
+
+BASE=https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo4-storage/files
+
+for f in logbook-ephemeral.yaml logbook-data-pvc.yaml logbook-rwo.yaml logbook-rwx.yaml logbook-sts.yaml logbook-volume-alert.yaml logbook-snapshot.yaml logbook-data-restored-pvc.yaml demo-storage-backup.yaml demo-storage-restore.yaml; do
+  [ -f "$f" ] || curl -sfO "$BASE/$f" || echo "could not download $f"   # kept if already here
+done
+oc project demo-storage >/dev/null 2>&1
+APPS=apps.homeocp.ocp4.peterlarsen.org
+LOGBOOK_URL=https://logbook-demo-storage.$APPS
+LOGBOOK_RWX_URL=https://logbook-rwx-demo-storage.$APPS
+CHEATSHEET=$(realpath "${BASH_SOURCE[0]:-cheatsheet.sh}")
+# cheat: every part from the first section header on; cheat N: part N only
+cheat() {
+  if [ -n "$1" ]; then
+    awk -v n="$1" '/^# -----/ { show = ($3 == n) } show' "$CHEATSHEET"
+  else
+    sed -n '/^# -----/,$p' "$CHEATSHEET" | less
+  fi
+}
+return 0 2>/dev/null || true
+
+# ---------------------------------------------------------------- 1 - Ephemeral by default (user1)
+oc get pods -l app=logbook -o wide
+oc set volume deployment/logbook                   # volume "data": an emptyDir
+curl -s $LOGBOOK_URL/logbook.txt | tail -3         # time, pod, node
+oc delete pod -l app=logbook
+curl -s $LOGBOOK_URL/logbook.txt                   # only the new pod's lines
+
+# ---------------------------------------------------------------- 2 - Ask for storage: a PVC (user1)
+oc get storageclass                                # ceph-rbd (default), cephfs, noobaa
+# Console: Storage -> PersistentVolumeClaims -> Create: logbook-data, ceph-rbd, RWO, 1 GiB
+oc create -f logbook-data-pvc.yaml                 # ...or as code (skip if made in the console)
+oc get pvc logbook-data                            # Bound
+oc get pv                                          # user1: Forbidden - PVs are the platform's
+oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=logbook-data
+oc rollout status deployment/logbook
+oc delete pod -l app=logbook
+curl -s $LOGBOOK_URL/logbook.txt | head -3         # the old pod's lines survived
+
+# ---------------------------------------------------------------- 3 - RWO vs RWX (user1)
+oc create -f logbook-rwo.yaml                      # 3 pods, 3 nodes, one RWO claim
+oc get pods -l app=logbook-rwo -o wide             # 1 Running, 2 ContainerCreating
+oc get events --field-selector reason=FailedAttachVolume
+oc delete -f logbook-rwo.yaml
+oc create -f logbook-rwx.yaml                      # DaemonSet, one CephFS RWX claim
+oc get pods -l app=logbook-rwx -o wide             # one per worker, all Running
+curl -s $LOGBOOK_RWX_URL/logbook.txt | tail        # lines from every node
+
+# ---------------------------------------------------------------- 4 - StatefulSet: a disk per replica (user1)
+oc create -f logbook-sts.yaml
+oc get pods,pvc -l app=logbook-sts                 # data-logbook-sts-0, -1, -2
+oc exec logbook-sts-1 -- tail -3 /data/logbook.txt # only logbook-sts-1's lines
+oc delete pod logbook-sts-1
+oc get pod logbook-sts-1 -o wide                   # same name, same claim
+oc exec logbook-sts-1 -- head -3 /data/logbook.txt # the old lines are still there
+oc scale statefulset/logbook-sts --replicas=1
+oc get pvc -l app=logbook-sts                      # all three claims stay
+# Before Part 5 - start filling the volume (the alert needs ~2-3 min):
+oc create -f logbook-volume-alert.yaml
+oc exec deployment/logbook -- dd if=/dev/zero of=/data/ballast bs=1M count=900
+
+# ---------------------------------------------------------------- 5 - What ODF adds (peter)
+oc get storagecluster -n openshift-storage
+oc get cephcluster -n openshift-storage            # HEALTH_OK
+oc get pods -n openshift-storage -l app=rook-ceph-osd -o wide   # one OSD per disk
+oc get storageclass
+oc get volumesnapshotclass
+oc get prometheusrules -n openshift-storage        # the alert rules ODF ships
+oc get obc -A                                      # bucket claims (the OADP bucket)
+
+# ---------------------------------------------------------------- 6 - A volume fills up (user1)
+oc get prometheusrule logbook-volume -o yaml       # created at the end of Part 4
+oc exec deployment/logbook -- df -h /data          # ~92% used
+# Console: Observe -> Alerts: VolumeAlmostFull
+# Console: Storage -> PersistentVolumeClaims -> logbook-data -> Actions -> Expand PVC: 2 GiB
+oc patch pvc logbook-data --type=merge -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'
+oc get pvc logbook-data                            # CAPACITY 2Gi
+oc exec deployment/logbook -- df -h /data          # same pod, bigger filesystem
+oc exec deployment/logbook -- rm /data/ballast     # before Part 7
+
+# ---------------------------------------------------------------- 7 - Snapshots (user1)
+oc create -f logbook-snapshot.yaml
+oc get volumesnapshot                              # READYTOUSE true
+oc exec deployment/logbook -- rm /data/logbook.txt # the "oops"
+curl -s $LOGBOOK_URL/logbook.txt                   # only the last few seconds
+oc create -f logbook-data-restored-pvc.yaml
+oc set volume deployment/logbook --add --overwrite --name=data --claim-name=logbook-data-restored
+oc rollout status deployment/logbook
+curl -s $LOGBOOK_URL/logbook.txt | head -3         # the history is back
+
+# ---------------------------------------------------------------- 8 - Backup and restore with OADP (peter)
+oc get dataprotectionapplication -n openshift-adp
+oc get backupstoragelocation -n openshift-adp      # Available
+oc create -f demo-storage-backup.yaml
+oc get backup demo-storage -n openshift-adp -o jsonpath='{.status.phase}{"\n"}'   # Completed
+oc create -f demo-storage-restore.yaml
+oc get restore demo-storage -n openshift-adp -o jsonpath='{.status.phase}{"\n"}'
+oc get pods,pvc -n demo-storage-restore
+curl -s https://logbook-demo-storage-restore.$APPS/logbook.txt | head -3
+
+# ---------------------------------------------------------------- 9 - When storage goes wrong
+oc describe pvc logbook-data
+oc get events --sort-by=.lastTimestamp
+oc get volumeattachment
+oc adm must-gather --image=registry.redhat.io/odf4/odf-must-gather-rhel9:v4.18   # match your ODF version

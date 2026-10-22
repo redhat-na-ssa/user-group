@@ -131,4 +131,37 @@
     <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="7"/>
     <path d="M50,26 V50 L66,62" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
   </symbol>
+
+  <!-- object storage bucket -->
+  <symbol id="i-bucket" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="24" rx="36" ry="11" fill="none" stroke="currentColor" stroke-width="5"/>
+    <path d="M14,24 L24,84 A26,8 0 0 0 76,84 L86,24" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+  </symbol>
+
+  <!-- snapshot: a camera -->
+  <symbol id="i-camera" viewBox="0 0 100 100">
+    <path d="M10,32 H30 L38,20 H62 L70,32 H90 V82 H10 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+    <circle cx="50" cy="56" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
+  </symbol>
+
+  <!-- alert: a bell -->
+  <symbol id="i-bell" viewBox="0 0 100 100">
+    <path d="M24,72 V46 A26,26 0 0 1 76,46 V72 L84,80 H16 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M42,88 A9,9 0 0 0 58,88" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    <path d="M50,12 V20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- dashboard / capacity: a gauge -->
+  <symbol id="i-gauge" viewBox="0 0 100 100">
+    <path d="M12,70 A38,38 0 1 1 88,70" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+    <path d="M50,66 L70,40" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="50" cy="66" r="6" fill="currentColor"/>
+  </symbol>
+
+  <!-- driver / plug-in (CSI): a plug -->
+  <symbol id="i-plug" viewBox="0 0 100 100">
+    <path d="M38,10 V30 M62,10 V30" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+    <path d="M26,30 H74 V48 A24,24 0 0 1 26,48 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M50,72 V92" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+  </symbol>
 </svg>

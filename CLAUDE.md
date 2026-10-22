@@ -102,6 +102,56 @@ Structure of the session:
 
 Builds: use OpenShift Pipelines (Tekton), not a bare S2I BuildConfig - pipelines show better in the console and look less cryptic to non-developers. This means the app source lives in a Git repo the pipeline clones from. The app is created live with the console's Import from Git (Pipelines build option) and **must be named `guestbook`**, because the pre-staged Gitea webhook -> EventListener -> TriggerTemplate starts the pipeline by that name.
 
-## Demo 2 - Development (devspaces)
+## Demo 2 - OpenShift Admin - overview
+
+Key areas this talk will cover
+
+* OpenShift Networking
+* OpenShift Storage
+* Limits/Quotas (if time permits, optimizing limits using cost manager and other solutions)
+* ClusterRoleBindings, ClusterRoles
+* Service Accounts, SCC and privileged containers
+* System Upgrade - Cluster Operator Updates and "standard" operator workloads.
+  * How to maintain an internal registry with the container images needed to run/upgrade clusters instead of having each cluster download from *.redhat.com. 
+* Authentication/Authorization
+
+## Demo 3 - OpenShift installation
+
+Covers managed installation on:
+* Cloud (AWS or Azure)
+* Baremetal - remember to cover MetalLB and external features needed to make it successful
+* Discuss key features of the install: Cluster Network, Machine Network, Service Network
+* Bonus if time: Installing/configuring OpenShift Virtualization (Hyperconverged)
+
+Covers the install-config.yaml for a typical install, and how the assisted installer works (in online mode).
+
+The demo would not show a full install from scratch, but use pre-run configuration setups and show a video of the cluster being installed, and allow the demo person to connect to the "already created" cluster for followup. 
+
+Potential Followup: Offline/disconnected installations
+
+## Demo 4 - OpenShift Storage
+
+Based on feedback, this will be one of many OPS specific presentations.  This demo will function to lay a foundation for how persistent storage is provided, maintained and used on OpenShift. 
+
+Content:
+* What is persistent storage in a k8s/ocp world
+  * Emphemeral storage is the default
+  * PV/PVC
+  * Object Storage (relevant?)
+  * RWX vs. RWO
+  * Why local-storage should be avoided
+* CSI - how the Container Storage Interface works
+* Openshift Data Foundation demo
+* Snapshots
+* Backups and restore with OADP
+* Basic diagnostics
+
+## Demo 5 - External Key/Secret Management
+
+This will be a demo using Hashicorp Vault to manage secrets in one or two namespaces with deployments that use these secrets, like TLS certificates, database connection information etc. 
+
+Demo should show how management policies will be different depending on the environment type (dev, test, prod). It needs to show that each deployment, gets different values depending on the environment being used.
+
+## more to come
 
 (more to come - we'll focus on demo 1 for now to see if this will work).
