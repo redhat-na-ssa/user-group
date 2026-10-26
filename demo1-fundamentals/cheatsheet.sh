@@ -13,14 +13,16 @@
 #
 # Every command below is copy/paste ready.
 
-# BASE=http://slides.faa-demo.svc:8080/demo1-fundamentals/files
-BASE=https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo1-fundamentals/files
+# The cluster's apps domain, from the console URL (works for any user)
+CONSOLE=$(oc whoami --show-console 2>/dev/null)
+APPS=${CONSOLE#https://*.}
+BASE=https://slides-faa-demo.$APPS/demo1-fundamentals/files
 
 for f in hello-pod.yaml guestbook-app.yaml guestbook-pipelinerun.yaml guestbook-db-env.patch.yaml guestbook-route-roundrobin.patch.yaml guestbook-hpa.yaml guestbook-eventlistener.yaml; do
   [ -f "$f" ] || curl -sfO "$BASE/$f" || echo "could not download $f"   # kept if already here
 done
 oc project demo-intro >/dev/null 2>&1
-GIT_REPO=https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
+GIT_REPO=https://local-gitea-gitea.$APPS/ocpdemo/guestbook.git
 CHEATSHEET=$(realpath "${BASH_SOURCE[0]:-cheatsheet.sh}")
 # cheat: every part from the first section header on; cheat N: part N only
 cheat() {
@@ -61,11 +63,11 @@ oc get pods -o wide                                # ...with a new IP; the Servi
 
 # ---------------------------------------------------------------- 3 - From source code
 # Console: +Add -> Import from Git
-#   Git Repo URL:    https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
+#   Git Repo URL:    echo $GIT_REPO   (https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook.git)
 #   Import Strategy: detected (Builder Image -> Python) - keep the suggested version
 #   Application:     guestbook        Name: guestbook (exactly - Part 6 needs it)
 #   Build option:    Pipelines        Resource type: Deployment, Create a route
-# Repo in the browser: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook
+# Repo in the browser: ${GIT_REPO%.git}
 # ...or as code instead of the form (also the catch-up if the form went wrong):
 sed "s|\${GIT_REPO}|$GIT_REPO|g" guestbook-app.yaml | oc create -f -   # ImageStream, Pipeline, Deployment, Service, Route
 oc create -f guestbook-pipelinerun.yaml            # first build (create, not apply)

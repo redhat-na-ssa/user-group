@@ -1,0 +1,58 @@
+# Demo 4 - OpenShift Storage: remove everything the demo created - the
+# projects, the NFS shelf's PVs and class - and empty the NFS directories
+# (pv1..pv10 stay on the server, empty). ODF is not touched.
+#
+#   .venv/bin/ansible-playbook demo4-storage/teardown.yml
+- name: Demo 4 - teardown
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  vars:
+    nfs_helper_ns: "{{ ns }}-nfs-helper"
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    # Deleting the projects deletes their claims, snapshots and pods; the NFS
+    # PVs (Retain) turn Released, ODF volumes (Delete) go with their claims
+    - name: Remove the projects
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ item }}"
+        wait: true
+        wait_timeout: 600
+      loop:
+        - "{{ ns }}"
+        - "{{ restore_ns }}"
+        - "{{ nfs_helper_ns }}"
+
+    - name: Empty the NFS directories
+      ansible.builtin.include_tasks: tasks/nfs-shelf.yml
+      vars:
+        nfs_action: wipe
+
+    - name: NFS directories emptied
+      ansible.builtin.assert:
+        that: nfs_shelf_ok
+        fail_msg: "{{ nfs_shelf_output }}"
+        quiet: true
+
+    - name: Remove the NFS PVs
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: PersistentVolume
+        name: "nfs-pv{{ item }}"
+        wait: true
+      loop: "{{ range(1, 11) | list }}"
+
+    - name: Remove StorageClass nfs-static
+      kubernetes.core.k8s:
+        state: absent
+        api_version: storage.k8s.io/v1
+        kind: StorageClass
+        name: nfs-static

@@ -20,14 +20,14 @@ warn() { echo "${_C_WARN} !${_C_OFF}  $*" >&2; }
 die()  { echo "${_C_ERR} ✘${_C_OFF}  $*" >&2; exit 1; }
 
 # ---------------------------------------------------------------- preflight
-# Require an oc session against the expected cluster. Pass "admin" to also
-# require cluster-admin rights.
+# Require an oc session (the cluster settings in env.sh come from it, unless
+# OCP_API was set). Pass "admin" to also require cluster-admin rights.
 require_login() {
   command -v oc >/dev/null || die "oc not found in PATH"
   local server
-  server=$(oc whoami --show-server 2>/dev/null) || die "Not logged in. Run: oc login ${OCP_API}"
+  server=$(oc whoami --show-server 2>/dev/null) || die "Not logged in. Run: oc login https://api.<cluster-domain>:6443"
   [[ "${server}" == "${OCP_API}" ]] \
-    || warn "Logged in to ${server}, expected ${OCP_API}"
+    || warn "Logged in to ${server}, but OCP_API is ${OCP_API}"
   if [[ "${1:-}" == "admin" ]]; then
     oc auth can-i '*' '*' --all-namespaces >/dev/null 2>&1 \
       || die "User $(oc whoami) is not cluster-admin"

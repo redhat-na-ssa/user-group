@@ -1,4 +1,4 @@
-# Part 8 (as peter): restore the backup into a new project, leaving the
+# Part 9 (as peter): restore the backup into a new project, leaving the
 # original alone
 apiVersion: velero.io/v1
 kind: Restore

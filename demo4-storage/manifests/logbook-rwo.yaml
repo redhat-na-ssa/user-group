@@ -1,4 +1,4 @@
-# Part 3: three replicas on three different nodes, one RWO claim. One pod
+# Part 4: three replicas on three different nodes, one RWO claim. One pod
 # starts; the others hang in ContainerCreating with a Multi-Attach error.
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -58,7 +58,7 @@ spec:
             - containerPort: 8080
           resources:
             requests: {cpu: 10m, memory: 64Mi}
-            limits: {memory: 128Mi}
+            limits: {cpu: 100m, memory: 128Mi}
           volumeMounts:
             - name: data
               mountPath: /data

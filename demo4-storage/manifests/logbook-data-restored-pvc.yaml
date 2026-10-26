@@ -1,5 +1,5 @@
-# Part 7: a new claim filled from the snapshot (at least the snapshot's size:
-# logbook-data was grown to 2Gi in Part 6)
+# Part 8: a new claim filled from the snapshot (at least the snapshot's size:
+# logbook-data was grown to 2Gi in Part 7)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

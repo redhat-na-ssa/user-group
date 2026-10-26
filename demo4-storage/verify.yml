@@ -1,0 +1,109 @@
+# Demo 4 - OpenShift Storage: is everything ready to present? Changes nothing
+# except the NFS write test, which binds and releases the shelf's PVs in a
+# helper project and leaves them Available.
+#
+#   .venv/bin/ansible-playbook demo4-storage/verify.yml
+#
+# Ends with "All good - ready to present Demo 4", or the list of problems.
+- name: Demo 4 - verify
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  vars:
+    nfs_helper_ns: "{{ ns }}-nfs-helper"
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    - name: Read the cluster state
+      kubernetes.core.k8s_info:
+        api_version: "{{ item.api }}"
+        kind: "{{ item.kind }}"
+        namespace: "{{ item.ns | default(omit) }}"
+        name: "{{ item.name | default(omit) }}"
+        label_selectors: "{{ item.labels | default(omit) }}"
+      loop:
+        - {key: snapclasses, api: snapshot.storage.k8s.io/v1, kind: VolumeSnapshotClass}
+        - {key: ceph, api: ceph.rook.io/v1, kind: CephCluster, ns: openshift-storage}
+        - {key: monitoring, api: v1, kind: ConfigMap, ns: openshift-monitoring, name: cluster-monitoring-config}
+        - {key: nodes, api: v1, kind: Node}
+        - {key: shelf, api: v1, kind: PersistentVolume, labels: [storage=nfs-static]}
+        - {key: pvcs, api: v1, kind: PersistentVolumeClaim, ns: "{{ ns }}"}
+        - {key: workloads, api: apps/v1, kind: Deployment, ns: "{{ ns }}"}
+        - {key: daemonsets, api: apps/v1, kind: DaemonSet, ns: "{{ ns }}"}
+        - {key: statefulsets, api: apps/v1, kind: StatefulSet, ns: "{{ ns }}"}
+        - {key: rules, api: monitoring.coreos.com/v1, kind: PrometheusRule, ns: "{{ ns }}"}
+        - {key: route, api: route.openshift.io/v1, kind: Route, ns: "{{ ns }}", name: logbook}
+        - {key: restore_ns, api: v1, kind: Namespace, name: "{{ restore_ns }}"}
+      loop_control:
+        label: "{{ item.key }}"
+      register: reads
+
+    - name: Index the results
+      ansible.builtin.set_fact:
+        st: "{{ dict(reads.results | map(attribute='item.key') | zip(reads.results | map(attribute='resources'))) }}"
+
+    - name: Logbook answers at its Route
+      ansible.builtin.uri:
+        url: "https://{{ st.route[0].spec.host }}/logbook.txt"
+        validate_certs: false
+      register: page
+      failed_when: false
+      when: st.route | length > 0
+
+    - name: NFS write test (every directory, from inside the cluster)
+      ansible.builtin.include_tasks: tasks/nfs-shelf.yml
+      vars:
+        nfs_action: probe
+      # only on a complete, unused shelf - verify never creates or frees PVs itself
+      when: st.shelf | selectattr('status.phase', 'equalto', 'Available') | list | length == 10
+
+    - name: Checks
+      vars:
+        nfs_sc: "{{ storage_classes.resources | selectattr('metadata.name', 'equalto', 'nfs-static') | list }}"
+      ansible.builtin.set_fact:
+        checks:
+          - name: "ODF classes ceph-rbd (expandable), cephfs, noobaa"
+            ok: >-
+              {{ (storage_classes.resources | selectattr('metadata.name', 'equalto', 'ocs-storagecluster-ceph-rbd')
+                  | selectattr('allowVolumeExpansion', 'defined') | selectattr('allowVolumeExpansion') | list | length == 1)
+                 and (storage_classes.resources | selectattr('metadata.name', 'in', ['ocs-storagecluster-cephfs', 'openshift-storage.noobaa.io']) | list | length == 2) }}
+          - name: "ODF snapshot class ocs-storagecluster-rbdplugin-snapclass"
+            ok: "{{ st.snapclasses | selectattr('metadata.name', 'equalto', 'ocs-storagecluster-rbdplugin-snapclass') | list | length == 1 }}"
+          - name: "Ceph HEALTH_OK"
+            ok: "{{ (st.ceph[0].status.ceph.health | default('')) == 'HEALTH_OK' }}"
+          - name: "User workload monitoring on (Part 7 alert)"
+            ok: "{{ 'enableUserWorkload: true' in (st.monitoring[0].data['config.yaml'] | default('')) }}"
+          - name: "At least 3 schedulable nodes (Part 4)"
+            ok: "{{ st.nodes | rejectattr('spec.unschedulable', 'defined') | list | length >= 3 }}"
+          - name: "StorageClass nfs-static present, not the default"
+            ok: >-
+              {{ nfs_sc | length == 1 and
+                 (nfs_sc[0].metadata.annotations | default({})).get('storageclass.kubernetes.io/is-default-class', 'false') != 'true' }}
+          - name: "NFS shelf: nfs-pv1..10 all Available"
+            ok: "{{ st.shelf | selectattr('status.phase', 'equalto', 'Available') | list | length == 10 }}"
+          - name: "NFS write test on all 10 directories"
+            ok: "{{ nfs_shelf_ok | default(false) }}"
+          - name: "Logbook at its Part 1 start (emptyDir) and answering"
+            ok: >-
+              {{ st.workloads | selectattr('metadata.name', 'equalto', 'logbook') | list | length == 1
+                 and (st.workloads | selectattr('metadata.name', 'equalto', 'logbook') | first).spec.template.spec.volumes
+                     | selectattr('emptyDir', 'defined') | list | length == 1
+                 and (page.status | default(0)) == 200 }}
+          - name: "Nothing left from a previous run (claims, rwo/rwx/sts, alert rule, {{ restore_ns }})"
+            ok: >-
+              {{ st.pvcs | length == 0 and st.workloads | length == 1 and st.daemonsets | length == 0
+                 and st.statefulsets | length == 0 and st.rules | length == 0 and st.restore_ns | length == 0 }}
+
+    - name: Results
+      ansible.builtin.debug:
+        msg: "{{ checks | map(attribute='ok') | map('ternary', 'ok     ', 'FAILED ') | zip(checks | map(attribute='name')) | map('join') | list
+                 + ((nfs_shelf_output | default([])) if not (nfs_shelf_ok | default(true)) else []) }}"
+
+    - name: Verdict
+      ansible.builtin.assert:
+        that: checks | rejectattr('ok') | list | length == 0
+        fail_msg: "Not ready - fix the FAILED lines above (reset.yml clears a previous run)"
+        success_msg: "All good - ready to present Demo 4 (OADP for Part 9 is not set up yet)"

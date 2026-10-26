@@ -1,0 +1,9 @@
+# Demo 4 - OpenShift Storage: back to the start after a rehearsal or a run -
+# teardown (projects gone, NFS directories emptied), then setup.
+#
+#   .venv/bin/ansible-playbook demo4-storage/reset.yml
+- name: Teardown
+  ansible.builtin.import_playbook: teardown.yml
+
+- name: Setup
+  ansible.builtin.import_playbook: setup.yml

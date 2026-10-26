@@ -32,6 +32,8 @@
         title: OpenShift Storage
         files:
           - manifests/logbook-ephemeral.yaml
+          - manifests/nfs-claim.yaml
+          - manifests/nfs-claim-big.yaml
           - manifests/logbook-data-pvc.yaml
           - manifests/logbook-rwo.yaml
           - manifests/logbook-rwx.yaml

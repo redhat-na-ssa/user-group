@@ -1,0 +1,39 @@
+# Helper pod for tasks/nfs-shelf.yml: mounts all ten NFS claims at
+# /shelf/pvN and runs nfs_action (probe or wipe) on each directory
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-{{ nfs_action }}
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: shelf
+      image: registry.access.redhat.com/ubi9/python-312:latest
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          rc=0
+          for d in /shelf/pv*; do
+            case "{{ nfs_action }}" in
+              probe) echo probe > "$d/.probe" && rm "$d/.probe" ;;
+              wipe)  find "$d" -mindepth 1 -delete ;;
+            esac && echo "$d ok" || { echo "$d FAILED"; rc=1; }
+          done
+          exit $rc
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+        limits: {cpu: 100m, memory: 64Mi}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: [ALL]}
+      volumeMounts:
+{% for n in range(1, 11) %}
+        - {name: pv{{ n }}, mountPath: /shelf/pv{{ n }}}
+{% endfor %}
+  volumes:
+{% for n in range(1, 11) %}
+    - {name: pv{{ n }}, persistentVolumeClaim: {claimName: pv{{ n }}}}
+{% endfor %}

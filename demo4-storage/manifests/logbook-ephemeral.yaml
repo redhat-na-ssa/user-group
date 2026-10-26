@@ -1,5 +1,5 @@
 # Part 1 (staged by setup): the logbook with an emptyDir - its data lives and
-# dies with the pod. Part 2 swaps the volume for the PVC logbook-data.
+# dies with the pod. Part 3 swaps the volume for the PVC logbook-data.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,7 +41,7 @@ spec:
             - containerPort: 8080
           resources:
             requests: {cpu: 10m, memory: 64Mi}
-            limits: {memory: 128Mi}
+            limits: {cpu: 100m, memory: 128Mi}
           volumeMounts:
             - name: data
               mountPath: /data

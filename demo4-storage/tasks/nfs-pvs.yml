@@ -1,0 +1,5 @@
+# The static NFS shelf: nfs-pv1..nfs-pv10, one per directory pvN of the export.
+# Only creates what's missing; a PV that exists is left as it is.
+- name: NFS PVs on {{ nfs_server }}:{{ nfs_export }}
+  kubernetes.core.k8s:
+    template: "{{ playbook_dir }}/templates/nfs-pvs.yaml.j2"

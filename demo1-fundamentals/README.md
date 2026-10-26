@@ -10,14 +10,14 @@ The presenter's talk track is in **[DEMO-SCRIPT.md](DEMO-SCRIPT.md)**.
 | Admin | `peter` (runs setup) |
 | Developer | `user1` – `edit` role, drives the demo in the console |
 | Viewer | `user2` – `view` role |
-| Source repo (browser) | `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook` (Gitea user `demo`) |
-| Clone URL (Import from Git, pipelines) | `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git`: task pods trust the route's certificate through `common/manifests/tektonconfig-git-ca.patch.yaml` (applied by `faa-demo/playbook.yml`) |
-| App URL (after Part 3) | `https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org` |
+| Source repo (browser) | `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook` (Gitea user `demo`) |
+| Clone URL (Import from Git, pipelines) | `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook.git`: task pods trust the route's certificate through `common/manifests/tektonconfig-git-ca.patch.yaml` (applied by `faa-demo/playbook.yml`) |
+| App URL (after Part 3) | `https://guestbook-demo-intro.apps.<cluster-domain>` |
 
 ## Lifecycle
 
 ```bash
-oc login -u peter https://api.homeocp.ocp4.peterlarsen.org:6443
+oc login -u peter https://api.<cluster-domain>:6443
 ./setup.sh      # one time: project, RBAC, PostgreSQL template, Gitea repo, trigger pieces
 ./verify.sh     # pre-flight: run before every presentation
 #   ... present ...

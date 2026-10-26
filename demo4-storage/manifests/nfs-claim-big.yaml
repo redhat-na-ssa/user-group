@@ -1,0 +1,11 @@
+# Part 2: more than any PV on the shelf - stays Pending (no provisioner)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-claim-big
+spec:
+  storageClassName: nfs-static
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 10Gi

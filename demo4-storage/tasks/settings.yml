@@ -1,0 +1,25 @@
+# Settings for every demo 4 playbook, read from demo.env - the one place they
+# are kept (common/workspace.sh reads the same file)
+- name: Settings from demo.env
+  ansible.builtin.shell: |
+    set -eu
+    source "{{ playbook_dir }}/demo.env"
+    printf '{"ns":"%s","ns_display":"%s","ns_description":"%s","admin_user":"%s","edit_user":"%s","view_user":"%s","restore_ns":"%s","nfs_server":"%s","nfs_export":"%s"}\n' \
+      "$NS" "$NS_DISPLAY" "$NS_DESCRIPTION" "$ADMIN_USER" "$EDIT_USER" "$VIEW_USER" "$RESTORE_NS" "$NFS_SERVER" "$NFS_EXPORT"
+  args:
+    executable: /bin/bash
+  register: demo_env
+  changed_when: false
+
+- name: Use the settings
+  ansible.builtin.set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ demo_env.stdout | from_json | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}={{ item.value }}"
+
+- name: Check the cluster connection (cluster admin needed)
+  kubernetes.core.k8s_info:
+    api_version: storage.k8s.io/v1
+    kind: StorageClass
+  register: storage_classes

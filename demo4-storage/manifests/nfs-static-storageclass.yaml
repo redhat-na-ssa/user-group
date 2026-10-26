@@ -1,0 +1,11 @@
+# Part 2 (setup, as admin): a class for the static NFS volumes. No
+# provisioner - nothing creates volumes; claims bind to the PVs setup made.
+# Never the default class, and not part of ODF.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-static
+  labels: {app.kubernetes.io/part-of: demo4-storage}
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: Immediate
+reclaimPolicy: Retain

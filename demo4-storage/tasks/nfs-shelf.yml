@@ -1,0 +1,113 @@
+# Run a command against all ten NFS directories from inside the cluster - the
+# laptop can't reach the storage network and needs no root on the server.
+#   nfs_action: probe   write and remove a file in each directory (verify)
+#               wipe    empty each directory (teardown/reset)
+# Binds a throwaway claim to every PV in a helper project, runs one pod that
+# mounts them all, then recreates the PVs so the shelf is Available again.
+# Refuses to touch the shelf while a demo claim holds one of its PVs.
+- name: NFS shelf - current PVs
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolume
+    label_selectors: [storage=nfs-static]
+  register: shelf
+
+- name: NFS shelf - not in use by a demo claim
+  ansible.builtin.assert:
+    that: bound | length == 0
+    fail_msg: "PVs still bound to a claim: {{ bound | join(', ') }} - run teardown.yml (or reset.yml) first"
+    quiet: true
+  vars:
+    bound: >-
+      {{ shelf.resources | selectattr('status.phase', 'equalto', 'Bound')
+         | rejectattr('spec.claimRef.namespace', 'equalto', nfs_helper_ns)
+         | map(attribute='metadata.name') | list }}
+
+# Released PVs keep their old claimRef and can't be bound again: start fresh
+- name: NFS shelf - remove the PVs
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolume
+    name: "{{ item.metadata.name }}"
+    wait: true
+  loop: "{{ shelf.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+
+- name: NFS shelf - create the PVs
+  ansible.builtin.include_tasks: nfs-pvs.yml
+
+- name: NFS shelf - helper project
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ nfs_helper_ns }}"
+        labels: {app.kubernetes.io/part-of: demo4-storage}
+
+- name: NFS shelf - one claim per PV
+  kubernetes.core.k8s:
+    namespace: "{{ nfs_helper_ns }}"
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "pv{{ item }}"
+      spec:
+        storageClassName: nfs-static
+        volumeName: "nfs-pv{{ item }}"
+        accessModes: [ReadWriteMany]
+        resources: {requests: {storage: 1Gi}}
+  loop: "{{ range(1, 11) | list }}"
+
+- name: NFS shelf - {{ nfs_action }} pod
+  kubernetes.core.k8s:
+    namespace: "{{ nfs_helper_ns }}"
+    template: "{{ playbook_dir }}/templates/nfs-shelf-pod.yaml.j2"
+
+- name: NFS shelf - wait for the pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ nfs_helper_ns }}"
+    name: "nfs-{{ nfs_action }}"
+  register: shelf_pod
+  until: (shelf_pod.resources[0].status.phase | default('')) in ['Succeeded', 'Failed']
+  retries: 36
+  delay: 5
+  failed_when: false
+
+- name: NFS shelf - pod output
+  kubernetes.core.k8s_log:
+    namespace: "{{ nfs_helper_ns }}"
+    name: "nfs-{{ nfs_action }}"
+  register: shelf_log
+  failed_when: false
+
+- name: NFS shelf - remove the helper project
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ nfs_helper_ns }}"
+    wait: true
+    wait_timeout: 300
+
+- name: NFS shelf - recreate the PVs (Available)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolume
+    name: "nfs-pv{{ item }}"
+    wait: true
+  loop: "{{ range(1, 11) | list }}"
+
+- name: NFS shelf - create the PVs again
+  ansible.builtin.include_tasks: nfs-pvs.yml
+
+- name: NFS shelf - result
+  ansible.builtin.set_fact:
+    nfs_shelf_ok: "{{ (shelf_pod.resources[0].status.phase | default('')) == 'Succeeded' }}"
+    nfs_shelf_output: "{{ shelf_log.log_lines | default(['(no output - the pod never started: ' + (shelf_pod.resources[0].status | default({}) | to_json) + ')']) }}"

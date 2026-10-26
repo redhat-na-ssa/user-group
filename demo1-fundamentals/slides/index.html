@@ -441,7 +441,7 @@
       <use href="#i-pod" x="442" y="372" width="76" height="76"/>
       <use href="#i-pod" x="537" y="372" width="76" height="76"/>
       <use href="#i-pod" x="632" y="372" width="76" height="76"/>
-      <text class="dg-small" x="400" y="70">https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org</text>
+      <text class="dg-small" x="400" y="70">https://guestbook-demo-intro.apps.&lt;cluster-domain&gt;</text>
     </svg>
   </div>
   <aside class="notes">
@@ -859,8 +859,8 @@ Topology → postgresql → the pod. Details: pod IP and Node (tie back to
       </div>
     </div>
     <aside class="notes">
-Git Repo URL: https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git
-      (the Gitea tab's address plus .git). The console reads the repo and
+Git Repo URL: https://local-gitea-gitea.apps.&lt;cluster-domain&gt;/ocpdemo/guestbook.git
+      (the Gitea tab's address plus .git; echo $GIT_REPO in the cheat-sheet). The console reads the repo and
       detects Python by itself - keep the suggested builder version. Application guestbook, Name
       guestbook (must be exactly that - the push trigger uses it). Build option
       Pipelines. Resource type Deployment. Create.
@@ -1005,7 +1005,7 @@ Topology → guestbook → Actions → Add Health Checks. Readiness: HTTP GET
       oc apply -f guestbook-hpa.yaml (adds a 1-minute scale-down window
       instead of the default 5, so we see the pods go away again).
       Load, from the laptop terminal (not the web terminal - ab is local):
-      ab -k -c 10 -t 120 https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org/
+      ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
       oc get hpa guestbook -w   in a second terminal, and watch Topology:
       CPU jumps far above 50%, and within ~30 s the ring goes from 2 to 6
       pods. When ab ends (2 min), CPU drops and about a minute later it's back

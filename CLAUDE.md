@@ -42,6 +42,8 @@ Follow-up app: a simple web app, opened by the presenter in a separate browser t
 
 ## Key information
 
+The values below describe my lab cluster; others will run this on theirs. Never hardcode a cluster hostname in a repo file. Scripts and playbooks read the API URL, console URL and apps domain from the logged-in cluster (`common/env.sh`, `common/vars.yml`) and derive everything else from them (Gitea is `local-gitea-gitea.<apps domain>`, the slides are `slides-faa-demo.<apps domain>`). Cheat-sheets compute `APPS` from `oc whoami --show-console`, which works for any user. Docs, notes and slides write `apps.<cluster-domain>`.
+
 OpenShift:
   api: https://api.homeocp.ocp4.peterlarsen.org:6443
   console: https://console-openshift-console.apps.homeocp.ocp4.peterlarsen.org
@@ -132,6 +134,8 @@ Potential Followup: Offline/disconnected installations
 ## Demo 4 - OpenShift Storage
 
 Based on feedback, this will be one of many OPS specific presentations.  This demo will function to lay a foundation for how persistent storage is provided, maintained and used on OpenShift. 
+
+ODF is already installed on the demo cluster and shared: the demo and its automation make NO changes to the cluster-wide ODF configuration (StorageCluster, StorageClasses incl. the default class, VolumeSnapshotClasses, pools, NooBaa, anything in openshift-storage). They only list the existing ODF storage classes (by provisioner) and consume them with namespaced objects - PVCs, VolumeSnapshots, ObjectBucketClaims - in the demo's own namespaces. Details in demo4-storage/DEMO-SCRIPT.md ("Hands off ODF").
 
 Content:
 * What is persistent storage in a k8s/ocp world

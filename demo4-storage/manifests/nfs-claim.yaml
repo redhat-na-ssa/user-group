@@ -1,0 +1,12 @@
+# Part 2: a claim for a static NFS volume - bound to the smallest PV that
+# fits (2Gi for 1.5Gi), and the claim gets all of it
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-claim
+spec:
+  storageClassName: nfs-static
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 1500Mi

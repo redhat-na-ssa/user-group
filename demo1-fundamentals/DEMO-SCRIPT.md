@@ -35,8 +35,8 @@ cd demo1-fundamentals
 | **Browser A – main** | `user1` / `welcome1` | Developer perspective → project **demo-intro** → Topology (empty) |
 | **Browser B – private window** | `user2` / `welcome1` | Developer perspective → project **demo-intro** → Topology |
 | **Browser C – other profile** | `peter` | Developer perspective → Project → Project access |
-| **Browser tab (in A)** | `demo` in Gitea | `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook` |
-| **Slides** | – | `https://slides-faa-demo.apps.homeocp.ocp4.peterlarsen.org/demo1-fundamentals/`, press **S** for the speaker view |
+| **Browser tab (in A)** | `demo` in Gitea | `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook` |
+| **Slides** | – | `https://slides-faa-demo.apps.<cluster-domain>/demo1-fundamentals/`, press **S** for the speaker view |
 | **Web terminal** (in A) | `user1` | `>_` icon: `curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh && source cheatsheet.sh` |
 
 Increase the browser zoom to 125–150%. Keep `manifests/hello-pod.yaml` open in an editor, ready to paste into Import YAML (Part 2).
@@ -80,7 +80,7 @@ The demo intro slide is the picture of today's app: **Gitea → Pipeline → ima
    - a **Secret**, `postgresql`, with the generated credentials (open it and reveal the values: keys `database-user`, `database-password`, `database-name`);
    - a **PersistentVolumeClaim**: 1Gi of storage that outlives the pod.
 4. *Optional:* show the template itself: *"this is what the platform team published - parameters plus objects."* Use one of:
-   - Bookmark: `https://console-openshift-console.apps.homeocp.ocp4.peterlarsen.org/search/ns/demo-intro?kind=template.openshift.io%7Ev1%7ETemplate&q=published-by%3Dplatform-team` → **postgresql-demo** → **YAML**. That's **Search → Template** filtered on the label `published-by=platform-team`: without the filter, Search also lists all the `openshift` namespace's templates. *"Labels are how you find things - the platform team tags what it publishes."*
+   - Bookmark: `https://console-openshift-console.apps.<cluster-domain>/search/ns/demo-intro?kind=template.openshift.io%7Ev1%7ETemplate&q=published-by%3Dplatform-team` → **postgresql-demo** → **YAML**. That's **Search → Template** filtered on the label `published-by=platform-team`: without the filter, Search also lists all the `openshift` namespace's templates. *"Labels are how you find things - the platform team tags what it publishes."*
    - Or skip it here, and show `oc get template postgresql-demo -o yaml` in the web terminal later.
    - *Needs the OpenShift Virtualization console plugin (`kubevirt-plugin`) disabled:* while it's enabled it takes over every Template page, including Search, and shows only VM templates. `verify.sh` checks this.
 
@@ -124,7 +124,7 @@ Talking points:
 
 1. Show the Gitea repo tab briefly: a plain Python app, `app.py`, `VERSION = "1.0"`.
 2. **+Add → Import from Git**:
-   - **Git Repo URL:** `https://local-gitea-gitea.apps.homeocp.ocp4.peterlarsen.org/ocpdemo/guestbook.git` (the same address as the Gitea tab, plus `.git`).
+   - **Git Repo URL:** `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook.git` (the same address as the Gitea tab, plus `.git`; `echo $GIT_REPO` in the cheat-sheet prints it).
    - The console reads the repo and detects **Python** on its own (Import Strategy: Builder Image, Python). Keep the version it suggests.
    - **Application:** `guestbook` (the group PostgreSQL is already in). **Name:** `guestbook`. *The name must be `guestbook`: the push trigger in Part 6 starts the pipeline by that name.*
    - **Build option: Pipelines.** Resource type: **Deployment**. Keep **Create a route** checked.
@@ -188,7 +188,7 @@ Talking points:
    ```
 7. **Load.** In the laptop terminal:
    ```bash
-   ab -k -c 10 -t 120 https://guestbook-demo-intro.apps.homeocp.ocp4.peterlarsen.org/
+   ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
    ```
    and `oc get hpa guestbook -w` in a second terminal, with Topology on screen. CPU jumps far above 50%, and within about 30 seconds the ring grows from 2 to 6 pods. When `ab` stops after 2 minutes, CPU drops, and about a minute later the Deployment is back to 2.
    - Keep `-c` at **10**. With 50 concurrent requests, the health checks queue behind the load, the pods turn Not Ready, and the autoscaler ignores them (it shows `<unknown>`) until the load is over.

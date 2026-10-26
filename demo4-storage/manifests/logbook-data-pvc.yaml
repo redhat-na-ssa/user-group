@@ -1,4 +1,4 @@
-# Part 2: the claim the console form creates - 1 GiB of RWO block storage
+# Part 3: the claim the console form creates - 1 GiB of RWO block storage
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

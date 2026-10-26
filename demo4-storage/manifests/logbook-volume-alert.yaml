@@ -1,4 +1,4 @@
-# Part 6: the app team's own alert - any volume in this project over 80% full
+# Part 7: the app team's own alert - any volume in this project over 80% full
 # (needs user workload monitoring; the user needs monitoring-rules-edit)
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule

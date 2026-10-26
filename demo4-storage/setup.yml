@@ -1,0 +1,130 @@
+# Demo 4 - OpenShift Storage: prepare the cluster. Safe to re-run.
+#
+#   .venv/bin/ansible-playbook demo4-storage/setup.yml      (from the repo root)
+#
+# Creates the project and its roles, the static NFS shelf (class nfs-static,
+# PVs nfs-pv1..10) and the logbook in its Part 1 state (emptyDir). Never
+# changes ODF: its storage classes are only checked. Settings: demo.env.
+# Not yet: OADP (Part 9). Then run verify.yml.
+- name: Demo 4 - setup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    # Read-only: the demo uses ODF as it is (DEMO-SCRIPT.md, "Hands off ODF")
+    - name: ODF storage classes the demo uses
+      ansible.builtin.assert:
+        that: item in (storage_classes.resources | map(attribute='metadata.name') | list)
+        fail_msg: "StorageClass {{ item }} not found - list the ODF classes and adjust the manifests (never the cluster)"
+        quiet: true
+      loop:
+        - ocs-storagecluster-ceph-rbd
+        - ocs-storagecluster-cephfs
+        - openshift-storage.noobaa.io
+
+    # ------------------------------------------------------------ project
+    - name: Project {{ ns }}
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ ns }}"
+            labels: {app.kubernetes.io/part-of: demo4-storage}
+            annotations:
+              openshift.io/display-name: "{{ ns_display }}"
+              openshift.io/description: "{{ ns_description }}"
+              openshift.io/requester: "{{ admin_user }}"
+
+    - name: Project access
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        definition:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: "{{ item.role }}-{{ item.user }}"
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: "{{ item.role }}"
+          subjects:
+            - {apiGroup: rbac.authorization.k8s.io, kind: User, name: "{{ item.user }}"}
+      loop:
+        - {role: admin, user: "{{ admin_user }}"}
+        - {role: edit, user: "{{ edit_user }}"}
+        - {role: monitoring-rules-edit, user: "{{ edit_user }}"}   # Part 7: the alert, as code
+        - {role: view, user: "{{ view_user }}"}
+      loop_control:
+        label: "{{ item.user }}: {{ item.role }}"
+
+    # ------------------------------------------------------------ NFS shelf (Part 2)
+    - name: StorageClass nfs-static (no provisioner, not the default)
+      kubernetes.core.k8s:
+        src: "{{ playbook_dir }}/manifests/nfs-static-storageclass.yaml"
+
+    - name: NFS PVs
+      ansible.builtin.include_tasks: tasks/nfs-pvs.yml
+
+    # ------------------------------------------------------------ logbook (Part 1)
+    # Only created when missing: during or after a run it's no longer in its
+    # Part 1 state, and re-running setup must not undo the demo (use reset.yml)
+    - name: Logbook - present?
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ ns }}"
+        name: logbook
+      register: logbook
+
+    - name: Logbook - Deployment (emptyDir), Service, Route
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        src: "{{ playbook_dir }}/manifests/logbook-ephemeral.yaml"
+      when: logbook.resources | length == 0
+
+    - name: Logbook - wait for the rollout
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ ns }}"
+        name: logbook
+      register: rollout
+      until: >-
+        rollout.resources | length > 0 and
+        (rollout.resources[0].status.updatedReplicas | default(0)) == rollout.resources[0].spec.replicas and
+        (rollout.resources[0].status.availableReplicas | default(0)) == rollout.resources[0].spec.replicas
+      retries: 36
+      delay: 5
+
+    - name: Logbook - Route
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ ns }}"
+        name: logbook
+      register: route
+
+    - name: Logbook - answers at its Route
+      ansible.builtin.uri:
+        url: "https://{{ route.resources[0].spec.host }}/logbook.txt"
+        return_content: true
+        validate_certs: false
+      register: page
+      until: page.status == 200 and page.content | length > 0
+      retries: 12
+      delay: 5
+
+    - name: Ready
+      ansible.builtin.debug:
+        msg:
+          - "Project {{ ns }}: {{ admin_user }} admin, {{ edit_user }} edit + monitoring-rules-edit, {{ view_user }} view"
+          - "NFS shelf: nfs-pv1..10 on {{ nfs_server }}:{{ nfs_export }} (class nfs-static)"
+          - "Logbook: https://{{ route.resources[0].spec.host }}/logbook.txt"
+          - "Last line: {{ page.content.splitlines() | last }}"
+          - "Next: verify.yml"
