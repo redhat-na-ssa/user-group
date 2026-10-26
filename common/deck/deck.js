@@ -5,6 +5,7 @@
  *
  * Conventions inside a deck:
  *   <section class="no-chrome">                 title/closing slide: no footer, hat or rule
+ *   <section class="title-slide">               gets a "Back to menu" link to the deck list
  *   <div class="shot" data-src="images/x.webp" data-caption="...">
  *                                                console screenshot; shows a
  *                                                placeholder until the file exists
@@ -29,6 +30,18 @@
     hat.src = "images/redhat-hat.svg";
     hat.alt = "";
     document.body.appendChild(hat);
+  }
+
+  // The deck list is one level up on every site: /user-group/ on GitHub
+  // Pages, / on the cluster and in the local preview
+  function menuLink() {
+    document.querySelectorAll("section.title-slide").forEach((slide) => {
+      const a = document.createElement("a");
+      a.className = "deck-menu";
+      a.href = "../";
+      a.textContent = "← Back to menu";
+      slide.appendChild(a);
+    });
   }
 
   function screenshots() {
@@ -89,6 +102,7 @@
     init() {
       const title = document.body.dataset.deckTitle || document.title;
       chrome(title);
+      menuLink();
       screenshots();
       qrcodes();
       return Promise.all([icons(), fonts()]).then(() => start());

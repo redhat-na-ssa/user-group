@@ -117,19 +117,21 @@ Key areas this talk will cover
   * How to maintain an internal registry with the container images needed to run/upgrade clusters instead of having each cluster download from *.redhat.com. 
 * Authentication/Authorization
 
-## Demo 3 - OpenShift installation
+## Demo 3 - Resource Management in OpenShift
 
-Covers managed installation on:
-* Cloud (AWS or Azure)
-* Baremetal - remember to cover MetalLB and external features needed to make it successful
-* Discuss key features of the install: Cluster Network, Machine Network, Service Network
-* Bonus if time: Installing/configuring OpenShift Virtualization (Hyperconverged)
+This section focuses on mapping resource management (cpu/gpu, memory, storage) from traditional OS management to Openshift. While most of OpenShift's resource management comes directly from upstream kubernetes, we'll use "Openshift" as the name in the demo. 
 
-Covers the install-config.yaml for a typical install, and how the assisted installer works (in online mode).
-
-The demo would not show a full install from scratch, but use pre-run configuration setups and show a video of the cluster being installed, and allow the demo person to connect to the "already created" cluster for followup. 
-
-Potential Followup: Offline/disconnected installations
+Key areas:
+* Limits vs. Requests
+* Quotas and project level limits
+* Overcommit - memory vs CPU
+* View consumption vs. reserved (prometheus/embedded dashboards)
+* Storage usage (summary, refer to the storage overview for "details")
+  * Key repeat: How to see how much "free" space there is
+* Tools to "right size" resource use (Cost Management, HPA, VPA)
+  * Key point - do not focus on a single large pod, but use auto-scaling for dynamic allocation.
+* Memory and CPU allocation for OpenShift Virtualization
+* Bonus: New project defaults
 
 ## Demo 4 - OpenShift Storage
 
@@ -155,6 +157,21 @@ Content:
 This will be a demo using Hashicorp Vault to manage secrets in one or two namespaces with deployments that use these secrets, like TLS certificates, database connection information etc. 
 
 Demo should show how management policies will be different depending on the environment type (dev, test, prod). It needs to show that each deployment, gets different values depending on the environment being used.
+
+## Demo 10 - OpenShift installation
+
+Covers managed installation on:
+* Cloud (AWS or Azure)
+* Baremetal - remember to cover MetalLB and external features needed to make it successful
+* Discuss key features of the install: Cluster Network, Machine Network, Service Network
+* Bonus if time: Installing/configuring OpenShift Virtualization (Hyperconverged)
+
+Covers the install-config.yaml for a typical install, and how the assisted installer works (in online mode).
+
+The demo would not show a full install from scratch, but use pre-run configuration setups and show a video of the cluster being installed, and allow the demo person to connect to the "already created" cluster for followup. 
+
+Potential Followup: Offline/disconnected installations
+
 
 ## more to come
 

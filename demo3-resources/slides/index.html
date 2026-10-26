@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Resource Management in OpenShift</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="images/redhat-hat.svg">
+  <link rel="stylesheet" href="../reveal/reset.css">
+  <link rel="stylesheet" href="../reveal/reveal.css">
+  <link rel="stylesheet" href="../reveal/plugin/highlight/monokai.css">
+  <link rel="stylesheet" href="../fonts/fonts.css">
+  <link rel="stylesheet" href="../common/theme.css">
+</head>
+<!-- deck title shows in every slide's footer -->
+<body data-deck-title="Resource Management · Red Hat User Group for FAA">
+<div class="reveal"><div class="slides">
+
+<!-- ================================================================ TITLE -->
+<section class="no-chrome title-slide" data-state="no-chrome">
+  <div class="logos">
+    <img src="images/redhat-logo.svg" alt="Red Hat">
+    <img class="faa" src="images/faa-seal.svg" alt="FAA" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'muted small',textContent:'[FAA logo]'}))">
+  </div>
+  <h1>Resource Management in OpenShift</h1>
+  <p class="sub">Red Hat User Group for FAA</p>
+  <p class="meta">Date TBD</p>
+  <aside class="notes">
+    Put this up while people join. Once you start: welcome everyone, thank
+    them for their time, and say what the next half hour looks like - a few
+    slides on how OpenShift hands out CPU, memory and storage, then a live
+    demo, mostly in the web console.
+
+    The question behind today's session is one every operations team knows
+    from servers and VMs: how big should this be, how do I know what it
+    really uses, and how do I stop one application from starving the
+    others? Most of what we show comes from upstream Kubernetes; we'll just
+    call it OpenShift. Questions are welcome at any time; anything we can't
+    answer on the spot gets written down and answered afterwards. The deck
+    stays online - link and QR code on the last slide.
+  </aside>
+</section>
+
+<!-- ================================================================ WHO WE ARE (TEAM)
+     From branding/"Who We Are - Red Hat Customer Success.odp" -->
+<section class="services">
+  <p class="kicker">Who we are - Red Hat Customer Success</p>
+  <h2>Enable FAA to get more value out of Red Hat technologies</h2>
+  <div class="cards">
+    <div class="card">
+      <svg viewBox="0 0 100 100"><use href="#i-checklist" class="white"/></svg>
+      <h3>Best Practices &amp; Enablement</h3>
+      <p>Operational best practices to build team knowledge and <span class="nowrap">self-sufficiency</span></p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 100 100"><use href="#i-sitemap" class="white"/></svg>
+      <h3>Architecture Review</h3>
+      <p>Validate system design prior to deployment</p>
+    </div>
+    <div class="card">
+      <svg viewBox="0 0 100 100"><use href="#i-headset" class="white"/></svg>
+      <h3>Remote Advisory-Only Support</h3>
+      <p>Screen-sharing consultation and recommendations without <span class="nowrap">hands-on-keyboard</span> activity</p>
+    </div>
+  </div>
+  <aside class="notes">
+    What Red Hat Customer Success does for FAA, in three parts. Best
+    practices and enablement - sessions like this one, aimed at building the
+    team's own knowledge. Architecture reviews - bring us a design before it
+    goes into production and we'll validate it with you; capacity planning
+    and quota design are a good example. Remote advisory support - we join a
+    screen share, look at the problem with you and recommend what to do,
+    with your hands on the keyboard.
+
+    Keep this short if the audience has seen it in earlier sessions.
+  </aside>
+</section>
+
+<!-- ================================================================ WHAT TO EXPECT
+     From branding/"FAA OpenShift User Group.odp" (light layout, redone dark) -->
+<section class="services">
+  <h2>What to expect - OpenShift User Group</h2>
+  <p class="lead">Fostering collaboration, sharing best practices, and maximizing platform value across engineering and operations</p>
+  <p class="bar"><svg viewBox="0 0 100 100"><use href="#i-clock"/></svg><b>60-minute monthly session</b><span class="sep">|</span><span>Facilitated by Red Hat Customer Success</span></p>
+  <div class="cards">
+    <div class="card">
+      <h3>Product Updates</h3>
+      <p>Roadmap and upcoming features</p>
+    </div>
+    <div class="card">
+      <h3>Operations Best Practices</h3>
+      <p>Practical, tailored best practices. <strong>Suggestions on topics welcome.</strong></p>
+    </div>
+    <div class="card">
+      <h3>Ask the Experts</h3>
+      <p>Q&amp;A, whiteboarding and high-level debugging</p>
+    </div>
+  </div>
+  <aside class="notes">
+    The usual reminder of the format: a few minutes of product news, the
+    main topic as a live demo, then time for your questions and problems.
+
+    Today is another operations session, as you asked for. It builds on the
+    guestbook application from the fundamentals session - same app, but
+    this time the question isn't how to deploy it, it's how much of the
+    cluster it should get.
+  </aside>
+</section>
+
+<!-- ================================================================ AGENDA
+     The wrap-up slide ("What we just did") says the same in OpenShift terms. -->
+<section>
+  <h2>What we will cover today</h2>
+  <p class="subheading">How much of the cluster an application gets - and how we keep it fair</p>
+  <ul>
+    <li>What an application really uses - and what it has set aside</li>
+    <li>Reserving the right amount, and setting a ceiling</li>
+    <li>What happens when an application hits its ceiling</li>
+    <li>A budget for each team</li>
+    <li>How much storage is left</li>
+    <li>Sizing for real use: more copies, not bigger ones</li>
+    <li>Virtual machines on the same platform</li>
+  </ul>
+  <aside class="notes">
+    The plan, in plain words. We start with an application that was
+    deployed without saying what it needs - which is how most applications
+    arrive - and look at what it actually uses compared with what's set
+    aside for it. Then we size it properly: a reservation that matches real
+    use, and a ceiling. We'll push it into that ceiling on purpose to see
+    what happens, which is different for processor time and for memory.
+
+    Then the platform team's side: a budget per team, so one project can't
+    take the whole cluster; a quick look at storage and how to tell how
+    much space is left; tools that recommend the right size; and why the
+    answer to more load is usually more copies of the application rather
+    than one bigger one. Finally, the same ideas applied to virtual
+    machines. The wrap-up lists the same points in OpenShift terms.
+  </aside>
+</section>
+
+<!-- ================================================================ FROM SERVERS TO OPENSHIFT
+     One horizontal slide. The concept slides sit below it (press DOWN) and
+     are only used if the audience needs them; RIGHT goes straight to the demo. -->
+<section>
+<section>
+  <h2>From servers to OpenShift</h2>
+  <p class="subheading">The same questions - asked per container, answered by the platform</p>
+  <svg class="diagram" viewBox="0 0 1600 620" style="max-width:1500px" aria-label="Traditional resource management mapped to OpenShift">
+    <text class="dg-label left" x="40" y="40">ON A SERVER OR VM</text>
+    <text class="dg-label left" x="900" y="40">IN OPENSHIFT</text>
+    <g>
+      <rect class="dg-panel" x="20" y="65" width="720" height="70" rx="8"/>
+      <text class="dg-title left" x="45" y="108">Reserved physical CPU and memory</text>
+      <path class="dg-line" d="M750,100 H870" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="880" y="65" width="700" height="70" rx="8"/>
+      <text class="dg-title left" x="905" y="108">Requests - set aside, counted by the scheduler</text>
+    </g>
+    <g>
+      <rect class="dg-panel" x="20" y="155" width="720" height="70" rx="8"/>
+      <text class="dg-title left" x="45" y="198">Configured vCPU and memory - the most it gets</text>
+      <path class="dg-line" d="M750,190 H870" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="880" y="155" width="700" height="70" rx="8"/>
+      <text class="dg-title left" x="905" y="198">Limits - the most a container can use</text>
+    </g>
+    <g>
+      <rect class="dg-panel" x="20" y="245" width="720" height="70" rx="8"/>
+      <text class="dg-title left" x="45" y="288">Overcommit - more vCPU and memory than the host</text>
+      <path class="dg-line" d="M750,280 H870" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="880" y="245" width="700" height="70" rx="8"/>
+      <text class="dg-title left" x="905" y="288">Overcommit - the room between request and limit</text>
+    </g>
+    <g>
+      <rect class="dg-panel" x="20" y="335" width="720" height="70" rx="8"/>
+      <text class="dg-title left" x="45" y="378">Department budget, disk quota</text>
+      <path class="dg-line" d="M750,370 H870" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="880" y="335" width="700" height="70" rx="8"/>
+      <text class="dg-title left" x="905" y="378">ResourceQuota and LimitRange per project</text>
+    </g>
+    <g>
+      <rect class="dg-panel" x="20" y="425" width="720" height="70" rx="8"/>
+      <text class="dg-title left" x="45" y="468">top, sar, df, monitoring agents</text>
+      <path class="dg-line" d="M750,460 H870" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="880" y="425" width="700" height="70" rx="8"/>
+      <text class="dg-title left" x="905" y="468">Built-in Prometheus and console dashboards</text>
+    </g>
+    <g>
+      <rect class="dg-panel" x="20" y="515" width="720" height="70" rx="8"/>
+      <text class="dg-title left" x="45" y="558">Resize the VM</text>
+      <path class="dg-line" d="M750,550 H870" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-panel" x="880" y="515" width="700" height="70" rx="8" style="stroke:#ee0000"/>
+      <text class="dg-title left" x="905" y="558">Autoscaling: HPA (more pods), VPA (right size)</text>
+    </g>
+  </svg>
+  <aside class="notes">
+    One slide to connect today's topic with what you already do with
+    virtual machines. A VM can have physical CPU and memory reserved for
+    it on the host - guaranteed, whatever else runs there. That's a
+    request: the scheduler only places a pod where its requests fit. A VM
+    is configured with a number of vCPUs and an amount of memory - the
+    most the guest can ever use. That's a limit, enforced by the kernel on
+    the node.
+
+    Overcommit is the same idea too. A hypervisor lets you configure more
+    vCPU and memory than the host physically has, betting that not every
+    VM is busy at once. In OpenShift the requests must always fit the
+    node - those are guaranteed - and the room between a pod's request and
+    its limit is the overcommitted part: shared with every other pod on
+    the node, first come, first served. Departments get budgets and disk
+    quotas; projects get quotas. Monitoring is built in. And instead of
+    resizing a machine, you let autoscalers add copies or recommend a
+    better size. If the audience is new to these words, press
+    DOWN for one slide per concept; otherwise go RIGHT to the demo.
+  </aside>
+</section>
+
+<!-- Requests -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Requests</h2>
+      <p class="def">What a container is guaranteed.<br>The scheduler only places a pod where its requests fit.</p>
+      <p class="where">In the demo: <b>Parts 1 and 2</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="A node's allocatable capacity filled by the requests of its pods">
+      <use href="#i-node" class="grey" x="30" y="40" width="70" height="70"/>
+      <text class="dg-title left" x="115" y="85">worker-1 · allocatable 8 cores</text>
+      <rect class="dg-panel" x="30" y="140" width="740" height="90" rx="8"/>
+      <rect x="34" y="144" width="200" height="82" fill="#ee0000" opacity="0.85"/>
+      <rect x="238" y="144" width="150" height="82" fill="#ee0000" opacity="0.6"/>
+      <rect x="392" y="144" width="250" height="82" fill="#ee0000" opacity="0.4"/>
+      <text class="dg-in" x="134" y="192">pod A 2</text>
+      <text class="dg-in" x="313" y="192">pod B 1.5</text>
+      <text class="dg-in" x="517" y="192">pod C 2.5</text>
+      <text class="dg-small" x="705" y="192">2 free</text>
+      <use href="#i-pod-new" x="320" y="290" width="110" height="110"/>
+      <text class="dg-small" x="375" y="430">new pod requests 3 cores</text>
+      <text class="dg-label" x="375" y="465">PENDING - DOESN'T FIT</text>
+      <text class="dg-small" x="400" y="510">reserved, not used: an idle pod still holds its request</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    A request is a reservation. The scheduler adds up the requests of the
+    pods already on each node and only places a new pod where its requests
+    still fit in the node's allocatable capacity - the node's size minus
+    what's kept back for the operating system and the kubelet. It doesn't
+    look at actual usage at all.
+
+    Two consequences. A pod with no requests can land anywhere, even on a
+    full node. And a request that's far too big wastes capacity: the cluster
+    looks full on paper while the processors sit idle. That gap between
+    reserved and used is the first thing we'll look at in the demo.
+  </aside>
+</section>
+
+<!-- Limits -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Limits</h2>
+      <p class="def">The ceiling a container can't pass.<br>Enforced by the kernel, on the node.</p>
+      <p class="where">In the demo: <b>Parts 2 and 3</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="Usage between request and limit">
+      <path class="dg-line grey" d="M80,440 H760"/>
+      <path class="dg-line grey" d="M80,440 V60"/>
+      <path class="dg-line dg-dash" d="M80,330 H760"/>
+      <text class="dg-small left" x="600" y="320">request</text>
+      <path class="dg-line" d="M80,140 H760" style="stroke-width:5"/>
+      <text class="dg-small left" x="600" y="128">limit</text>
+      <path class="dg-line grey" d="M80,400 C160,390 200,300 260,310 S360,200 420,230 S520,150 560,150 S640,260 700,300 L760,320" style="stroke:#a3a6a9"/>
+      <text class="dg-small" x="420" y="490">usage can go above the request - never above the limit</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    A limit is a hard cap, enforced by Linux cgroups on the node - the same
+    mechanism you may already use on servers. Between its request and its
+    limit, a container can use whatever happens to be free on the node.
+    Above the limit, it's stopped - and how it's stopped depends on the
+    resource, which is the next slide.
+
+    Limits are optional. A container with a memory limit but no CPU limit
+    is a common and sensible choice; we'll see why in Part 3.
+  </aside>
+</section>
+
+<!-- One pod on a node: used, request, limit (memory) -->
+<section>
+  <h2>One pod, three numbers</h2>
+  <p class="subheading">A node's memory - and where one pod's used, min and max sit in it</p>
+  <svg class="diagram" viewBox="0 0 1600 620" style="max-width:1560px" aria-label="A node's physical memory with system reserved, other pods, and one pod split into used, request and limit">
+    <!-- the node -->
+    <use href="#i-node" class="grey" x="40" y="10" width="56" height="56"/>
+    <text class="dg-label left" x="110" y="46">WORKER NODE · 32 GiB PHYSICAL MEMORY</text>
+    <rect class="dg-panel" x="40" y="80" width="1520" height="300" rx="14"/>
+    <!-- system reserved -->
+    <rect x="60" y="130" width="150" height="200" rx="6" fill="#5c5f62" opacity="0.55"/>
+    <text class="dg-in" x="135" y="225">system</text>
+    <text class="dg-in" x="135" y="250">reserved</text>
+    <text class="dg-small" x="135" y="360">OS · kubelet</text>
+    <!-- allocatable -->
+    <path class="dg-line grey" d="M225,108 V100 H1540 V108"/>
+    <text class="dg-small" x="880" y="125">allocatable - what pods can reserve</text>
+    <!-- other pods: their requests -->
+    <rect class="dg-panel" x="230" y="160" width="170" height="170" rx="6"/>
+    <rect class="dg-panel" x="415" y="160" width="130" height="170" rx="6"/>
+    <text class="dg-small" x="388" y="360">other pods</text>
+    <!-- the pod: used | rest of the request | room up to the limit -->
+    <use href="#i-pod" x="565" y="145" width="44" height="44"/>
+    <text class="dg-title left" x="615" y="177">guestbook pod</text>
+    <rect x="570" y="200" width="220" height="130" fill="#ee0000" opacity="0.9"/>
+    <rect x="790" y="200" width="200" height="130" fill="#ee0000" opacity="0.4"/>
+    <rect class="dg-box" x="990" y="200" width="250" height="130"/>
+    <text class="dg-in" x="680" y="272">used</text>
+    <text class="dg-in" x="890" y="272">reserved</text>
+    <text class="dg-in" x="1115" y="260">shared room</text>
+    <text class="dg-small" x="1115" y="288">not reserved</text>
+    <!-- free -->
+    <text class="dg-small" x="1395" y="272">free</text>
+    <!-- the three numbers, measured from the start of the pod -->
+    <path class="dg-line" d="M570,418 V430 H790 V418"/>
+    <text class="dg-title left" x="805" y="438">used · 250Mi</text>
+    <text class="dg-small left" x="980" y="438">what it holds right now</text>
+    <path class="dg-line" d="M570,478 V490 H990 V478"/>
+    <text class="dg-title left" x="1005" y="498">min · request 320Mi</text>
+    <text class="dg-small left" x="1005" y="524">guaranteed - the scheduler counts this</text>
+    <path class="dg-line" d="M570,558 V570 H1240 V558"/>
+    <text class="dg-title left" x="1255" y="578">max · limit 512Mi</text>
+    <text class="dg-small left" x="1255" y="604">over this: OOMKilled</text>
+    <text class="dg-small left" x="40" y="604">not to scale</text>
+  </svg>
+  <aside class="notes">
+    One node, seen from the memory side. The whole box is the node's
+    physical memory. A slice on the left is kept back for the operating
+    system and the kubelet; the rest is allocatable - what pods can
+    reserve. Other pods have already reserved their share.
+
+    Our guestbook pod has three numbers. Used: what it holds right now.
+    Min, the request: memory guaranteed to it, and the only number the
+    scheduler looks at when it places the pod - the solid part of the box
+    is what it took from the node. Max, the limit: the pod may grow into
+    the dashed part, but that room isn't reserved - it's shared with every
+    other pod on the node, first come, first served. That's overcommit. If
+    the pod goes past its limit, the kernel kills it: OOMKilled. And if the
+    node runs short while the pod is in that shared room, it's among the
+    first to be evicted. Set the request to what the pod really needs, and
+    for anything important, request equal to limit removes the shared part
+    altogether.
+
+    The values are the ones the guestbook gets in Part 2 (used is an
+    example). In the demo: Parts 1, 2 and 3.
+  </aside>
+</section>
+
+<!-- CPU vs memory / overcommit -->
+<section>
+  <div class="term">
+    <div>
+      <h2>CPU bends, memory breaks</h2>
+      <p class="def">Too much CPU: the container is slowed down.<br>Too much memory: it's killed.</p>
+      <p class="where">In the demo: <b>Part 3</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="CPU over the limit is throttled, memory over the limit is OOM killed">
+      <rect class="dg-panel" x="20" y="40" width="360" height="380" rx="12"/>
+      <use href="#i-gauge" x="130" y="70" width="140" height="140"/>
+      <text class="dg-label" x="200" y="245">CPU</text>
+      <text class="dg-title" x="200" y="300">throttled</text>
+      <text class="dg-small" x="200" y="340">slower, still running</text>
+      <text class="dg-small" x="200" y="370">safe to overcommit</text>
+      <rect class="dg-panel" x="420" y="40" width="360" height="380" rx="12" style="stroke:#ee0000"/>
+      <use href="#i-pod" x="530" y="70" width="140" height="140"/>
+      <path class="dg-line" d="M540,80 L660,200 M660,80 L540,200" style="stroke-width:6"/>
+      <text class="dg-label" x="600" y="245">MEMORY</text>
+      <text class="dg-title" x="600" y="300">OOMKilled</text>
+      <text class="dg-small" x="600" y="340">exit code 137, restarted</text>
+      <text class="dg-small" x="600" y="370">overcommit with care</text>
+      <text class="dg-small" x="400" y="480">memory request = limit for anything that matters</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    CPU is a compressible resource: if a container wants more than its
+    limit, the kernel simply gives it less time - it gets slower but keeps
+    running. Memory isn't compressible: you can't take memory back from a
+    process, so a container that goes over its memory limit is killed - the
+    famous OOMKilled, exit code 137 - and restarted.
+
+    That's also why overcommit works differently for the two. Requests are
+    guaranteed; everything between a pod's request and its limit is shared
+    room on the node, and the limits together can add up to more than the
+    node has. For CPU that's harmless: busy containers just share. For
+    memory, if several pods use that shared room at once, the node runs out
+    and starts evicting pods that are over their requests. Common advice: for databases and anything that
+    matters, set the memory request equal to the limit.
+  </aside>
+</section>
+
+<!-- QoS classes -->
+<section>
+  <h2>Quality of service</h2>
+  <p class="subheading">How requests and limits are set decides who goes first when a node runs short</p>
+  <div class="modes">
+    <div class="mode"><code>Guaranteed</code><h3>requests = limits</h3><p>CPU and memory, every container. Evicted last.</p></div>
+    <div class="mode"><code>Burstable</code><h3>requests &lt; limits</h3><p>A reservation, plus room to grow. The usual choice.</p></div>
+    <div class="mode dim"><code>BestEffort</code><h3>nothing set</h3><p>No reservation at all. Evicted first.</p></div>
+    <div class="mode dim"><code>Eviction</code><h3>node under pressure</h3><p>BestEffort, then Burstable over their requests, then the rest.</p></div>
+  </div>
+  <p class="small muted" style="margin-top:50px">In the demo: <b class="red">Parts 1 and 2</b></p>
+  <aside class="notes">
+    OpenShift sorts every pod into one of three quality-of-service classes,
+    based only on how its requests and limits are set. Guaranteed: every
+    container has CPU and memory requests equal to their limits. Burstable:
+    at least a request is set, and limits are higher or missing - most
+    applications. BestEffort: nothing set at all.
+
+    The class matters when a node runs out of memory: the kubelet evicts
+    BestEffort pods first, then Burstable pods that use more than they
+    asked for. A pod that stays within its request is safe. Our guestbook
+    starts the demo as BestEffort - the class nobody wants in production.
+  </aside>
+</section>
+
+<!-- Quota & LimitRange -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Quotas &amp; limit ranges</h2>
+      <p class="def">A quota is the project's budget.<br>A limit range sets defaults and bounds per container.</p>
+      <p class="where">In the demo: <b>Part 4</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="A project with a quota and a limit range">
+      <rect class="dg-box" x="20" y="40" width="760" height="400" rx="14"/>
+      <text class="dg-label left" x="45" y="75">PROJECT DEMO-RESOURCES</text>
+      <rect class="dg-panel" x="50" y="100" width="330" height="150" rx="10" style="stroke:#ee0000"/>
+      <text class="dg-title left" x="70" y="140">ResourceQuota</text>
+      <text class="dg-mono" x="70" y="175">requests.cpu: 2</text>
+      <text class="dg-mono" x="70" y="200">requests.memory: 4Gi</text>
+      <text class="dg-mono" x="70" y="225">requests.storage: 10Gi</text>
+      <rect class="dg-panel" x="420" y="100" width="330" height="150" rx="10"/>
+      <text class="dg-title left" x="440" y="140">LimitRange</text>
+      <text class="dg-mono" x="440" y="175">default request</text>
+      <text class="dg-mono" x="440" y="200">default limit</text>
+      <text class="dg-mono" x="440" y="225">min / max</text>
+      <use href="#i-pod" x="80" y="285" width="100" height="100"/>
+      <use href="#i-pod" x="200" y="285" width="100" height="100"/>
+      <use href="#i-pod" x="320" y="285" width="100" height="100"/>
+      <use href="#i-pod-new" class="grey" x="460" y="285" width="100" height="100"/>
+      <text class="dg-small" x="510" y="410">over budget: rejected</text>
+      <text class="dg-small" x="400" y="490">the developer's YAML can't exceed what the platform team allows</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    A ResourceQuota caps the total for a project: CPU and memory requests
+    and limits, number of pods, number of claims, storage per storage class.
+    Anything that would take the project over its budget is refused when
+    it's created - the existing pods keep running. It's the "department
+    budget" of the platform.
+
+    A LimitRange works per container: it fills in a default request and
+    limit for containers that don't set any, and rejects ones outside a
+    minimum and maximum. The two go together: once a quota covers CPU or
+    memory, every pod must state those values - the LimitRange's defaults
+    make sure it does.
+  </aside>
+</section>
+
+<!-- Autoscaling -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Scale out, not up</h2>
+      <p class="def">More small pods beat one big pod.<br>Let the autoscalers do the sizing.</p>
+      <p class="where">In the demo: <b>Part 6</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="HPA adds pods, VPA recommends sizes, cluster autoscaler adds nodes">
+      <rect class="dg-panel" x="20" y="30" width="760" height="130" rx="10" style="stroke:#ee0000"/>
+      <text class="dg-title left" x="40" y="70">HPA - more pods</text>
+      <use href="#i-pod" x="430" y="50" width="80" height="80"/>
+      <use href="#i-pod" x="520" y="50" width="80" height="80"/>
+      <use href="#i-pod-new" x="610" y="50" width="80" height="80"/>
+      <text class="dg-small left" x="40" y="105">load up: add replicas, load down: remove</text>
+      <rect class="dg-panel" x="20" y="185" width="760" height="130" rx="10"/>
+      <text class="dg-title left" x="40" y="225">VPA - the right size</text>
+      <use href="#i-gauge" x="560" y="200" width="100" height="100"/>
+      <text class="dg-small left" x="40" y="260">recommends requests from real usage</text>
+      <rect class="dg-panel" x="20" y="340" width="760" height="130" rx="10"/>
+      <text class="dg-title left" x="40" y="380">Cluster autoscaler - more nodes</text>
+      <use href="#i-node" x="560" y="355" width="100" height="100"/>
+      <text class="dg-small left" x="40" y="415">pods Pending: add a machine</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    The old reflex is to give an application one bigger machine. In
+    OpenShift the better answer is usually more copies: a
+    HorizontalPodAutoscaler adds pods when the average usage passes a target
+    and removes them when load drops - so the cluster only reserves the
+    extra capacity while it's needed. It also spreads the risk: losing one
+    of six small pods hurts less than losing one big one.
+
+    The VerticalPodAutoscaler looks at what pods actually use and
+    recommends requests - an optional operator we only mention today. On
+    clouds and some bare-metal setups the cluster autoscaler adds nodes
+    when pods can't be scheduled. Cost Management, on console.redhat.com,
+    gives the same kind of recommendations across clusters, with cost.
+  </aside>
+</section>
+
+<!-- Virtualization -->
+<section>
+  <div class="term">
+    <div>
+      <h2>Virtual machines too</h2>
+      <p class="def">A VM runs inside a pod.<br>Its CPU and memory become that pod's requests.</p>
+      <p class="where">In the demo: <b>Part 7</b></p>
+    </div>
+    <svg class="diagram" viewBox="0 0 800 520" aria-label="A VM inside a virt-launcher pod">
+      <rect class="dg-box" x="40" y="40" width="720" height="380" rx="14"/>
+      <text class="dg-label left" x="65" y="75">POD VIRT-LAUNCHER</text>
+      <rect class="dg-panel" x="80" y="110" width="400" height="270" rx="10" style="stroke:#ee0000"/>
+      <text class="dg-title left" x="100" y="150">VM: 2 vCPU, 4 GiB</text>
+      <use href="#i-node" x="210" y="190" width="140" height="140"/>
+      <text class="dg-mono" x="510" y="170">cpu request:</text>
+      <text class="dg-mono" x="510" y="195">  200m (1/10 per vCPU)</text>
+      <text class="dg-mono" x="510" y="245">memory request:</text>
+      <text class="dg-mono" x="510" y="270">  4Gi + overhead</text>
+      <text class="dg-small" x="400" y="480">same scheduler, same quotas, same dashboards</text>
+    </svg>
+  </div>
+  <aside class="notes">
+    With OpenShift Virtualization a virtual machine runs inside a pod called
+    virt-launcher, so everything from today applies to VMs as well: the
+    scheduler places them by their requests, quotas count them, and the same
+    dashboards show their use.
+
+    The translation has two defaults worth knowing. CPU is overcommitted:
+    by default each vCPU requests a tenth of a core, because most VMs are
+    idle most of the time (the ratio is a cluster setting). Memory is not
+    overcommitted by default: the pod requests the guest's memory plus an
+    overhead for the virtualization layer. Higher density through memory
+    overcommit exists, but it's an opt-in. Check the numbers against the
+    release in use before quoting them.
+  </aside>
+</section>
+</section>
+
+<!-- ================================================================ DEMO INTRO -->
+<section>
+  <h2>Live demo: today's setup</h2>
+  <p class="subheading">The guestbook from the fundamentals session - deployed without any sizing</p>
+  <svg class="diagram" viewBox="0 0 1600 620" style="max-width:1600px" aria-label="The guestbook and PostgreSQL in a project with quota, limit range, autoscalers and dashboards">
+    <rect class="dg-box" x="10" y="10" width="1100" height="440" rx="16"/>
+    <text class="dg-label left" x="36" y="46">PROJECT DEMO-RESOURCES</text>
+    <!-- guestbook -->
+    <rect class="dg-box grey" x="40" y="70" width="560" height="260" rx="12"/>
+    <text class="dg-label" x="320" y="104">DEPLOYMENT GUESTBOOK</text>
+    <use href="#i-pod" x="80" y="130" width="120" height="120"/>
+    <use href="#i-pod" x="260" y="130" width="120" height="120"/>
+    <use href="#i-pod-new" class="grey" x="440" y="130" width="120" height="120"/>
+    <text class="dg-small" x="320" y="290">Python / Flask · no requests, no limits</text>
+    <text class="dg-small" x="320" y="315">Parts 1 · 2 · 3 · 6</text>
+    <!-- postgresql -->
+    <rect class="dg-box grey" x="640" y="70" width="440" height="260" rx="12"/>
+    <text class="dg-label" x="860" y="104">DEPLOYMENT POSTGRESQL</text>
+    <use href="#i-pod" x="690" y="130" width="120" height="120"/>
+    <path class="dg-line" d="M815,190 H895" marker-end="url(#dg-arrow)"/>
+    <use href="#i-disk" x="905" y="140" width="100" height="100"/>
+    <text class="dg-small" x="860" y="290">PVC postgresql · Part 5</text>
+    <!-- guardrails -->
+    <rect class="dg-panel" x="40" y="355" width="1040" height="75" rx="10" style="stroke:#ee0000"/>
+    <text class="dg-title left" x="65" y="402">ResourceQuota + LimitRange · Part 4</text>
+    <text class="dg-small left" x="640" y="402">HPA · Part 6</text>
+    <!-- outside -->
+    <use href="#i-gauge" x="1200" y="40" width="120" height="120"/>
+    <text class="dg-label" x="1260" y="190">DASHBOARDS</text>
+    <text class="dg-small" x="1260" y="215">used vs reserved · Part 1</text>
+    <use href="#i-node" x="1420" y="40" width="120" height="120"/>
+    <text class="dg-label" x="1480" y="190">NODES</text>
+    <text class="dg-small" x="1480" y="215">allocated · Part 2</text>
+    <use href="#i-hex" x="1300" y="270" width="120" height="120"/>
+    <text class="dg-label" x="1360" y="420">VIRTUAL MACHINE</text>
+    <text class="dg-small" x="1360" y="445">Part 7</text>
+    <text class="dg-small" x="800" y="540">Bonus: what a brand-new project gets by default</text>
+  </svg>
+  <aside class="notes">
+    The application is the guestbook from the fundamentals session: a small
+    Python web frontend and a PostgreSQL database with a persistent volume.
+    Every page still shows the version and the pod that served it. Setup
+    deployed it the way many applications arrive: working, but with no
+    requests and no limits at all.
+
+    During the demo we'll look at what it uses, size it, push it into its
+    limits, put the project on a budget, check the database's storage,
+    let the autoscalers do the sizing, and finish with how the same rules
+    apply to a virtual machine.
+
+    Now switch to the browser: the OpenShift console as peter (Administrator
+    perspective - this is an ops session), and the terminal tabs for peter
+    and user1 (bash --rcfile ~/faa-demo/demo3-resources/user1.rc).
+  </aside>
+</section>
+
+<!-- Part 1 -->
+<section>
+  <section>
+    <h3>1 · Used vs reserved</h3>
+    <p class="subheading">The guestbook runs fine - and has reserved nothing</p>
+    <div class="steps">
+      <ol>
+        <li>Topology: <b>guestbook</b> and <b>postgresql</b></li>
+        <li>A pod's details: QoS class <b>BestEffort</b></li>
+        <li><b>Observe → Dashboards</b>: usage vs requests - there are none</li>
+        <li><b>Compute → Nodes</b>: the node's own picture</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get pods -o custom-columns=\
+NAME:.metadata.name,QOS:.status.qosClass
+oc adm top pods
+oc describe $(oc get nodes -o name \
+  -l node-role.kubernetes.io/worker | head -1) \
+  | grep -A 8 'Allocated resources'</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. As user1, Developer perspective, project demo-resources: Topology
+      shows guestbook (2 pods) and postgresql. Open a guestbook pod → Details:
+      QoS class BestEffort. "Nobody said what this needs. It runs - until the
+      node gets busy, and then it's the first to go."
+      oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass
+      oc adm top pods - what each pod really uses right now.
+      As peter, Administrator perspective: Observe → Dashboards →
+      "Kubernetes / Compute Resources / Namespace (Pods)", namespace
+      demo-resources: CPU and memory usage per pod, and the request and limit
+      columns empty. Then the same dashboard for a busy namespace to show
+      what a gap between requested and used looks like.
+      Compute → Nodes → a worker → Overview: utilization. In the terminal:
+      oc describe on a worker node, grep 'Allocated resources' (cheat 1) - requests
+      and limits as a percentage of the node: "the scheduler's view, not the
+      kernel's".
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>No requests: BestEffort, and nothing reserved</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-used-qos.webp" data-caption="Pod details: QoS class BestEffort"></div><figcaption>1 · The pod: QoS class BestEffort</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-used-dashboard.webp" data-caption="Compute Resources / Namespace (Pods): usage, empty request and limit columns"></div><figcaption>2 · The dashboard: usage, but no requests</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: a guestbook pod's details - QoS class BestEffort, because none
+      of its containers sets a request or a limit. Right: the namespace
+      dashboard - CPU and memory the pods actually use, with the request and
+      limit columns empty. The scheduler placed these pods without knowing
+      what they need.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 2 -->
+<section>
+  <section>
+    <h3>2 · Requests and limits, the right way</h3>
+    <p class="subheading">Reserve what it really uses - cap the memory</p>
+    <div class="steps">
+      <ol>
+        <li>Deployment → <b>Actions → Edit resource limits</b></li>
+        <li>Requests from what Part 1 showed, a memory limit, no CPU limit</li>
+        <li>New pods: QoS <b>Burstable</b></li>
+        <li>Ask for far too much CPU: the new pod is <b>Pending</b></li>
+        <li>Roll back</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc patch deployment/guestbook \
+  --patch-file=guestbook-resources.patch.yaml
+oc get pods -o custom-columns=\
+NAME:.metadata.name,QOS:.status.qosClass
+oc set resources deployment/guestbook \
+  --requests=cpu=100
+oc get events \
+  --field-selector reason=FailedScheduling
+oc rollout undo deployment/guestbook</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. As user1. Topology → guestbook → the Deployment's page → Actions →
+      Edit resource limits: CPU request 50m, memory request 320Mi, memory
+      limit 512Mi, no CPU limit (the values demo 1 uses - check them against
+      what Part 1 measured). Save; a rollout. "Requests from measurements,
+      not guesses. A memory ceiling, because memory can't be taken back. No
+      CPU ceiling - Part 3 shows why."
+      Now as code, to make the point that the form isn't how real changes
+      are made: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
+      (same values; nothing changes - "the file is what goes into Git").
+      New pods: QoS Burstable.
+      Ask for too much: oc set resources deployment/guestbook --requests=cpu=100
+      One new pod stays Pending: oc get events --field-selector reason=FailedScheduling
+      → "0/6 nodes are available: ... Insufficient cpu". The old pods keep
+      serving - a rolling update never removes the old before the new is
+      ready. "The scheduler doesn't care that the node is idle - it counts
+      reservations." Undo: oc rollout undo deployment/guestbook.
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Setting requests and limits - and a request that doesn't fit</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-requests-form.webp" data-caption="Edit resource limits: CPU and memory requests and limits"></div><figcaption>1 · The form: requests and a memory limit</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-requests-pending.webp" data-caption="A pod Pending: Insufficient cpu"></div><figcaption>2 · Too big: Pending, Insufficient cpu</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the console form behind Actions → Edit resource limits - a
+      request (the reservation) and a limit (the ceiling) for CPU and for
+      memory. Right: what happens when a pod asks for more CPU than any node
+      has left to reserve: it stays Pending, and its events say why. The
+      running pods are not affected.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 3 -->
+<section>
+  <section>
+    <h3>3 · Hitting the ceiling</h3>
+    <p class="subheading">Over the CPU limit: slower. Over the memory limit: killed.</p>
+    <div class="steps">
+      <ol>
+        <li>A pod that keeps eating memory: <b>OOMKilled</b>, restarted</li>
+        <li>Give the guestbook a tight <b>CPU limit</b></li>
+        <li>Put load on it: response times climb, <b>throttling</b> shows</li>
+        <li>Roll back - and why many teams set no CPU limit</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc create -f memory-hog.yaml
+oc get pod memory-hog -w
+oc describe pod memory-hog | \
+  grep -A 4 'Last State'
+oc delete -f memory-hog.yaml
+
+oc set resources deployment/guestbook \
+  --limits=cpu=100m
+ab -k -c 10 -t 60 https://$(oc get route \
+  guestbook -o jsonpath='{.spec.host}')/
+oc rollout undo deployment/guestbook</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. As user1. oc create -f memory-hog.yaml - a small pod that
+      allocates memory in a loop, with a 128Mi limit. oc get pod memory-hog -w:
+      Running → OOMKilled → CrashLoopBackOff. Console: pod → Details: Last
+      State Terminated, reason OOMKilled, exit code 137. "The kernel killed
+      it - no warning, no slowdown. That's memory." oc delete -f memory-hog.yaml.
+      CPU: oc set resources deployment/guestbook --limits=cpu=100m. On the
+      laptop: ab -k -c 10 -t 60 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
+      (keep -c at 10, as in demo 1). Pod → Metrics: CPU flat at the limit
+      line. As peter, Observe → Metrics:
+      rate(container_cpu_cfs_throttled_periods_total{namespace="demo-resources"}[1m])
+      - the throttling. "Nothing crashed - it just got slower. That's CPU."
+      oc rollout undo deployment/guestbook. Talking point: with a CPU limit,
+      an idle node still can't help a busy pod; with only a request, the
+      pod is guaranteed its share and may use spare cycles. Memory: request
+      = limit for anything important.
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Memory over the limit: killed. CPU over the limit: throttled.</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-limits-oomkilled.webp" data-caption="Pod details: last state Terminated, OOMKilled, exit code 137"></div><figcaption>1 · Memory: OOMKilled, exit code 137</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-limits-throttled.webp" data-caption="Pod metrics: CPU flat at the limit under load"></div><figcaption>2 · CPU: flat at the limit, throttled</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: a pod that used more memory than its limit. The kernel killed
+      it (OOMKilled, exit code 137) and OpenShift restarted it - over and
+      over, since it does the same thing every time. Right: the guestbook
+      under load with a CPU limit of a tenth of a core - its CPU use is
+      flat at the limit: requests wait, but nothing crashes.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 4 -->
+<section>
+  <section>
+    <h3>4 · A budget for each project</h3>
+    <p class="subheading">The platform team sets the budget - the developer works within it</p>
+    <div class="steps">
+      <ol>
+        <li>Admin: a <b>LimitRange</b> and a <b>ResourceQuota</b></li>
+        <li><b>Administration → ResourceQuotas</b>: used vs hard</li>
+        <li>Developer: scale to 10 - only some pods start</li>
+        <li>A pod without requests gets the <b>defaults</b></li>
+        <li>A claim bigger than the storage budget: <b>refused</b></li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash"># peter
+oc create -f project-limits.yaml
+oc create -f project-quota.yaml
+oc describe quota
+# user1
+oc scale deployment/guestbook --replicas=10
+oc get events \
+  --field-selector reason=FailedCreate
+oc create -f no-requests-pod.yaml
+oc get pod no-requests \
+  -o jsonpath='{.spec.containers[0].resources}'
+oc create -f big-claim.yaml</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. As peter: oc create -f project-limits.yaml (default request and
+      limit per container, a maximum) and oc create -f project-quota.yaml
+      (requests.cpu, requests.memory, limits.memory, pods, requests.storage).
+      Administration → ResourceQuotas → demo-resources: bars for used vs
+      hard. "This is the department budget."
+      As user1: oc scale deployment/guestbook --replicas=10. Topology shows
+      fewer than 10 pods. oc get events --field-selector reason=FailedCreate
+      → "exceeded quota: ... requested: requests.memory=320Mi, used: ...,
+      limited: ...". Nothing already running is touched. Scale back to 2.
+      oc create -f no-requests-pod.yaml - a pod with no resources section;
+      oc get pod no-requests -o jsonpath='{.spec.containers[0].resources}'
+      shows the LimitRange's defaults filled in. Without the LimitRange, the
+      quota would have rejected it ("must specify requests.cpu...").
+      Storage is budgeted too: oc create -f big-claim.yaml (20Gi) →
+      "exceeded quota: requests.storage". Quotas can also be per storage
+      class (gold vs bronze).
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The project's budget, and a scale-up that hits it</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-quota-usage.webp" data-caption="ResourceQuota details: used vs hard for CPU, memory, pods and storage"></div><figcaption>1 · The quota: used vs hard</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-quota-exceeded.webp" data-caption="ReplicaSet events: exceeded quota"></div><figcaption>2 · Scaling past it: exceeded quota</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the project's ResourceQuota - for each resource, how much is in
+      use and the hard limit. Right: the events after scaling the guestbook
+      to ten pods - the ReplicaSet could only create the pods that fit in
+      the budget; the rest were refused with "exceeded quota". Running pods
+      are never stopped by a quota.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 5 -->
+<section>
+  <section>
+    <h3>5 · How much storage is left?</h3>
+    <p class="subheading">Two questions: how full is my volume - and how full is the storage behind it</p>
+    <div class="steps">
+      <ol>
+        <li>PVC <b>postgresql</b>: used vs capacity</li>
+        <li>Inside the pod: <code>df</code></li>
+        <li><b>Observe → Metrics</b>: free bytes per volume</li>
+        <li>Admin: the storage system's own capacity</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get pvc
+oc exec deployment/postgresql -- \
+  df -h /var/lib/pgsql/data
+oc describe quota | grep storage</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. Short - the storage session has the details. As user1, Storage →
+      PersistentVolumeClaims → postgresql: the usage graph, used vs total.
+      oc exec deployment/postgresql -- df -h /var/lib/pgsql/data shows the
+      same from inside. As peter, Observe → Metrics:
+      kubelet_volume_stats_available_bytes{namespace="demo-resources"} - the
+      query behind the "volume almost full" alerts.
+      "Free" has two levels: inside a claim (this), and in the storage
+      system that provides the claims - Storage → Data Foundation overview
+      shows raw and used capacity. With thin provisioning, the claims can
+      add up to more than the storage has: watch the second number, not
+      just the first. And the quota from Part 4 is the third view: how much
+      storage this project may still ask for.
+      Press DOWN for the backup screenshot.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>A volume's usage - and the storage system's capacity</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-storage-pvc.webp" data-caption="PVC details: used vs capacity graph"></div><figcaption>1 · The claim: used vs capacity</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-storage-capacity.webp" data-caption="Data Foundation overview: raw and used capacity"></div><figcaption>2 · The storage system: raw and used</figcaption></figure>
+    </div>
+    <aside class="notes">
+      Left: the database's claim - how much of its volume is used. Right: the
+      storage system behind all the claims. Both need watching: a volume can
+      fill up, and so can the pool that thin-provisioned volumes share.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 6 -->
+<section>
+  <section>
+    <h3>6 · Right-sizing: let the platform measure</h3>
+    <p class="subheading">Autoscaling for the load - recommendations for the size</p>
+    <div class="steps">
+      <ol>
+        <li><b>HPA</b>: 2 to 6 pods on CPU</li>
+        <li>Load: more pods - not bigger ones</li>
+        <li>Load gone: back to 2</li>
+        <li>For the size: <b>VPA</b> and <b>Cost Management</b> recommend requests</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc create -f guestbook-hpa.yaml
+ab -k -c 10 -t 120 https://$(oc get route \
+  guestbook -o jsonpath='{.spec.host}')/
+oc get hpa guestbook -w</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
+      the CPU request (the same file as demo 1). On the laptop:
+      ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
+      oc get hpa guestbook -w: TARGETS climbs, REPLICAS goes up; Topology
+      shows new pods; the page shows different pod names. After the load,
+      down to 2 within a minute or two. "Capacity reserved only while it's
+      needed - and six small pods survive a node failure better than one
+      big one."
+      Mention only, no demo: the VerticalPodAutoscaler (an optional operator)
+      watches what pods use and recommends requests - in "Off" mode it only
+      recommends, the safe way to start; in its other modes it applies them
+      by restarting pods. Don't let it change CPU while an HPA scales on CPU.
+      Cost Management: console.redhat.com → OpenShift → Optimizations (backup
+      screenshot - it needs days of data): recommendations per container,
+      short/medium/long term, cost or performance.
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>More pods under load</h3>
+    <div class="shot" data-src="images/demo3-rightsize-hpa.webp" data-caption="HPA scaling the guestbook out under load"></div>
+    <aside class="notes">
+      The HorizontalPodAutoscaler adding guestbook pods while load runs
+      against the app, and removing them again afterwards.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Cost Management: optimization recommendations</h3>
+    <div class="shot" data-src="images/demo3-rightsize-cost.webp" data-caption="console.redhat.com Cost Management: resource optimization recommendations for a container"></div>
+    <aside class="notes">
+      Cost Management on console.redhat.com, included with OpenShift. Its
+      resource optimization view recommends requests and limits for each
+      container, over short, medium and long periods, tuned either for cost
+      or for performance - for every connected cluster, in one place.
+    </aside>
+  </section>
+</section>
+
+<!-- Part 7 -->
+<section>
+  <section>
+    <h3>7 · Virtual machines: the same rules</h3>
+    <p class="subheading">A VM's CPU and memory - as the scheduler sees them</p>
+    <div class="steps">
+      <ol>
+        <li>A VM: 2 vCPU, 4 GiB</li>
+        <li>Its <b>virt-launcher</b> pod: the requests behind it</li>
+        <li>CPU overcommitted by default, memory not</li>
+        <li>The project's quota counts the VM too</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get vm,vmi
+oc get pod -l kubevirt.io=virt-launcher \
+  -o jsonpath='{.items[0].spec.containers[0].resources}'
+oc describe quota</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT - depends on a VM being available (see DEMO-SCRIPT.md "Still to do").
+      oc get vm,vmi: the VM, 2 vCPU and 4 GiB. Its pod: oc get pod -l
+      kubevirt.io=virt-launcher -o jsonpath='{.items[0].spec.containers[0].resources}'
+      - CPU request a tenth per vCPU (200m), memory request the guest's 4Gi
+      plus overhead. "The scheduler sees a pod - the same rules as every
+      other workload." oc describe quota: the VM's requests count against
+      the project's budget.
+      The cluster-wide knobs (admin, look only): the HyperConverged
+      resource's CPU allocation ratio, and the opt-in memory overcommit for
+      higher density.
+      Press DOWN for the backup screenshot.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>A VM and the pod that runs it</h3>
+    <div class="shot" data-src="images/demo3-vm-launcher.webp" data-caption="virt-launcher pod: CPU and memory requests for a 2 vCPU, 4 GiB VM"></div>
+    <aside class="notes">
+      The pod that runs a 2 vCPU, 4 GiB virtual machine. Its CPU request is
+      a fraction of a core per vCPU (CPU is overcommitted by default); its
+      memory request is the guest's memory plus overhead. Quotas and the
+      scheduler treat it like any other pod.
+    </aside>
+  </section>
+</section>
+
+<!-- Bonus -->
+<section>
+  <section>
+    <h3>Bonus · New project defaults</h3>
+    <p class="subheading">Every new project starts with a budget - no ticket needed</p>
+    <div class="steps">
+      <ol>
+        <li>The <b>project request template</b></li>
+        <li>Add a LimitRange and a quota to it</li>
+        <li>Every <code>oc new-project</code> gets them</li>
+      </ol>
+      <div>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc adm create-bootstrap-project-template \
+  -o yaml | less
+oc get project.config.openshift.io \
+  cluster -o yaml</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+DRAFT. Only if there's time. When a user creates a project, OpenShift
+      instantiates a template: by default just the project and an admin
+      rolebinding. oc adm create-bootstrap-project-template -o yaml prints
+      that default; add a LimitRange and a ResourceQuota to it, store it in
+      openshift-config, and point projects.config.openshift.io/cluster
+      (spec.projectRequestTemplate.name) at it. From then on every new
+      project starts with a budget and sane defaults.
+      Show only - changing it affects every user of the cluster.
+    </aside>
+  </section>
+</section>
+
+<!-- ================================================================ WRAP-UP -->
+<section>
+  <h2>What we just did</h2>
+  <p class="subheading">The plan from the start - in OpenShift terms</p>
+  <ul>
+    <li>Usage vs requests: QoS classes, dashboards, node allocation</li>
+    <li>Requests from measurements, a memory limit, no CPU limit</li>
+    <li>CPU throttling vs OOMKilled - overcommit</li>
+    <li>ResourceQuota and LimitRange per project</li>
+    <li>PVC usage and storage capacity</li>
+    <li>HPA scale-out - VPA and Cost Management for sizing</li>
+    <li>VM resources through virt-launcher pods</li>
+  </ul>
+  <aside class="notes">
+    The same seven points as "What we will cover today", with the names you
+    saw on screen. A pod without requests is BestEffort and invisible to
+    the scheduler's accounting; requests come from measured use, memory
+    gets a limit, CPU usually doesn't. Over a CPU limit a container is
+    throttled; over a memory limit it's OOMKilled - which is why CPU is safe
+    to overcommit and memory isn't. Quotas and limit ranges are the
+    project's budget and defaults; volumes and the storage behind them both
+    need watching; the HPA adds copies under load, and the VPA and Cost
+    Management recommend sizes; and VMs follow the same rules through their
+    pods.
+
+    Go back to "Live demo: today's setup" if there's time and point at each
+    box.
+  </aside>
+</section>
+
+<!-- ================================================================ Q&A -->
+<section class="no-chrome qa">
+  <h1>Q&amp;A</h1>
+  <div class="banner"></div>
+  <p class="thanks">Thank you for attending - let's talk</p>
+  <ul class="discuss">
+    <li>Was this useful?</li>
+    <li>Is the format right?</li>
+    <li>What would you like to see next?</li>
+  </ul>
+  <p class="slides-url">The slides, commands included:<br><a href="https://redhat-na-ssa.github.io/user-group/demo3-resources/" target="_blank">redhat-na-ssa.github.io/user-group/demo3-resources</a></p>
+  <figure class="qr-box">
+    <div class="qr" data-url="https://redhat-na-ssa.github.io/user-group/demo3-resources/"></div>
+    <figcaption>Presentation source</figcaption>
+  </figure>
+  <aside class="notes">
+    Open the floor: questions first, then the prompts on the slide.
+    Resource questions are often site-specific - how quotas are split
+    between teams today, how chargeback works, how big the nodes should be;
+    note them as candidates for an architecture review or a follow-up
+    session.
+
+    Write everything down in the follow-up app - open it from your own
+    bookmark in a separate tab; it is not linked from the deck. Finally,
+    point at the QR code: the deck, with the backup screenshots and the
+    commands on every demo slide, stays online.
+  </aside>
+</section>
+
+</div></div>
+<script src="../reveal/reveal.js"></script>
+<script src="../reveal/plugin/notes.js"></script>
+<script src="../reveal/plugin/highlight.js"></script>
+<script src="../lib/qrcode.js"></script>
+<script src="../common/deck.js"></script>
+<script>Deck.init();</script>
+</body>
+</html>

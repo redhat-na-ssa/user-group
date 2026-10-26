@@ -123,6 +123,12 @@
 .title-slide h1 { font-size: 2.4em; max-width: 1400px; }
 .reveal .title-slide p.sub { color: var(--rh-text); font-family: var(--r-heading-font); font-size: 1.15em; margin-top: 0.2em; }
 .title-slide .meta { margin-top: 70px; font-size: 0.75em; color: var(--rh-muted); }
+/* added by deck.js: back to the deck list */
+.reveal .title-slide .deck-menu {
+  display: inline-block; margin-top: 50px; font-size: 0.55em;
+  color: var(--rh-dim); text-decoration: none;
+}
+.reveal .title-slide .deck-menu:hover { color: var(--rh-red); }
 .title-band {
   position: absolute; left: -2000px; right: -2000px; bottom: -80px; height: 150px;
   background: var(--rh-bg-deep);

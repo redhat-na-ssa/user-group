@@ -19,7 +19,7 @@ The decks are published on GitHub Pages:
 |---|---|---|
 | 1 - OpenShift fundamentals (pods, services, routes, deployments, pipelines, RBAC) | [demo1-fundamentals/](demo1-fundamentals/) | Ready (shell scripts, to be converted to Ansible) |
 | 2 - OpenShift admin overview | - | Planned |
-| 3 - OpenShift installation | - | Planned |
+| 3 - Resource management (requests and limits, quotas, overcommit, right-sizing) | [demo3-resources/](demo3-resources/) | Outline (deck and script drafted, no automation yet) |
 | 4 - OpenShift storage (PV/PVC, CSI, ODF, snapshots, OADP) | [demo4-storage/](demo4-storage/) | In progress |
 | 5 - External secret management (HashiCorp Vault) | - | Planned |
 

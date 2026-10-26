@@ -28,6 +28,9 @@
           - manifests/guestbook-route-roundrobin.patch.yaml
           - manifests/guestbook-hpa.yaml
           - manifests/guestbook-eventlistener.yaml
+      - name: demo3-resources
+        title: Resource Management
+        files: []   # manifests to come - see demo3-resources/DEMO-SCRIPT.md
       - name: demo4-storage
         title: OpenShift Storage
         files:
