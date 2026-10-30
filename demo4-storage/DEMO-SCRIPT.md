@@ -87,7 +87,7 @@ In the cluster (setup, as admin). These are cluster-scoped objects, but they bel
 - StorageClass `nfs-static` (`manifests/nfs-static-storageclass.yaml`): provisioner `kubernetes.io/no-provisioner`, `reclaimPolicy: Retain`, `Immediate`, **not** the default class.
 - PVs `nfs-pv1`…`nfs-pv10` (`templates/nfs-pvs.yaml.j2`, rendered with `NFS_SERVER` / `NFS_EXPORT` from `demo.env`): 1 GiB (1–5), 2 GiB (6–8) and 5 GiB (9–10), RWX+RWO, label `storage=nfs-static`. The mixed sizes make the binder's "smallest PV that fits" visible: a 1.5 GiB claim gets a 2 GiB PV.
 
-Talking points it sets up: the claim gets the *whole* PV; the size is only a label. The directories have no quota and sit on one 100 GiB file system, so `df` in the pod shows ~100G for a "2 GiB" volume. One pod can fill the space for all ten PVs and for anyone else on that disk, and the PVC's usage graph and metrics measure the shared 100 GiB. That's why the Part 7 fill only ever runs on the ODF volume; an empty shelf means a Pending claim and a ticket; with Retain, a deleted claim leaves its PV **Released** with the data still on the server (shown at the end of Part 3).
+Talking points it sets up: the claim gets the *whole* PV; the size is only a label. The directories have no quota and sit on one 100 GiB file system, so `df` in the pod shows ~100G for a "2 GiB" volume. One pod can fill the space for all ten PVs and for anyone else on that disk, and the PVC page's Used and the metrics measure the shared 100 GiB. That's why the Part 7 fill only ever runs on the ODF volume; an empty shelf means a Pending claim and a ticket; with Retain, a deleted claim leaves its PV **Released** with the data still on the server (shown at the end of Part 3).
 
 ## Preparing the cluster
 
@@ -124,13 +124,13 @@ Concept slides sit DOWN under "Persistent storage in OpenShift". Use them only i
 
 | Part | Time | Who | What happens |
 |---|---|---|---|
-| 1 · Ephemeral by default | 2 min | user1 | Open the logbook, show the `emptyDir`, delete the pod, and the history is gone |
+| 1 · Ephemeral by default | 2 min | user1 | Open the logbook and note the pod name. Delete the pod: a new pod name, and the history is gone. *Then* the why: the Deployment's Volumes table shows `data` with an empty Type (an `emptyDir`; the console has no "ephemeral" label, so the behaviour is the proof). Optional for ops: the folder on the node, from the node Terminal |
 | 2 · Static volumes: plain NFS | 3 min | peter, user1 | The shelf: `nfs-pv1`…`10` Available, class `nfs-static` with no provisioner. A 1.5 GiB claim is bound to a 2 GiB PV. Mount it with `oc set volume`, delete the pod, and the history stays. `df` shows 100G, because the size isn't enforced. A 10 GiB claim stays Pending |
 | 3 · Dynamic storage: ODF | 4 min | peter, user1 | StorageClasses (the menu). Create PVC `logbook-data` in the console, it's Bound, and a PV is created for it. `oc get pv` is Forbidden for user1. Swap the volume. Delete `nfs-claim`: its PV is Released, not Available |
-| 4 · RWO vs RWX | 4 min | user1 | `logbook-rwo`: 1 Running, 2 stuck on a Multi-Attach error. Delete it. `logbook-rwx` DaemonSet on CephFS: all nodes, one file |
+| 4 · RWO vs RWX | 4 min | user1 | `logbook-rwo`: 1 Running, 2 stuck on a Multi-Attach error. Delete it. `logbook-rwx` DaemonSet on CephFS: all nodes, one file. Say that all pods appending to one file is a demo shortcut, not a pattern to copy (see "RWX in practice") |
 | 5 · StatefulSet | 3 min | user1 | 3 pods, 3 claims. Delete `logbook-sts-1`: same name, same disk. Scale down: the claims stay. **Then start the fill for Part 7** |
-| 6 · What ODF adds | 4 min | peter | Data Foundation dashboard (health, capacity, performance, consumers), Object tab, the PVC's usage graph, alert rules shipped by ODF. DOWN: "Any CSI driver vs ODF" table |
-| 7 · A volume fills up | 3 min | user1 | `VolumeAlmostFull` fires. Expand PVC to 2 GiB online, `df` shows it, the alert resolves. Remove the ballast |
+| 6 · What ODF adds | 4 min | peter | Data Foundation dashboard (health, capacity, performance, consumers), Object tab, alert rules shipped by ODF. DOWN: "Any CSI driver vs ODF" table |
+| 7 · A volume fills up | 3 min | user1 | How full is it: `df` in the pod is the reliable number (the PVC page and metrics only show usage when the driver reports it). `VolumeAlmostFull` fires. Expand PVC to 2 GiB online, `df` shows it, the alert resolves. Remove the ballast |
 | 8 · Snapshots | 3 min | user1 | Create a snapshot, "oops" `rm`, restore as a new PVC, `oc set volume`, and the history is back |
 | 9 · OADP | 4 min | peter | Backup `demo-storage` to the ODF bucket, restore as `demo-storage-restore`, open the restored logbook |
 
@@ -139,6 +139,33 @@ Then **When storage goes wrong** (1 min, a diagnostics checklist built from what
 **Timing risks:**
 - The alert in Part 7 needs about 2–3 minutes: kubelet volume stats are scraped about once a minute, plus `for: 1m`. That's why the fill starts at the end of Part 5 and runs while the ODF dashboard is shown.
 - The OADP backup with data mover takes a minute or two, and the restore about as long. If time is short, show a backup taken during rehearsal and only start the restore live.
+
+## RWX in practice (Part 4)
+
+RWX only promises that pods on many nodes can mount the volume read-write at once. Neither Kubernetes nor CSI coordinates the writes; that's left to the shared filesystem and, above all, to the application.
+
+| | CephFS (ODF RWX) | NFS v4 |
+|---|---|---|
+| Seeing other clients' writes | Strong. The metadata server revokes client caching when several clients write one file, so it behaves close to a local POSIX filesystem | Close-to-open: changes are only guaranteed to be visible after the writer closes and the reader re-opens; attribute caching can lag a few seconds |
+| Locks | POSIX advisory locks (`fcntl`, `flock`), coordinated across clients | Byte-range locks held by the server under a lease |
+| A client dies holding locks | Evicted after a timeout and blocklisted (fenced), so it can't write after its locks are handed on | Its lease expires (90 s by default) and the locks are released |
+| Appends from many clients | Coherent: writers are serialized | Not atomic across clients: lines can overwrite each other |
+
+**Deadlocks:** the locks are advisory, so they only work if every writer uses them. Nothing detects deadlocks between pods on different nodes; Linux's `EDEADLK` only sees one machine. Avoiding them is the application's design: one lock order, timeouts, or no shared write locks at all. The storage's safety net is releasing a dead client's locks.
+
+**Good RWX:** many readers, or many writers that each write their own files (uploads with unique names, shared static content).
+**Bad RWX:** several writers updating the same file without locking. Never put a database's data directory on one RWX volume shared by replicas (SQLite on NFS is the classic failure); databases use one RWO volume per replica and replicate themselves (the StatefulSet, Part 5).
+**RWX block for VMs** (OpenShift Virtualization live migration) is safe because the hypervisor guarantees a single writer, not the storage.
+
+**Our demo:** every `logbook-rwx` pod appends to the *same* `logbook.txt`. That works on CephFS but would be unsafe on NFS. Say so on stage: "fine for a demo; a real app gives each pod its own file, or uses a database".
+
+## Likely questions
+
+- **"Can NFS clean up a released PV by itself?"** Kubernetes once had `persistentVolumeReclaimPolicy: Recycle`, which ran a scrub pod (`rm -rf`) and made the PV Available again. It has been deprecated for years, so don't build on it. The modern answer is a provisioner: the community `csi-driver-nfs` (or the older `nfs-subdir-external-provisioner`) creates a directory per claim on an existing NFS export and removes it when the claim is deleted (`onDelete: delete`, or `retain`/`archive`). Both are community projects, not supported by Red Hat, and need privileged pods on the nodes. They turn static NFS into dynamic storage, the same thing ODF does in Part 3. In this demo the cleanup is done by `teardown.yml`/`reset.yml`.
+- **"Why does a 2 GiB NFS volume show 100 GiB in `df`?"** The directories have no quota, and the PV's capacity is only a label used for matching (Part 2).
+- **"Why does the console show 0 B, or no usage at all, for a volume?"** Kubernetes only knows a volume's usage if the storage driver reports volume stats (CSI `NodeGetVolumeStats`). Not every driver does, raw block volumes never do, and the result depends on the filesystem; a nearly empty volume also rounds to 0 B. `df` inside the container is the reliable number. ODF's RBD and CephFS volumes do report, which is why Part 7's alert works.
+- **"How does RWX handle concurrency and deadlocks?"** It doesn't: see "RWX in practice" above.
+- **"Why not just give everyone NFS?"** All pods write as one squashed user (3000), there are no sizes, snapshots or expansion, and someone has to keep the shelf stocked. It's fine for existing shares, not as the platform's default storage.
 
 ## Still to do
 

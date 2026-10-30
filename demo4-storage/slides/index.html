@@ -677,37 +677,64 @@
 <section>
   <section>
     <h3>1 · Ephemeral by default</h2>
-    <p class="subheading">The app writes - the pod restarts - the history is gone</p>
+    <p class="subheading">The app writes - the pod is replaced - the history is gone</p>
     <div class="steps">
       <ol>
         <li>Topology: <b>logbook</b> - one pod, a line every 5 s</li>
-        <li>Its Route: <code>/logbook.txt</code></li>
-        <li>The volume: an <b>emptyDir</b></li>
-        <li>Delete the pod</li>
-        <li>Reload - a fresh, empty logbook</li>
+        <li>Its Route: <code>/logbook.txt</code> - who wrote what</li>
+        <li>Delete the pod - a new one starts</li>
+        <li>Reload: a new pod name, <b>the history is gone</b></li>
+        <li>Deployment → <b>Volumes</b>: <code>data</code>, no type - nothing behind it</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Deployment logbook: one pod with an emptyDir that is deleted with the pod">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT LOGBOOK</text>
+        <use href="#i-pod" x="70" y="62" width="110" height="110"/>
+        <text class="dg-small" x="125" y="195">pod</text>
+        <path class="dg-line grey dg-dash" d="M185,117 H255"/>
+        <use href="#i-disk" class="grey" x="262" y="72" width="90" height="90"/>
+        <text class="dg-small" x="307" y="195">emptyDir</text>
+        <text class="dg-small" x="307" y="222">deleted with the pod</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">oc set volume deployment/logbook
-curl -s $LOGBOOK_URL/logbook.txt | tail -3
+<pre><code class="language-bash">curl -s $LOGBOOK_URL/logbook.txt | tail -3
 oc delete pod -l app=logbook
-curl -s $LOGBOOK_URL/logbook.txt</code></pre>
+curl -s $LOGBOOK_URL/logbook.txt
+oc set volume deployment/logbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-The logbook Deployment is pre-staged by setup (manifests/logbook-ephemeral.yaml).
+Show it, don't explain it: the proof is what happens to the data.
+      The logbook Deployment is pre-staged by setup (manifests/logbook-ephemeral.yaml).
       Topology (Developer perspective, project demo-storage) → logbook → open
       the Route (arrow icon) and add /logbook.txt: lines like
-      "10:42:05  logbook-7d9f…-x2k4p  on  worker-1". Reload a couple of times -
-      it grows. "This is the app's data."
-      Show where it lives: the Deployment → YAML, volumes: data → emptyDir: {}
-      (or oc set volume deployment/logbook in the terminal). "An emptyDir is a
-      folder on the node, created with the pod and deleted with it."
-      Delete the pod (Topology → pod → Actions → Delete Pod, or
-      oc delete pod -l app=logbook). The Deployment starts a new one within
-      seconds. Reload: only lines from the NEW pod name, starting just now.
-      "Every upgrade, every node drain, every crash - this happens. Stateless
-      pods are a feature; but data you want to keep needs a volume."
+      "10:42:05  logbook-7d9f…-x2k4p  on  ocpnode3". Reload a couple of times -
+      it grows. "This is the app's data - and every line says which pod
+      wrote it." Note the pod name.
+      Delete the pod: Topology → logbook → side panel → the pod → Actions →
+      Delete Pod. The Deployment starts a new one within seconds (the ring
+      goes light blue, then dark blue). Reload: a NEW pod name, and the
+      history starts just now - everything the old pod wrote is gone.
+      "Every rollout, node drain for an upgrade, or eviction does exactly
+      this. Pods are disposable - that's what makes self-healing and scaling
+      easy - so data you want to keep can't live in the pod."
+      Why: click the Deployment name in the side panel → Details, scroll to
+      Volumes: one volume, data at /data - and the Type column is empty.
+      "There's a volume, but nothing behind it: it's an emptyDir, a scratch
+      folder the pod gets on its node and loses with the pod. Remember this
+      row - in Part 2 it gets a type." (The console has no label that says
+      "ephemeral"; the blank Type is the tell.)
+      If asked "so where is the data?": Deployment → YAML tab, volumes:
+      data → emptyDir: {}. For an ops audience, the node itself (as peter):
+      Pod → Details → Node; Compute → Nodes → that node → Terminal tab:
+        chroot /host
+        find /var/lib/kubelet/pods -path '*empty-dir/data/logbook.txt' | xargs tail -2
+      "A folder in the kubelet's area on that node." Delete the pod, run the
+      find again: gone.
+      Careful with "restart": an emptyDir survives a container RESTART in the
+      same pod (a crash, a failed liveness probe). It's lost when the POD is
+      replaced - deleted, rescheduled, or rolled out.
       Press DOWN for the backup screenshot.
     </aside>
   </section>
@@ -722,7 +749,9 @@ The logbook Deployment is pre-staged by setup (manifests/logbook-ephemeral.yaml)
       that wrote it and the node it ran on. Right: the same URL right after
       the pod was deleted. The Deployment replaced the pod, as it should, but
       the new pod started with an empty /data: the emptyDir was deleted
-      together with the old pod.
+      together with the old pod. In the console nothing marks the volume as
+      temporary - the Deployment's Volumes table just shows "data" with an
+      empty Type - so the behaviour is the proof.
     </aside>
   </section>
 </section>
@@ -741,6 +770,22 @@ The logbook Deployment is pre-staged by setup (manifests/logbook-ephemeral.yaml)
         <li>Claim 10 GiB: <b>Pending</b> - nothing on the shelf fits</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Deployment logbook: pod, claim nfs-claim, a pre-made NFS PV, the NFS server">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT LOGBOOK · STATIC NFS</text>
+        <use href="#i-pod" x="30" y="62" width="110" height="110"/>
+        <text class="dg-small" x="85" y="195">pod</text>
+        <path class="dg-line" d="M145,117 H185" marker-end="url(#dg-arrow)"/>
+        <use href="#i-doc" x="192" y="72" width="90" height="90"/>
+        <text class="dg-small" x="237" y="195">nfs-claim</text>
+        <path class="dg-line" d="M287,117 H327" marker-end="url(#dg-arrow)"/>
+        <use href="#i-disk" x="334" y="72" width="90" height="90"/>
+        <text class="dg-small" x="379" y="195">nfs-pv7</text>
+        <text class="dg-small" x="379" y="222">made in advance</text>
+        <path class="dg-line grey dg-dash" d="M429,117 H478"/>
+        <use href="#i-node" class="grey" x="485" y="72" width="90" height="90"/>
+        <text class="dg-small" x="530" y="195">NFS server</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc get pv -l storage=nfs-static
 oc create -f nfs-claim.yaml
@@ -773,8 +818,8 @@ As peter, Administrator perspective. Storage → PersistentVolumes, filter
       the whole file system on the server, not 2 GiB. "OpenShift picked this
       PV by its label - 2Gi - but nothing enforces it. All ten PVs share the
       same 100 GiB, so one runaway app fills it for every claim, and for
-      everyone else using that server." The PVC's usage graph and the kubelet
-      metrics see the same 100 GiB, so a fill alert on an NFS claim measures
+      everyone else using that server." The PVC page's Used/Available and the
+      kubelet metrics see the same 100 GiB, so a fill alert on an NFS claim measures
       the shared disk, not the claim. Enforcing a size takes quotas on the
       server, or storage with a provisioner (Part 3: df on an ODF volume
       shows exactly what was asked). Never run the Part 7 fill on an NFS
@@ -795,14 +840,15 @@ As peter, Administrator perspective. Storage → PersistentVolumes, filter
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Ten NFS volumes made in advance - one taken by a claim</h3>
-    <div class="shot" data-src="images/demo4-nfs-pvs.webp" data-caption="Storage → PersistentVolumes: nfs-pv1 to nfs-pv10 in class nfs-static, one Bound to demo-storage/nfs-claim, the rest Available"></div>
+    <div class="shot" data-src="images/demo4-nfs-pvs.webp" data-caption="Storage → PersistentVolumes: nfs-pv1 to nfs-pv10, labelled storage=nfs-static; nfs-pv7 (2Gi) Bound to the claim logbook-storage, the rest Available"></div>
     <aside class="notes">
-      The PersistentVolumes page after the claim: ten static NFS volumes in
-      the nfs-static class, created in advance by an administrator - each one
-      a directory on an NFS server. One is now Bound to demo-storage/nfs-claim:
-      the smallest that was big enough (2 GiB for a 1.5 GiB request). The
-      others wait, Available, for the next claim. There's no driver behind
-      them: when the shelf is empty, new claims stay Pending.
+      The PersistentVolumes page after the claim: ten static NFS volumes,
+      created in advance by an administrator - each one a directory on an NFS
+      server, labelled storage=nfs-static. One is now Bound: nfs-pv7, 2 GiB,
+      to the claim logbook-storage - the smallest PV that was big enough for
+      the request, and the claim gets all of it. The others wait, Available,
+      for the next claim. There's no driver behind them: when the shelf is
+      empty, new claims stay Pending.
     </aside>
   </section>
 </section>
@@ -821,6 +867,23 @@ As peter, Administrator perspective. Storage → PersistentVolumes, filter
         <li>Delete the NFS claim: its PV is <b>Released</b>, not free</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Deployment logbook: pod, claim logbook-data, ODF's ceph-rbd class, a PV made on demand">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT LOGBOOK · DYNAMIC ODF</text>
+        <use href="#i-pod" x="30" y="62" width="110" height="110"/>
+        <text class="dg-small" x="85" y="195">pod</text>
+        <path class="dg-line" d="M145,117 H185" marker-end="url(#dg-arrow)"/>
+        <use href="#i-doc" x="192" y="72" width="90" height="90"/>
+        <text class="dg-small" x="237" y="195">logbook-data</text>
+        <path class="dg-line" d="M287,117 H327" marker-end="url(#dg-arrow)"/>
+        <use href="#i-plug" x="334" y="72" width="90" height="90"/>
+        <text class="dg-small" x="379" y="195">ceph-rbd</text>
+        <text class="dg-small" x="379" y="222">RWO</text>
+        <path class="dg-line" d="M429,117 H478" marker-end="url(#dg-arrow)"/>
+        <use href="#i-disk" x="485" y="72" width="90" height="90"/>
+        <text class="dg-small" x="530" y="195">PV</text>
+        <text class="dg-small" x="530" y="222">made on demand</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc get storageclass | \
   grep -E '^NAME|openshift-storage'
@@ -863,6 +926,15 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
       and before anyone can use that PV again an admin must wipe the
       directory and clear the PV's claimRef. A dynamic ODF volume (reclaim
       Delete) simply disappears with its claim.
+      If asked "can't NFS clean up by itself?": the old reclaim policy
+      Recycle (rm -rf, then Available again) - deprecated for years, don't
+      build on it. Today's answer is a provisioner: the community
+      csi-driver-nfs (or the older nfs-subdir-external-provisioner) creates a
+      directory per claim on an existing NFS export and deletes it with the
+      claim. Community projects, not supported by Red Hat, and they need
+      privileged node pods - but it's exactly the point: a StorageClass with a
+      provisioner turns the shelf into dynamic storage, which is what ODF did
+      for us here.
       Press DOWN for the backup screenshots.
     </aside>
   </section>
@@ -905,6 +977,26 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
         <li>Its Route: every node writes to the same logbook</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 900 260" aria-label="Left: logbook-rwo, three pods on three nodes, one RWO disk - one runs, two are blocked. Right: DaemonSet logbook-rwx, a pod per node sharing one CephFS volume">
+        <rect class="dg-box grey" x="5" y="5" width="430" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">LOGBOOK-RWO · ONE RWO DISK</text>
+        <use href="#i-pod" x="30" y="55" width="90" height="90"/>
+        <use href="#i-pod-new" class="grey" x="170" y="55" width="90" height="90"/>
+        <use href="#i-pod-new" class="grey" x="310" y="55" width="90" height="90"/>
+        <path class="dg-line" d="M195,105 L235,145 M235,105 L195,145 M335,105 L375,145 M375,105 L335,145" style="stroke-width:4"/>
+        <path class="dg-line" d="M75,147 V170 H185"/>
+        <path class="dg-line grey dg-dash" d="M215,147 V160 M355,147 V170 H245"/>
+        <use href="#i-disk" x="185" y="160" width="60" height="55"/>
+        <text class="dg-small" x="215" y="242">RWO · one node at a time</text>
+        <rect class="dg-box grey" x="460" y="5" width="430" height="250" rx="12"/>
+        <text class="dg-label left" x="480" y="36">DAEMONSET LOGBOOK-RWX</text>
+        <use href="#i-pod" x="485" y="55" width="90" height="90"/>
+        <use href="#i-pod" x="630" y="55" width="90" height="90"/>
+        <use href="#i-pod" x="775" y="55" width="90" height="90"/>
+        <path class="dg-line" d="M530,147 V170 H650 M820,147 V170 H700 M675,147 V160"/>
+        <use href="#i-doc" x="650" y="160" width="50" height="55"/>
+        <text class="dg-small" x="675" y="242">CephFS · RWX · every node</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f logbook-rwo.yaml
 oc get pods -l app=logbook-rwo -o wide
@@ -941,6 +1033,24 @@ curl -s $LOGBOOK_RWX_URL/logbook.txt | tail</code></pre>
       When to use which: RWO block for databases (faster, and they handle
       their own replication); RWX file for content several pods really share
       - uploads, shared config, CMS content.
+      Say it about our own demo: "every pod appends to the SAME file - fine
+      for a demo, CephFS serializes the writers; on NFS lines could overwrite
+      each other. A real app gives each pod its own file, or uses a database."
+      If asked how RWX handles concurrency: it doesn't - RWX only allows the
+      mounts. Coordination is the filesystem's and the app's job. CephFS keeps
+      clients coherent (the metadata server revokes caching when several write
+      one file) and coordinates POSIX locks (fcntl/flock) across nodes; NFS v4
+      is only close-to-open consistent, with lease-based locks. Locks are
+      advisory - they only work if every writer uses them - and nothing
+      detects deadlocks between pods on different nodes: that's the app's
+      design (one lock order, timeouts, or no shared write locks at all).
+      What the storage does: a dead client's locks are released - CephFS
+      evicts and fences (blocklists) it, NFS lets its 90 s lease expire.
+      Good RWX: many readers, or writers that each write their own files.
+      Bad RWX: several writers updating the same file without locking; never
+      a database's data directory shared by replicas (SQLite on NFS is the
+      classic failure) - databases use RWO per replica (Part 5). RWX block for
+      VM live migration is safe because the hypervisor guarantees one writer.
       Press DOWN for backup screenshots.
     </aside>
   </section>
@@ -985,6 +1095,20 @@ curl -s $LOGBOOK_RWX_URL/logbook.txt | tail</code></pre>
         <li>Scale to 1 - the claims stay</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="StatefulSet logbook-sts: three pods, each with its own RWO disk">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">STATEFULSET LOGBOOK-STS</text>
+        <use href="#i-pod" x="60" y="50" width="100" height="100"/>
+        <use href="#i-pod" x="270" y="50" width="100" height="100"/>
+        <use href="#i-pod" x="480" y="50" width="100" height="100"/>
+        <path class="dg-line" d="M110,152 V165 M320,152 V165 M530,152 V165"/>
+        <use href="#i-disk" x="80" y="165" width="60" height="60"/>
+        <use href="#i-disk" x="290" y="165" width="60" height="60"/>
+        <use href="#i-disk" x="500" y="165" width="60" height="60"/>
+        <text class="dg-small left" x="150" y="202">-0</text>
+        <text class="dg-small left" x="360" y="202">-1</text>
+        <text class="dg-small left" x="570" y="202">-2</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f logbook-sts.yaml
 oc get pods,pvc -l app=logbook-sts
@@ -1044,7 +1168,6 @@ oc create -f logbook-sts.yaml (user1). The StatefulSet has a
         <li><b>Storage → Data Foundation</b>: the storage system</li>
         <li>Block and File: health, capacity, performance, top consumers</li>
         <li>Object: buckets and their usage</li>
-        <li>A PVC's page: used vs. size, over time</li>
         <li><b>Observe → Alerting</b>: the storage alert rules ODF ships</li>
       </ol>
       <div>
@@ -1069,9 +1192,6 @@ As peter, Administrator perspective. LOOK ONLY: this ODF is shared - never
       The OSD pods (oc get pods -l app=rook-ceph-osd -o wide): one per disk,
       spread over the storage nodes - the storage itself runs as pods,
       managed by an operator, upgraded with the cluster.
-      Back to one volume: Storage → PersistentVolumeClaims → logbook-data →
-      the utilization graph: used vs. capacity. It's rising - we started
-      filling it a minute ago (end of Part 5).
       Observe → Alerting → Alerting rules, filter "Ceph": CephClusterNearFull
       (75% raw), CephClusterCriticallyFull, CephOSDDiskNotResponding,
       CephMonQuorumAtRisk, PersistentVolumeUsageNearFull... "We didn't write
@@ -1144,11 +1264,28 @@ As peter, Administrator perspective. LOOK ONLY: this ODF is shared - never
       <ol>
         <li>An alert at 80% full - as code</li>
         <li>Fill <code>logbook-data</code>: 900 MiB</li>
+        <li>How full? <code>df</code> in the pod - the console, only if the driver reports it</li>
         <li><b>Observe → Alerts</b>: <code>VolumeAlmostFull</code> fires</li>
         <li>PVC → <b>Expand PVC</b>: 2 GiB, online</li>
         <li>The alert resolves - the pod never restarted</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Deployment logbook on logbook-data: the volume fills, an alert fires, the claim grows from 1 to 2 GiB">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT LOGBOOK · LOGBOOK-DATA</text>
+        <use href="#i-pod" x="30" y="62" width="110" height="110"/>
+        <text class="dg-small" x="85" y="195">pod</text>
+        <path class="dg-line" d="M145,117 H185" marker-end="url(#dg-arrow)"/>
+        <use href="#i-disk" x="192" y="72" width="90" height="90"/>
+        <text class="dg-small" x="237" y="195">logbook-data</text>
+        <text class="dg-small" x="237" y="222">1 GiB → 2 GiB</text>
+        <path class="dg-line grey dg-dash" d="M287,117 H327"/>
+        <use href="#i-gauge" class="grey" x="334" y="72" width="90" height="90"/>
+        <text class="dg-small" x="379" y="195">80% full</text>
+        <path class="dg-line" d="M429,117 H478" marker-end="url(#dg-arrow)"/>
+        <use href="#i-bell" x="485" y="72" width="90" height="90"/>
+        <text class="dg-small" x="530" y="195">alert</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f logbook-volume-alert.yaml
 oc exec deployment/logbook -- dd \
@@ -1169,10 +1306,27 @@ The first two lines ran at the end of Part 5 (if not, run them now and
       - the app team owns this one, in its own namespace, with its own
       threshold." (User workload monitoring is enabled by setup; user1 has the
       monitoring-rules-edit role.)
-      oc exec deployment/logbook -- df -h /data: ~92% used.
+      How full is it? The reliable answer is df inside the container:
+      logbook pod → Terminal tab → df -h /data (or
+      oc exec deployment/logbook -- df -h /data): ~92% used.
+      The console's PVC page (Storage → PersistentVolumeClaims → logbook-data:
+      the Available donut and Used) and the kubelet metrics only show usage
+      when the storage driver reports volume stats for that volume - CSI
+      drivers may or may not, raw block volumes never do, and what's reported
+      depends on the filesystem. "Don't build your capacity process on the
+      console's number; df in the container is the truth." ODF's RBD and
+      CephFS volumes do report, which is what makes the Part 7 alert
+      possible - with another driver, check first. The PVC page also shows
+      only the current value (no history; history is Observe → Metrics,
+      kubelet_volume_stats_used_bytes{persistentvolumeclaim="logbook-data"}), and a
+      nearly empty volume shows "Used 0 B". The ODF dashboards are
+      cluster-wide (capacity, performance, prediction), not per claim.
       Developer perspective → Observe → Alerts: VolumeAlmostFull firing for
-      logbook-data. (Admin: Observe → Alerting shows it too.) The PVC page's
-      graph shows the jump.
+      logbook-data. (Admin: Observe → Alerting shows it too.) The alert is
+      built on the kubelet's volume stats, which ODF's driver reports - say
+      so: "this works because the driver reports usage; with storage that
+      doesn't, you'd alert from inside the app or the storage system, and
+      check with df".
       Fix it: Administrator → Storage → PersistentVolumeClaims → logbook-data
       → Actions → Expand PVC → 2 GiB → Expand. Watch the PVC: the size
       changes in seconds; df -h /data in the pod: 2.0G, ~45% used. The pod
@@ -1232,6 +1386,23 @@ The first two lines ran at the end of Part 5 (if not, run them now and
         <li>The history is back</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="logbook-data, a snapshot of it, a new claim logbook-data-restored from the snapshot, mounted by the logbook pod">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT LOGBOOK · RESTORE</text>
+        <use href="#i-disk" x="30" y="72" width="90" height="90"/>
+        <text class="dg-small" x="75" y="195">logbook-data</text>
+        <path class="dg-line" d="M125,117 H185" marker-end="url(#dg-arrow)"/>
+        <use href="#i-camera" x="192" y="72" width="90" height="90"/>
+        <text class="dg-small" x="237" y="195">snapshot</text>
+        <path class="dg-line" d="M287,117 H327" marker-end="url(#dg-arrow)"/>
+        <use href="#i-disk" x="334" y="72" width="90" height="90"/>
+        <text class="dg-small" x="379" y="195">logbook-data-</text>
+        <text class="dg-small" x="379" y="222">restored</text>
+        <path class="dg-line" d="M429,117 H478" marker-end="url(#dg-arrow)"/>
+        <use href="#i-pod" x="485" y="62" width="110" height="110"/>
+        <text class="dg-small" x="540" y="195">pod</text>
+        <text class="dg-small" x="540" y="222">mounts it</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f logbook-snapshot.yaml
 oc get volumesnapshot
@@ -1328,7 +1499,25 @@ As peter. Operators → Installed Operators → OADP Operator (namespace
       pointed at the same bucket.
       In real life: a Schedule object takes these nightly, with a TTL, and
       the bucket lives outside the cluster (another site, or a cloud).
-      Press DOWN for the backup screenshot.
+      Press DOWN for the backup screenshots.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>OADP in its project: what the DataProtectionApplication runs</h3>
+    <div class="shot" data-src="images/demo4-oadp-topology.webp" data-caption="Topology of project openshift-adp: the OADP operator, the velero Deployment and node-agent DaemonSet grouped under DPA dpa-odf, and Kopia repository maintenance Jobs for demo-storage"></div>
+    <aside class="notes">
+      Developer perspective → Topology, project openshift-adp. Right: the
+      OADP operator itself (its controller manager, grouped under the
+      operator's ClusterServiceVersion). Middle: what our one
+      DataProtectionApplication, dpa-odf, asked for - the velero Deployment
+      (the backup engine) and the node-agent DaemonSet (the data mover: one
+      pod per node, which copies volume data into the bucket). Top: two
+      helper servers the operator runs on its own. Bottom: Jobs named
+      demo-storage-dpa-odf-1-kopia-maintain-job-... - not backups, but
+      periodic maintenance of the Kopia repository that holds demo-storage's
+      volume data in location dpa-odf-1 (compaction and clean-up of data no
+      backup refers to any more). The backups themselves run as short-lived
+      pods and are gone by the time you look.
     </aside>
   </section>
   <section class="backup">
@@ -1381,8 +1570,9 @@ oc adm must-gather --image=\
     A pod stuck in ContainerCreating: describe the pod - Multi-Attach (Part
     3), a mount or permission error, a node that can't reach the storage.
     VolumeAttachments show which node holds a volume. An app failing with
-    "no space left": df in the pod, and the usage graph on the PVC page
-    (Part 7). If many volumes misbehave at once, look at the storage itself:
+    "no space left": df in the pod first - it's the reliable number; the
+    PVC page's Used and the kubelet metrics only exist when the driver
+    reports volume stats (Parts 6 and 7). If many volumes misbehave at once, look at the storage itself:
     the ODF dashboard and its alerts (Part 6). For a support case, run
     must-gather with the ODF image (match the tag to your ODF version) and
     attach the result.

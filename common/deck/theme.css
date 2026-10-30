@@ -296,3 +296,9 @@
 .modes .mode code { font-size: 1.1em; color: var(--rh-red); background: none; padding: 0; }
 .modes .mode h3 { font-size: 0.85em; margin: 0.4em 0; }
 .modes .mode p { font-size: 0.62em; color: var(--rh-muted); margin: 0; }
+
+/* Demo step slides: a small diagram of the step's set-up, pinned to the
+   top right of the slide, level with the title (the section is the positioned
+   ancestor) - a cut-down part of the demo intro diagram, so the steps and the
+   code stay the focus */
+.reveal .steps .mini { position: absolute; top: -10px; right: -10px; width: 400px; max-height: 170px; margin: 0; }

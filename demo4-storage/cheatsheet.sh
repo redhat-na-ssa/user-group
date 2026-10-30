@@ -5,9 +5,10 @@
 # open a tab per user with
 #   bash --rcfile ~/faa-demo/demo4-storage/user1.rc
 #   cheat                       # all demo commands
-#   cheat 7                     # only part 6
+#   cheat 7                     # only part 7
 #
-# Fallback, the console's web terminal (>_ icon):
+# Fallback, the console's web terminal (>_ icon) - fetch this file first,
+# then sourcing it downloads the YAML files below and sets the project:
 #   curl -sO http://slides.faa-demo.svc:8080/demo4-storage/cheatsheet.sh
 #   source cheatsheet.sh
 #
@@ -36,11 +37,14 @@ cheat() {
 return 0 2>/dev/null || true
 
 # ---------------------------------------------------------------- 1 - Ephemeral by default (user1)
-oc get pods -l app=logbook -o wide
-oc set volume deployment/logbook                   # volume "data": an emptyDir
+oc get pods -l app=logbook -o wide                 # note the pod name
 curl -s $LOGBOOK_URL/logbook.txt | tail -3         # time, pod, node
-oc delete pod -l app=logbook
-curl -s $LOGBOOK_URL/logbook.txt                   # only the new pod's lines
+oc delete pod -l app=logbook                       # the Deployment starts a new pod
+curl -s $LOGBOOK_URL/logbook.txt                   # new pod name - the history is gone
+oc set volume deployment/logbook                   # why: volume "data" is an emptyDir
+# Optional, as peter - the emptyDir is a folder on the node (Compute -> Nodes -> <node> -> Terminal):
+#   chroot /host
+#   find /var/lib/kubelet/pods -path '*empty-dir/data/logbook.txt' | xargs tail -2
 
 # ---------------------------------------------------------------- 2 - Static volumes: plain NFS (peter, then user1)
 oc get pv -l storage=nfs-static                    # peter: nfs-pv1..10, Available (1, 2, 5 GiB)
@@ -49,7 +53,14 @@ oc get storageclass nfs-static                     # kubernetes.io/no-provisione
 oc create -f nfs-claim.yaml                        # user1: 1500Mi RWX
 oc get pvc nfs-claim                               # Bound to a 2Gi PV - the smallest that fits
 oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=nfs-claim
-oc rollout status deployment/logbook
+# Console instead: Deployment -> YAML, under spec.template.spec.volumes replace
+#           emptyDir: {}
+#   with (same indent as that line; if it reads "- emptyDir: {}", keep the "- "):
+#           persistentVolumeClaim:
+#             claimName: nfs-claim
+#   -> Save (one rollout). Two-step UI: Volumes row menu -> Remove volume, then
+#   Actions -> Add storage -> existing claim nfs-claim, mount path /data.
+oc rollout status deployment/logbook               # waits for the new pod - starts nothing
 oc delete pod -l app=logbook
 curl -s $LOGBOOK_URL/logbook.txt | head -3         # the old pod's lines survived
 oc exec deployment/logbook -- df -h /data          # ~100G: the whole server disk, not 2Gi - no quota
@@ -64,7 +75,12 @@ oc create -f logbook-data-pvc.yaml                 # ...or as code (skip if made
 oc get pvc logbook-data                            # Bound
 oc get pv                                          # user1: Forbidden - PVs are the platform's
 oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=logbook-data
-oc rollout status deployment/logbook
+# Console instead: Deployment -> YAML, under spec.template.spec.volumes change
+#           claimName: nfs-claim
+#   to
+#           claimName: logbook-data
+#   -> Save (one rollout).
+oc rollout status deployment/logbook               # waits for the new pod - starts nothing
 oc delete pod -l app=logbook
 curl -s $LOGBOOK_URL/logbook.txt | head -3         # the new logbook on ODF survived
 oc delete pvc nfs-claim                            # static: its PV is now Released, not Available
@@ -104,7 +120,9 @@ oc get obc -A                                      # bucket claims (the OADP buc
 
 # ---------------------------------------------------------------- 7 - A volume fills up (user1)
 oc get prometheusrule logbook-volume -o yaml       # created at the end of Part 5
-oc exec deployment/logbook -- df -h /data          # ~92% used
+oc exec deployment/logbook -- df -h /data          # ~92% used - df in the container is the truth
+# Console's Used / metrics only if the driver reports volume stats (ODF does):
+#   Observe -> Metrics: kubelet_volume_stats_used_bytes{persistentvolumeclaim="logbook-data"}
 # Console: Observe -> Alerts: VolumeAlmostFull
 # Console: Storage -> PersistentVolumeClaims -> logbook-data -> Actions -> Expand PVC: 2 GiB
 oc patch pvc logbook-data --type=merge -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'
@@ -119,7 +137,12 @@ oc exec deployment/logbook -- rm /data/logbook.txt # the "oops"
 curl -s $LOGBOOK_URL/logbook.txt                   # only the last few seconds
 oc create -f logbook-data-restored-pvc.yaml
 oc set volume deployment/logbook --add --overwrite --name=data --claim-name=logbook-data-restored
-oc rollout status deployment/logbook
+# Console instead: Deployment -> YAML, under spec.template.spec.volumes change
+#           claimName: logbook-data
+#   to
+#           claimName: logbook-data-restored
+#   -> Save (one rollout).
+oc rollout status deployment/logbook               # waits for the new pod - starts nothing
 curl -s $LOGBOOK_URL/logbook.txt | head -3         # the history is back
 
 # ---------------------------------------------------------------- 9 - Backup and restore with OADP (peter)
