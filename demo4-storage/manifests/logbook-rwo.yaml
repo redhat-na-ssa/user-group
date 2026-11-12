@@ -1,5 +1,6 @@
 # Part 4: three replicas on three different nodes, one RWO claim. One pod
-# starts; the others hang in ContainerCreating with a Multi-Attach error.
+# starts; the others hang in ContainerCreating: "Waiting for detach ... Volume is
+# already used by pod(s)" (older versions: "Multi-Attach error").
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

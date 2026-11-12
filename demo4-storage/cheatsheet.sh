@@ -91,8 +91,9 @@ oc create -f logbook-rwo.yaml                      # 3 pods, 3 nodes, one RWO cl
 oc get pods -l app=logbook-rwo -o wide             # 1 Running, 2 ContainerCreating
 oc get events --field-selector reason=FailedAttachVolume
 oc delete -f logbook-rwo.yaml
+oc get nodes -l node-role.kubernetes.io/app-worker # peter: where it may run (user3: Forbidden)
 oc create -f logbook-rwx.yaml                      # DaemonSet, one CephFS RWX claim
-oc get pods -l app=logbook-rwx -o wide             # one per worker, all Running
+oc get pods -l app=logbook-rwx -o wide             # one per app-worker node, all Running
 curl -s $LOGBOOK_RWX_URL/logbook.txt | tail        # lines from every node
 
 # ---------------------------------------------------------------- 5 - StatefulSet: a disk per replica (user3)

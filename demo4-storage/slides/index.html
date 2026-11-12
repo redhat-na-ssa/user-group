@@ -661,7 +661,7 @@
     history survives.
 
     We run it three ways: a Deployment with one pod (first without storage,
-    then on a static NFS volume, then on an ODF block volume), a DaemonSet - one pod on every node - all
+    then on a static NFS volume, then on an ODF block volume), a DaemonSet - one pod on each application node - all
     sharing one file volume, and a StatefulSet that gives each replica its
     own disk. Underneath, ODF provides the block, file and object storage;
     on the right, the operations side - an alert when a volume fills up, and
@@ -987,9 +987,9 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
     <div class="steps">
       <ol>
         <li><b>logbook-rwo</b>: 3 pods on 3 nodes, one RWO claim</li>
-        <li>One Running, two stuck: <b>Multi-Attach error</b></li>
-        <li><b>logbook-rwx</b>: a DaemonSet - a pod per node - one <b>CephFS</b> claim</li>
-        <li>Its Route: every node writes to the same logbook</li>
+        <li>One Running, two stuck: <b>volume already in use</b></li>
+        <li><b>logbook-rwx</b>: a DaemonSet - a pod per <b>app-worker</b> node - one <b>CephFS</b> claim</li>
+        <li>Its Route: every pod writes to the same logbook</li>
       </ol>
       <div>
         <svg class="mini diagram" viewBox="0 0 900 260" aria-label="Left: logbook-rwo, three pods on three nodes, one RWO disk - one runs, two are blocked. Right: DaemonSet logbook-rwx, a pod per node sharing one CephFS volume">
@@ -1010,7 +1010,7 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
         <use href="#i-pod" x="775" y="55" width="90" height="90"/>
         <path class="dg-line" d="M530,147 V170 H650 M820,147 V170 H700 M675,147 V160"/>
         <use href="#i-doc" x="650" y="160" width="50" height="55"/>
-        <text class="dg-small" x="675" y="242">CephFS · RWX · every node</text>
+        <text class="dg-small" x="675" y="242">CephFS · RWX · every app node</text>
       </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f logbook-rwo.yaml
@@ -1031,17 +1031,23 @@ curl -s $LOGBOOK_RWX_URL/logbook.txt | tail</code></pre>
       anti-affinity, so the demo is predictable).
       oc get pods -l app=logbook-rwo -o wide: one Running, two
       ContainerCreating, forever. Console: one stuck pod → Events:
-      "Multi-Attach error for volume pvc-… Volume is already used by pod(s)
-      logbook-rwo-…". "RWO means one NODE. A block device can't be mounted
+      FailedAttachVolume, "Waiting for detach for volume pvc-… Volume is
+      already used by pod(s) logbook-rwo-…" (older versions word it
+      "Multi-Attach error for volume …"; the same thing). "RWO means one NODE. A block device can't be mounted
       read-write by two machines - the filesystem would be corrupted. Note:
       two pods on the SAME node would both have started - RWO isn't one pod;
       ReadWriteOncePod is." Clean up: oc delete -f logbook-rwo.yaml.
       Now shared storage: oc create -f logbook-rwx.yaml - a claim on
       ocs-storagecluster-cephfs with ReadWriteMany, and a DaemonSet: "one pod
-      on every worker - typically used for agents like log collectors; today
-      it's the clearest way to show many nodes on one volume". Topology shows
-      the DaemonSet (DS) ring with one pod per worker. oc get pods -o wide:
-      each on a different node, all Running.
+      on every node it's allowed on - typically used for agents like log
+      collectors; today it's the clearest way to show many nodes on one
+      volume". Its nodeSelector keeps it to the application nodes (role
+      app-worker: ocpnode4-6 on our cluster) - the same mechanism that keeps
+      apps off infrastructure or storage nodes. Topology shows the DaemonSet
+      (DS) ring with one pod per app-worker node. oc get pods -o wide: each on
+      a different node, all Running. (As peter, oc get nodes -l
+      node-role.kubernetes.io/app-worker lists them; a developer can't list
+      nodes.)
       Open the logbook-rwx Route, /logbook.txt: lines from every pod and every
       node, interleaved, in one file. Reload - the Service sends you to a
       different pod each time, and the content is the same.
@@ -1071,27 +1077,43 @@ curl -s $LOGBOOK_RWX_URL/logbook.txt | tail</code></pre>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>RWO on three nodes: one pod runs, the others can't attach</h3>
-    <div class="shot" data-src="images/demo4-rwo-multiattach.webp" data-caption="A logbook-rwo pod stuck in ContainerCreating: Multi-Attach error, volume already used by another pod"></div>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo4-rwo-pods.webp" data-caption="Deployment logbook-rwo → Pods: x2575 Running on ocpnode3; 925nw (ocpnode5) and kqwzd (ocpnode6) stuck in ContainerCreating"></div><figcaption>1 · What: one pod Running, two stuck in ContainerCreating</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-rwo-multiattach.webp" data-caption="Pod logbook-rwo-...-925nw → Events: &quot;Waiting for detach for volume pvc-... Volume is already used by pod(s) logbook-rwo-...-x2575&quot; - the Running pod on another node"></div><figcaption>2 · Why: the volume is already used by the Running pod</figcaption></figure>
+    </div>
     <aside class="notes">
-      One of the two stuck logbook-rwo pods. Its Events tab says why: the
-      volume is RWO and already attached to the node of the first pod, so
-      the CSI driver refuses to attach it to a second node. The pod waits
+      Left: the Deployment's Pods tab - three replicas on three nodes, one
+      Running, two in ContainerCreating. Nothing on this page says why.
+      Right: one of the stuck pods (click its name) → Events tab:
+      "Waiting for detach for volume pvc-… Volume is already used by pod(s)
+      logbook-rwo-…-x2575" - the Running pod from the left image (event reason
+      FailedAttachVolume; older versions say "Multi-Attach error"). The two
+      scheduler events below it ("unbound immediate PersistentVolumeClaims")
+      are from the first second, while the claim was still being created -
+      harmless. The volume is RWO and attached to the first
+      pod's node, so the CSI driver refuses to attach it to a second node.
+      (Home → Events, filtered on Warning, shows the same for both stuck
+      pods at once.) The pod waits
       forever - it's not a crash, so nothing restarts it. This is the most
       common storage error people hit when they scale a Deployment that has
       a block volume.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>RWX: a pod on every node, one shared logbook</h3>
+    <span class="backup-tag">Backup</span><h3>RWX: one shared claim, written from every application node</h3>
     <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo4-rwx-pods.webp" data-caption="DaemonSet logbook-rwx: one pod per worker node, all Running"></div><figcaption>1 · One pod per worker, all Running</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo4-rwx-logbook.webp" data-caption="logbook.txt on the shared CephFS volume: lines from every node"></div><figcaption>2 · One file, written from every node</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-rwx-pvc.webp" data-caption="PVC logbook-shared details: Bound, 1 GiB, access mode ReadWriteMany, Filesystem, class ocs-storagecluster-cephfs"></div><figcaption>1 · logbook-shared: ReadWriteMany, on CephFS</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-rwx-logbook.webp" data-caption="logbook.txt from the logbook-rwx Route: lines from three pods on ocpnode4, 5 and 6, interleaved, every few seconds"></div><figcaption>2 · One file, written from three nodes at once</figcaption></figure>
     </div>
     <aside class="notes">
-      Left: the DaemonSet's pods, one on each worker, all Running - all of
-      them mount the same ReadWriteMany claim on CephFS. Right: the shared
-      logbook - lines from every pod and every node in one file. Whichever
-      pod the Route sends you to, it serves the same content.
+      Left: the DaemonSet's claim, logbook-shared (Storage →
+      PersistentVolumeClaims → logbook-shared): access mode ReadWriteMany, on
+      cephfs, the file-storage class - one claim for all the pods, not one per
+      pod. (The claims list has no access-mode column; this page does.)
+      Right: the shared logbook through the logbook-rwx Route -
+      three pods (one per app-worker node, ocpnode4 to 6) writing to the same
+      file, their lines interleaved within the same second. Whichever pod the
+      Route sends you to, it serves the same content.
     </aside>
   </section>
 </section>
@@ -1162,7 +1184,7 @@ oc create -f logbook-sts.yaml (user3). The StatefulSet has a
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Three replicas, three claims - named after the pods</h3>
-    <div class="shot" data-src="images/demo4-sts-pvcs.webp" data-caption="PersistentVolumeClaims: data-logbook-sts-0, -1 and -2, each Bound to its own volume"></div>
+    <div class="shot" data-src="images/demo4-sts-pvcs.webp" data-caption="PersistentVolumeClaims: data-logbook-sts-0, -1 and -2, each Bound to its own 1 GiB ceph-rbd volume, each in use (28 KiB)"></div>
     <aside class="notes">
       The claims the StatefulSet created from its template: one per replica,
       named data-logbook-sts-&lt;n&gt; after the pod that uses it. Pod
@@ -1247,25 +1269,53 @@ As peter, Administrator perspective. LOOK ONLY: this ODF is shared - never
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>The ODF dashboard: health, capacity and performance in one place</h3>
-    <div class="shot" data-src="images/demo4-odf-dashboard.webp" data-caption="Storage → Data Foundation → Storage System → Block and File: status, capacity, performance, consumers"></div>
+    <span class="backup-tag">Backup</span><h3>The ODF overview: health, capacity and activity in one place</h3>
+    <div class="shot" data-src="images/demo4-odf-dashboard.webp" data-caption="Storage → Data Foundation → Overview: cluster, block/file and object resiliency all Healthy; raw capacity 4.65 TiB used, 6.27 TiB available; a 24-hour health score; recent storage events"></div>
     <aside class="notes">
-      The ODF storage system overview. Status at the top (the cluster and
-      data resiliency), raw capacity used and available, the capacity
-      breakdown by project, and the performance graphs - IOPS, throughput,
-      latency. This is what the storage team watches, inside the same
-      console as everything else.
+      The Data Foundation overview (Storage → Data Foundation). Left: the
+      storage cluster's status - the cluster, block and file resiliency
+      (are all copies of the data there?) and object resiliency, all
+      Healthy - with the ODF version and update channel, and the raw
+      capacity: 4.65 TiB used, 6.27 TiB available. Raw means before
+      replication: with three copies of every block, the usable space is
+      about a third of it. Middle: a health score over the last 24 hours and
+      the open issues by severity, with a link to the health checks. Right:
+      the cluster's recent events. "View storage" leads to the detailed
+      pages - per-pool capacity, performance (IOPS, throughput, latency)
+      and the consumers. This is what the storage team watches, inside the
+      same console as everything else.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>One level down: the storage cluster's block and file view</h3>
+    <div class="shot" data-src="images/demo4-odf-blockfile.webp" data-caption="Storage cluster → Block and File: details (internal mode, bare metal, ODF 4.22), status, raw capacity 4.65 of 10.92 TiB, consumption over the past 4 days, inventory: 3 nodes, 94 claims and volumes"></div>
+    <aside class="notes">
+      "View storage" on the overview leads here: Storage cluster → Block and
+      File. Left: what this storage is - ODF in internal mode (it runs on
+      the cluster's own nodes and disks) on bare metal, not encrypted - and
+      its inventory: three storage nodes, serving 94 claims across the
+      cluster. Middle: raw capacity, 4.65 of 10.92 TiB used (raw: every
+      block is stored three times), and the consumption trend over the last
+      days - the graph that tells you when to add disks, long before an
+      alert does. Right: ongoing activities (a rebalance after adding a
+      disk would show here) and recent events. The other tabs - Object,
+      Storage pools, Topology - break it down further.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Storage alert rules that come with ODF</h3>
-    <div class="shot" data-src="images/demo4-odf-alert-rules.webp" data-caption="Observe → Alerting → Alerting rules filtered on Ceph: rules shipped by ODF"></div>
+    <div class="shot" data-src="images/demo4-odf-alert-rules.webp" data-caption="Observe → Alerting → Alerting rules, source Platform, name Ceph: 44 rules shipped by ODF - nearly full, critically full, read-only, error state... - none firing"></div>
     <aside class="notes">
-      Observe → Alerting → Alerting rules, filtered on "Ceph". Every one of
-      these was installed by the ODF operator: the storage cluster nearly or
-      critically full, a disk not responding, monitors losing quorum, and
-      more. They feed the same Alertmanager as the rest of the platform, so
-      they go wherever your alerts already go - e-mail, Slack, PagerDuty.
+      Observe → Alerting → Alerting rules, filtered on source Platform and
+      name "Ceph": 44 rules. Every one of these was installed by the ODF
+      operator: the storage cluster nearly full (Warning), critically full
+      and read-only (Critical), error states, recovery taking too long, a
+      disk not responding, monitors losing quorum, and more. State "-" means
+      none is firing right now. They feed the same Alertmanager as the rest
+      of the platform, so they go wherever your alerts already go - e-mail,
+      Slack, PagerDuty. (Some names appear twice: ODF installs one rule set
+      for the storage cluster and one for its storage client, and both
+      contain a few of the same CephFS checks.)
     </aside>
   </section>
 </section>
@@ -1582,8 +1632,8 @@ oc adm must-gather --image=\
     backend out of space. (With a WaitForFirstConsumer class, Pending is
     normal until a pod uses the claim.)
 
-    A pod stuck in ContainerCreating: describe the pod - Multi-Attach (Part
-    3), a mount or permission error, a node that can't reach the storage.
+    A pod stuck in ContainerCreating: describe the pod - volume already in use
+    by another node (Part 4, "Multi-Attach"), a mount or permission error, a node that can't reach the storage.
     VolumeAttachments show which node holds a volume. An app failing with
     "no space left": df in the pod first - it's the reliable number; the
     PVC page's Used and the kubelet metrics only exist when the driver

@@ -1,4 +1,5 @@
-# Part 4: a pod on every worker node, all sharing one RWX CephFS claim
+# Part 4: a pod on every application node (role app-worker), all sharing one
+# RWX CephFS claim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -23,6 +24,9 @@ spec:
     metadata:
       labels: {app: logbook-rwx}
     spec:
+      # Only the application nodes: one pod on each node with this role
+      nodeSelector:
+        node-role.kubernetes.io/app-worker: ""
       volumes:
         - name: data
           persistentVolumeClaim: {claimName: logbook-shared}

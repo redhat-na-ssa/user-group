@@ -14,8 +14,8 @@ The application itself doesn't matter, so there's no source code and no build. E
 | Workload | Storage | Shows | Parts |
 |---|---|---|---|
 | Deployment `logbook` (1 pod, strategy Recreate) | `emptyDir`, then static NFS PVC `nfs-claim`, then PVC `logbook-data` (ceph-rbd, RWO) | ephemeral vs persistent, static vs dynamic, expansion, snapshot restore | 1, 2, 3, 7, 8 |
-| Deployment `logbook-rwo` (3 pods, anti-affinity) | one RWO PVC | Multi-Attach error: RWO is one *node* | 4 |
-| DaemonSet `logbook-rwx` (a pod per worker) | one RWX PVC `logbook-shared` (cephfs) | every node writes to the same file | 4 |
+| Deployment `logbook-rwo` (3 pods, anti-affinity) | one RWO PVC | "Volume is already used by pod(s)" (Multi-Attach): RWO is one *node* | 4 |
+| DaemonSet `logbook-rwx` (a pod per `app-worker` node) | one RWX PVC `logbook-shared` (cephfs) | every node writes to the same file | 4 |
 | StatefulSet `logbook-sts` (3 replicas) | `volumeClaimTemplates`, giving `data-logbook-sts-0/1/2` | a disk per replica, stable identity | 5 |
 
 Why both a DaemonSet and a StatefulSet: the DaemonSet guarantees a pod on *every* node, which is the clearest picture of RWX. The StatefulSet is how RWO storage scales correctly (databases, Kafka).
@@ -129,7 +129,7 @@ Concept slides sit DOWN under "Persistent storage in OpenShift". Use them only i
 | 1 · Ephemeral by default | 2 min | user3 | Open the logbook and note the pod name. Delete the pod: a new pod name, and the history is gone. *Then* the why: the Deployment's Volumes table shows `data` with an empty Type (an `emptyDir`; the console has no "ephemeral" label, so the behaviour is the proof). Optional for ops: the folder on the node, from the node Terminal |
 | 2 · Static volumes: plain NFS | 3 min | peter, user3 | The shelf: `nfs-pv1`…`10` Available, class `nfs-static` with no provisioner. A 1.5 GiB claim is bound to a 2 GiB PV. Mount it with `oc set volume`, delete the pod, and the history stays. `df` shows 100G, because the size isn't enforced. A 10 GiB claim stays Pending |
 | 3 · Dynamic storage: ODF | 4 min | peter, user3 | StorageClasses (the menu). Create PVC `logbook-data` in the console, it's Bound, and a PV is created for it. `oc get pv` is Forbidden for user3. Swap the volume. Delete `nfs-claim`: its PV is Released, not Available |
-| 4 · RWO vs RWX | 4 min | user3 | `logbook-rwo`: 1 Running, 2 stuck on a Multi-Attach error. Delete it. `logbook-rwx` DaemonSet on CephFS: all nodes, one file. Say that all pods appending to one file is a demo shortcut, not a pattern to copy (see "RWX in practice") |
+| 4 · RWO vs RWX | 4 min | user3 | `logbook-rwo`: 1 Running, 2 stuck on "Waiting for detach … Volume is already used by pod(s)" (the event formerly called Multi-Attach error). Delete it. `logbook-rwx` DaemonSet on CephFS, limited to the `app-worker` nodes by a nodeSelector: every app node, one file. Say that all pods appending to one file is a demo shortcut, not a pattern to copy (see "RWX in practice") |
 | 5 · StatefulSet | 3 min | user3 | 3 pods, 3 claims. Delete `logbook-sts-1`: same name, same disk. Scale down: the claims stay. **Then start the fill for Part 7** |
 | 6 · What ODF adds | 4 min | peter | Data Foundation dashboard (health, capacity, performance, consumers), Object tab, alert rules shipped by ODF. DOWN: "Any CSI driver vs ODF" table |
 | 7 · A volume fills up | 3 min | user3 | How full is it: `df` in the pod is the reliable number (the PVC page and metrics only show usage when the driver reports it). `VolumeAlmostFull` fires. Expand PVC to 2 GiB online, `df` shows it, the alert resolves. Remove the ballast |
