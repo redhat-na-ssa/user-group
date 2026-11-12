@@ -2,7 +2,7 @@
 # Prepare the cluster for Demo 1 (OpenShift fundamentals). Safe to re-run.
 #
 # End state ("ready to present"):
-#   * project demo-intro, peter=admin, user1=edit, user2=view
+#   * project demo-intro, peter=admin, user3=edit, user2=view
 #   * an EMPTY project: PostgreSQL is deployed live in Part 1 from the
 #     staged project template "postgresql-demo" (Developer Catalog)
 #   * Gitea repo ocpdemo/guestbook holding the app source at VERSION 1.0
@@ -11,7 +11,7 @@
 #     is created live in Part 6)
 #   * NO guestbook app or pipeline - the presenter creates them live with
 #     the console's Import from Git
-#   * per-user kubeconfigs for user1/user2 in ~/.kube/demo-users
+#   * per-user kubeconfigs for user3/user2 in ~/.kube/demo-users
 #
 # Usage: ./setup.sh [--reset-source]   --reset-source force-pushes app/ to
 #                                      Gitea even if the repo has content

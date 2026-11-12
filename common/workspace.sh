@@ -12,7 +12,7 @@
 # Re-running refreshes everything; nothing in the workspace is precious.
 #
 #   common/workspace.sh demo1-fundamentals
-#   bash --rcfile ~/faa-demo/demo1-fundamentals/user1.rc    # one per tab
+#   bash --rcfile ~/faa-demo/demo1-fundamentals/user3.rc    # one per tab
 source "$(dirname "$0")/lib.sh"
 
 [[ $# -eq 1 ]] || die "usage: $0 <demo directory, e.g. demo1-fundamentals>"

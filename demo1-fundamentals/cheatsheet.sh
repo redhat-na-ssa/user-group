@@ -9,7 +9,7 @@
 # On the presenter's laptop instead: common/workspace.sh demo1-fundamentals
 # puts this file, the YAML files and one session per user in
 # ~/faa-demo/demo1-fundamentals; open a tab per user with
-#   bash --rcfile ~/faa-demo/demo1-fundamentals/user1.rc
+#   bash --rcfile ~/faa-demo/demo1-fundamentals/user3.rc
 #
 # Every command below is copy/paste ready.
 
@@ -94,9 +94,9 @@ ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
 oc get hpa guestbook -w                            # second terminal: 2 -> 6 pods, back to 2 a minute after
 
 # ---------------------------------------------------------------- 5 - Projects and RBAC
-oc auth can-i create deployments                   # as yourself (user1: yes)
-oc auth can-i get secrets                          # user1: yes
-oc auth can-i create rolebindings                  # user1: no - only the admin
+oc auth can-i create deployments                   # as yourself (user3: yes)
+oc auth can-i get secrets                          # user3: yes
+oc auth can-i create rolebindings                  # user3: no - only the admin
 oc get rolebindings -n demo-intro                  # admin only
 oc auth can-i patch deployments/scale -n demo-intro --as=user2   # admin only: no
 oc auth can-i get secrets -n demo-intro --as=user2               # admin only: no

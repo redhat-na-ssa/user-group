@@ -25,7 +25,7 @@ The same Python/Flask guestbook and PostgreSQL as in demo 1, in a project of its
 | Who | Perspective | Used for |
 |---|---|---|
 | `peter` (admin) | Administrator | Dashboards, nodes, metrics queries, LimitRange and ResourceQuota, storage capacity, VM, project template (Parts 1, 3, 4, 5, 7, bonus) |
-| `user1` (edit) | Developer | Sizing the guestbook, hitting the limits and the quota, HPA (Parts 1–6) |
+| `user3` (edit) | Developer | Sizing the guestbook, hitting the limits and the quota, HPA (Parts 1–6) |
 | `user2` (view) | – | Not used |
 
 ## Slides (≤ 8 min)
@@ -52,7 +52,7 @@ The speaker notes on each demo slide have the clicks and commands (marked DRAFT 
 ## Still to do
 
 - [ ] Presentation date on the title slide.
-- [ ] Automation (Ansible, like demo 4): `setup.yml`, `verify.yml`, `reset.yml`, `teardown.yml`, `tasks/settings.yml` reading `demo.env`, and the `collections -> ../collections` symlink. Setup creates project `demo-resources`, rolebindings (user1 edit, user2 view), the `postgresql-demo` template and instance, and the guestbook **without resources**. Decide where the guestbook image comes from: a pipeline run from Gitea `ocpdemo/guestbook` in this project, or an image built once and pushed to the registry.
+- [ ] Automation (Ansible, like demo 4): `setup.yml`, `verify.yml`, `reset.yml`, `teardown.yml`, `tasks/settings.yml` reading `demo.env`, and the `collections -> ../collections` symlink. Setup creates project `demo-resources`, rolebindings (user3 edit, user2 view), the `postgresql-demo` template and instance, and the guestbook **without resources**. Decide where the guestbook image comes from: a pipeline run from Gitea `ocpdemo/guestbook` in this project, or an image built once and pushed to the registry.
 - [ ] Manifests: `guestbook-resources.patch.yaml`, `memory-hog.yaml`, `project-limits.yaml`, `project-quota.yaml`, `no-requests-pod.yaml`, `big-claim.yaml`, `guestbook-hpa.yaml` (copy of demo 1's, namespace changed). Then add them to the deck's `files` list in `faa-demo/playbook.yml` and to the download loop in `cheatsheet.sh`.
 - [ ] Measure the guestbook's real CPU and memory use and set the Part 2 values and the quota numbers from it (demo 1 uses 50m / 320Mi / 512Mi). The quota must leave room for 2 guestbook pods + PostgreSQL + HPA headroom (6 pods), but not for 10 guestbook pods.
 - [ ] Cost Management: is the cluster connected to console.redhat.com with the Cost Management Metrics Operator? Recommendations need days of data, so connect it well before the session and take the backup screenshot from there.

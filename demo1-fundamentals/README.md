@@ -8,7 +8,7 @@ The presenter's talk track is in **[DEMO-SCRIPT.md](DEMO-SCRIPT.md)**.
 |---|---|
 | Project | `demo-intro` |
 | Admin | `peter` (runs setup) |
-| Developer | `user1` – `edit` role, drives the demo in the console |
+| Developer | `user3` – `edit` role, drives the demo in the console |
 | Viewer | `user2` – `view` role |
 | Source repo (browser) | `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook` (Gitea user `demo`) |
 | Clone URL (Import from Git, pipelines) | `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook.git`: task pods trust the route's certificate through `common/manifests/tektonconfig-git-ca.patch.yaml` (applied by `faa-demo/playbook.yml`) |
@@ -36,7 +36,7 @@ All scripts are safe to re-run. `setup.sh --reset-source` force-pushes `app/` to
 | Gitea repo `ocpdemo/guestbook` at v1.0 | Part 3: Import from Git: pipeline `guestbook`, ImageStream, Deployment, Service, Route, and the first PipelineRun; the database credentials mapped into the Deployment |
 | TriggerBinding and TriggerTemplate `guestbook`, plus a webhook secret | Part 4: health checks, scaling, route annotations |
 | Gitea webhook → `el-guestbook` (in-cluster service URL) | Part 6: the EventListener `el-guestbook` (Import YAML), then the v2.0 commit → an automatic PipelineRun → rollout |
-| Logins for user1 and user2 in `~/.kube/demo-users/` | Part 7: config change and rollback |
+| Logins for user3 and user2 in `~/.kube/demo-users/` | Part 7: config change and rollback |
 
 Part 5 (Projects and RBAC) only looks at what's there - it creates nothing.
 

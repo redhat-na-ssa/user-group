@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Part 7 - Configuration change rolls out a new ReplicaSet; then roll back.
-# Runs as user1.
+# Runs as user3.
 #
 # Usage: 07-config-rollback.sh [COLOR]    (default #0066cc)
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"

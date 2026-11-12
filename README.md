@@ -43,7 +43,7 @@ what that demo needs.
 - `oc`, logged in to the cluster as a cluster admin
 - Python 3, plus `npm` for the local slide preview
 - On the cluster: OpenShift Pipelines, the Gitea instance used for the demo
-  source repos, and the demo users `user1`..`user10`.
+  source repos, and the demo users `user3`..`user10`.
 
 Nothing in the repository names a cluster. The playbooks and scripts work on
 whichever cluster `oc` is logged in to: the API URL, console URL and apps
@@ -112,7 +112,7 @@ Shortly before presenting (demo user tokens expire):
 
 ```bash
 common/workspace.sh demo1-fundamentals
-bash --rcfile ~/faa-demo/demo1-fundamentals/user1.rc   # one terminal tab per identity
+bash --rcfile ~/faa-demo/demo1-fundamentals/user3.rc   # one terminal tab per identity
 ```
 
 This builds `~/faa-demo/<demo>/` outside the repo with the cheat-sheet, the

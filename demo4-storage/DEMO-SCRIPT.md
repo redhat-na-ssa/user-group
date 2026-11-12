@@ -25,8 +25,10 @@ Why both a DaemonSet and a StatefulSet: the DaemonSet guarantees a pod on *every
 | Who | Perspective | Used for |
 |---|---|---|
 | `peter` (admin) | Administrator | Storage classes, PVs (the NFS shelf), ODF dashboard, alert rules, OADP (Parts 2, 3, 6, 9) |
-| `user1` (edit + `monitoring-rules-edit`) | Developer and Administrator | Creating the apps, claims, alert rule and snapshots (Parts 1–5, 7, 8). Shows that `oc get pv` is Forbidden for a developer |
+| `user3` (edit + `monitoring-rules-edit`) | Developer and Administrator | Creating the apps, claims, alert rule and snapshots (Parts 1–5, 7, 8). Shows that `oc get pv` is Forbidden for a developer |
 | `user2` (view) | – | Not used in this demo |
+
+Why `user3` and not `user3`: on the lab cluster, ACM gives `user3` the role `acm-vm-extended:view` for the virtualization demos (a MulticlusterRoleAssignment, applied as ClusterRoleBinding `acm-vm-extended-view-…`). It includes cluster-wide read on PersistentVolumes, PVCs, pods, ConfigMaps and projects, so as `user3` the "`oc get pv` is Forbidden" point doesn't work. Before presenting, `oc auth can-i list persistentvolumes --as=user3` must say `no`.
 
 This is an ops session, so the console is mostly in the **Administrator** perspective: storage pages live there. The Developer perspective is used for Topology and the project's Observe → Alerts.
 
@@ -108,7 +110,7 @@ Both verify's write test and teardown's emptying run *inside the cluster* (`task
 - **Static NFS**: the export, the `nfs-static` class and the 10 PVs (see above).
 - **User workload monitoring**: already enabled on the demo cluster (`enableUserWorkload: true`), so there's nothing to change. Verify checks that it stays on.
 - **OADP operator**: 1.6.1 is already installed in `openshift-adp`, with no DataProtectionApplication yet. (ACM has its own copy in `open-cluster-management-backup`: leave it alone.) Setup adds, in `openshift-adp` only, an ObjectBucketClaim (a namespaced bucket request, like a PVC; no ODF configuration change) and a DataProtectionApplication: Velero with the `openshift` and `csi` plugins, node agent enabled (data mover), and the default BackupStorageLocation on that bucket.
-- Project `demo-storage`: user1 `edit` + `monitoring-rules-edit`, user2 `view`, and `manifests/logbook-ephemeral.yaml` applied (the demo starts with the ephemeral logbook running).
+- Project `demo-storage`: user3 `edit` + `monitoring-rules-edit`, user2 `view`, and `manifests/logbook-ephemeral.yaml` applied (the demo starts with the ephemeral logbook running).
 - **Reset** must also: return the NFS shelf to all-Available (delete and recreate the 10 PVs, and empty `pv1`…`pv10` on the server, so no old logbook lines show up in Part 2), delete project `demo-storage-restore`, the Backup and Restore `demo-storage` in `openshift-adp` (a `DeleteBackupRequest`, so the bucket data goes too), and any leftover VolumeSnapshots.
 - **Verify:** the 10 NFS PVs are Available, a test pod can mount one and write to it (this catches export, firewall and SELinux problems), the ODF classes in the table above exist (read-only listing), ODF `HEALTH_OK`, the BSL `Available`, the logbook Route answers, there are at least 3 schedulable workers (Part 4 needs 3 nodes for the anti-affinity; the demo cluster has 6 untainted nodes - 3 control-plane+worker, 3 storage+worker - so the DaemonSet runs 6 pods) and no `VolumeAlmostFull` alert is firing.
 
@@ -124,14 +126,14 @@ Concept slides sit DOWN under "Persistent storage in OpenShift". Use them only i
 
 | Part | Time | Who | What happens |
 |---|---|---|---|
-| 1 · Ephemeral by default | 2 min | user1 | Open the logbook and note the pod name. Delete the pod: a new pod name, and the history is gone. *Then* the why: the Deployment's Volumes table shows `data` with an empty Type (an `emptyDir`; the console has no "ephemeral" label, so the behaviour is the proof). Optional for ops: the folder on the node, from the node Terminal |
-| 2 · Static volumes: plain NFS | 3 min | peter, user1 | The shelf: `nfs-pv1`…`10` Available, class `nfs-static` with no provisioner. A 1.5 GiB claim is bound to a 2 GiB PV. Mount it with `oc set volume`, delete the pod, and the history stays. `df` shows 100G, because the size isn't enforced. A 10 GiB claim stays Pending |
-| 3 · Dynamic storage: ODF | 4 min | peter, user1 | StorageClasses (the menu). Create PVC `logbook-data` in the console, it's Bound, and a PV is created for it. `oc get pv` is Forbidden for user1. Swap the volume. Delete `nfs-claim`: its PV is Released, not Available |
-| 4 · RWO vs RWX | 4 min | user1 | `logbook-rwo`: 1 Running, 2 stuck on a Multi-Attach error. Delete it. `logbook-rwx` DaemonSet on CephFS: all nodes, one file. Say that all pods appending to one file is a demo shortcut, not a pattern to copy (see "RWX in practice") |
-| 5 · StatefulSet | 3 min | user1 | 3 pods, 3 claims. Delete `logbook-sts-1`: same name, same disk. Scale down: the claims stay. **Then start the fill for Part 7** |
+| 1 · Ephemeral by default | 2 min | user3 | Open the logbook and note the pod name. Delete the pod: a new pod name, and the history is gone. *Then* the why: the Deployment's Volumes table shows `data` with an empty Type (an `emptyDir`; the console has no "ephemeral" label, so the behaviour is the proof). Optional for ops: the folder on the node, from the node Terminal |
+| 2 · Static volumes: plain NFS | 3 min | peter, user3 | The shelf: `nfs-pv1`…`10` Available, class `nfs-static` with no provisioner. A 1.5 GiB claim is bound to a 2 GiB PV. Mount it with `oc set volume`, delete the pod, and the history stays. `df` shows 100G, because the size isn't enforced. A 10 GiB claim stays Pending |
+| 3 · Dynamic storage: ODF | 4 min | peter, user3 | StorageClasses (the menu). Create PVC `logbook-data` in the console, it's Bound, and a PV is created for it. `oc get pv` is Forbidden for user3. Swap the volume. Delete `nfs-claim`: its PV is Released, not Available |
+| 4 · RWO vs RWX | 4 min | user3 | `logbook-rwo`: 1 Running, 2 stuck on a Multi-Attach error. Delete it. `logbook-rwx` DaemonSet on CephFS: all nodes, one file. Say that all pods appending to one file is a demo shortcut, not a pattern to copy (see "RWX in practice") |
+| 5 · StatefulSet | 3 min | user3 | 3 pods, 3 claims. Delete `logbook-sts-1`: same name, same disk. Scale down: the claims stay. **Then start the fill for Part 7** |
 | 6 · What ODF adds | 4 min | peter | Data Foundation dashboard (health, capacity, performance, consumers), Object tab, alert rules shipped by ODF. DOWN: "Any CSI driver vs ODF" table |
-| 7 · A volume fills up | 3 min | user1 | How full is it: `df` in the pod is the reliable number (the PVC page and metrics only show usage when the driver reports it). `VolumeAlmostFull` fires. Expand PVC to 2 GiB online, `df` shows it, the alert resolves. Remove the ballast |
-| 8 · Snapshots | 3 min | user1 | Create a snapshot, "oops" `rm`, restore as a new PVC, `oc set volume`, and the history is back |
+| 7 · A volume fills up | 3 min | user3 | How full is it: `df` in the pod is the reliable number (the PVC page and metrics only show usage when the driver reports it). `VolumeAlmostFull` fires. Expand PVC to 2 GiB online, `df` shows it, the alert resolves. Remove the ballast |
+| 8 · Snapshots | 3 min | user3 | Create a snapshot, "oops" `rm`, restore as a new PVC, `oc set volume`, and the history is back |
 | 9 · OADP | 4 min | peter | Backup `demo-storage` to the ODF bucket, restore as `demo-storage-restore`, open the restored logbook |
 
 Then **When storage goes wrong** (1 min, a diagnostics checklist built from what was just seen), **What we just did**, and **Q&A**.
@@ -172,6 +174,6 @@ RWX only promises that pods on many nodes can mount the volume read-write at onc
 - [x] Ansible: `setup.yml` / `verify.yml` / `reset.yml` / `teardown.yml` (2026-10-22: setup ran clean twice, the second time with no changes, and verify ended "All good" with the NFS write test passing on all 10 directories).
 - [ ] OADP for Part 9: the ObjectBucketClaim and DataProtectionApplication in `openshift-adp` (setup), and deleting the Backup and Restore (teardown).
 - [x] `pv1`…`pv10` on `cloud.peterlarsen.org`: they mount and are writable from the cluster (verify's write test).
-- [ ] Check on the cluster: that restricted pods can write to the NFS PVs (the SELinux boolean `virt_use_nfs` on RHCOS; if it's off, choose another server setup rather than changing the nodes); the console's PVC form and the StorageClass list as user1; that a user-namespace PrometheusRule can use `kubelet_volume_stats_*` (Thanos Ruler should allow it); OADP data mover restore into a mapped namespace (route hosts are regenerated).
+- [ ] Check on the cluster: that restricted pods can write to the NFS PVs (the SELinux boolean `virt_use_nfs` on RHCOS; if it's off, choose another server setup rather than changing the nodes); the console's PVC form and the StorageClass list as user3; that a user-namespace PrometheusRule can use `kubelet_volume_stats_*` (Thanos Ruler should allow it); OADP data mover restore into a mapped namespace (route hosts are regenerated).
 - [ ] Rehearse and take the backup screenshots (the deck shows placeholders with the expected file names, `images/demo4-*.webp`).
 - [ ] Set the session date on the title slide, and "See you next time" on Q&A once the next topic is set.

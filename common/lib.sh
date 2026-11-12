@@ -65,8 +65,8 @@ grant_role() {
 # ---------------------------------------------------------------- per-user sessions
 # Each demo user gets its own kubeconfig so several identities can be used
 # side by side in different terminals without logging each other out.
-#   user_kubeconfig user1   -> prints path
-#   login_user user1        -> logs in (password from DEMO_USER_PASSWORD)
+#   user_kubeconfig user3   -> prints path
+#   login_user user3        -> logs in (password from DEMO_USER_PASSWORD)
 user_kubeconfig() { echo "${DEMO_KUBECONFIG_DIR}/$1.kubeconfig"; }
 
 login_user() {

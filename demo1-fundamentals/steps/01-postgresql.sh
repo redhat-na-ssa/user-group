@@ -2,7 +2,7 @@
 # Part 1 - "It's this simple": deploy PostgreSQL from the project's template
 # (the console's +Add -> Developer Catalog -> Databases -> PostgreSQL).
 # Creates a Deployment, Service, Secret (generated credentials) and PVC.
-# Runs as user1.
+# Runs as user3.
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"
 source "${DEMO_DIR}/demo.env"

@@ -5,7 +5,7 @@
 
 Every live section has a **catch-up script** in `steps/`. If a console step goes wrong or time runs short, run the script in Terminal B. It brings the project to the end state of that section, and then you carry on in the console.
 
-> **Use the Developer perspective** (the perspective switcher at the top of the left nav) for user1 and user2. A new user's left nav has **+Add, Topology, Observe, Search, Builds, Pipelines, Helm, Project, ConfigMaps and Secrets**, with no Deployments entry. So this script reaches a Deployment's **full page** from Topology: click the node, then click the Deployment name at the top of the side panel. Only peter's Browser C uses the Administrator perspective, to show nodes.
+> **Use the Developer perspective** (the perspective switcher at the top of the left nav) for user3 and user2. A new user's left nav has **+Add, Topology, Observe, Search, Builds, Pipelines, Helm, Project, ConfigMaps and Secrets**, with no Deployments entry. So this script reaches a Deployment's **full page** from Topology: click the node, then click the Deployment name at the top of the side panel. Only peter's Browser C uses the Administrator perspective, to show nodes.
 
 ---
 
@@ -15,7 +15,7 @@ The project isn't created during the demo; that's prep work. The demo starts fro
 
 | Situation | Run |
 |---|---|
-| First time, or after `./teardown.sh` (the project `demo-intro` doesn't exist) | `./setup.sh`: creates the project, RBAC (user1 edit, user2 view), the PostgreSQL template, the Gitea repo at v1.0 and the push trigger's hidden pieces (~1 min) |
+| First time, or after `./teardown.sh` (the project `demo-intro` doesn't exist) | `./setup.sh`: creates the project, RBAC (user3 edit, user2 view), the PostgreSQL template, the Gitea repo at v1.0 and the push trigger's hidden pieces (~1 min) |
 | After a rehearsal or a previous run | `./reset.sh`: deletes the project and rebuilds it with `setup.sh`, Git repo back to v1.0 (a minute or two) |
 | Always, right before presenting | `./verify.sh`: must end with "All good - ready to present Demo 1" |
 
@@ -32,12 +32,12 @@ cd demo1-fundamentals
 
 | Window | Logged in as | Starting point |
 |---|---|---|
-| **Browser A – main** | `user1` / `welcome1` | Developer perspective → project **demo-intro** → Topology (empty) |
+| **Browser A – main** | `user3` / `welcome1` | Developer perspective → project **demo-intro** → Topology (empty) |
 | **Browser B – private window** | `user2` / `welcome1` | Developer perspective → project **demo-intro** → Topology |
 | **Browser C – other profile** | `peter` | Developer perspective → Project → Project access |
 | **Browser tab (in A)** | `demo` in Gitea | `https://local-gitea-gitea.apps.<cluster-domain>/ocpdemo/guestbook` |
 | **Slides** | – | `https://slides-faa-demo.apps.<cluster-domain>/demo1-fundamentals/`, press **S** for the speaker view |
-| **Web terminal** (in A) | `user1` | `>_` icon: `curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh && source cheatsheet.sh` |
+| **Web terminal** (in A) | `user3` | `>_` icon: `curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh && source cheatsheet.sh` |
 
 Increase the browser zoom to 125–150%. Keep `manifests/hello-pod.yaml` open in an editor, ready to paste into Import YAML (Part 2).
 
@@ -201,13 +201,13 @@ Talking points:
 
 **Point to make:** everything so far happened in a project, as a developer with the `edit` role. The admin decides who can see or change what in each project.
 
-1. **Browser C (peter, Developer perspective):** **Project** (left nav) → **Project access** tab: peter is `admin`, user1 is `edit`, user2 is `view`, and the `pipeline` **service account** has `edit` too. *"Roles aren't only for people: the pipeline runs under its own identity."* Only the admin sees this tab. *"These are project roles. There are also cluster-wide roles, for the platform team that runs the cluster itself - not today's topic."*
+1. **Browser C (peter, Developer perspective):** **Project** (left nav) → **Project access** tab: peter is `admin`, user3 is `edit`, user2 is `view`, and the `pipeline` **service account** has `edit` too. *"Roles aren't only for people: the pipeline runs under its own identity."* Only the admin sees this tab. *"These are project roles. There are also cluster-wide roles, for the platform team that runs the cluster itself - not today's topic."*
 2. **Browser B (user2, view):** the same Topology, the same app, but read-only:
    - the guestbook's scale arrows are missing;
    - **Secrets** (left nav): access denied, so user2 can't read the database password;
    - Actions to edit or delete aren't available.
 
-Talking points: roles are standard (`admin`, `edit`, `view`) and bound per project. user2 could be an auditor, or a team that depends on this app. RBAC is per project, so user1 could be `admin` in their own sandbox and `view` in production.
+Talking points: roles are standard (`admin`, `edit`, `view`) and bound per project. user2 could be an auditor, or a team that depends on this app. RBAC is per project, so user3 could be `admin` in their own sandbox and `view` in production.
 
 *Catch-up:* `steps/05-rbac.sh` (read-only; prints a can-i matrix)
 
@@ -289,5 +289,5 @@ Go back to the architecture picture and point at each box: you touched every one
 | The pipeline's build task fails on pip | The build needs outbound access to PyPI. Rerun it (**Actions → Rerun**) |
 | A commit doesn't start a pipeline | Is `el-guestbook` running? Is the pipeline named `guestbook`? Check Gitea **Settings → Webhooks → Recent deliveries**, then `oc logs deploy/el-guestbook`. Start the run by hand with **Actions → Start** |
 | The browser always shows the same pod | The route patch from Part 4 is missing, or the browser kept a cookie (use a new private window) |
-| user1 or user2 cannot log in | `../common/login-users.sh user1 user2` (the password is in `common/env.sh`) |
+| user3 or user2 cannot log in | `../common/login-users.sh user3 user2` (the password is in `common/env.sh`) |
 | The state is messed up mid-demo | Run that section's catch-up script. Each one is safe to re-run |

@@ -484,7 +484,7 @@
       <use href="#i-user" class="white" x="35" y="40" width="70" height="70"/>
       <text class="dg-small" x="70" y="132">peter · <tspan class="dg-red">admin</tspan></text>
       <use href="#i-user" class="white" x="35" y="150" width="70" height="70"/>
-      <text class="dg-small" x="70" y="242">user1 · <tspan class="dg-red">edit</tspan></text>
+      <text class="dg-small" x="70" y="242">user3 · <tspan class="dg-red">edit</tspan></text>
       <use href="#i-user" class="white" x="35" y="260" width="70" height="70"/>
       <text class="dg-small" x="70" y="352">user2 · <tspan class="dg-red">view</tspan></text>
       <path class="dg-line" d="M110,75 L230,110" marker-end="url(#dg-arrow)"/>
@@ -649,7 +649,7 @@
     storage. Each box is a word from the concept slides; we'll meet them one
     at a time.
 
-    Now switch to the browser. Browser A = user1 (Developer perspective),
+    Now switch to the browser. Browser A = user3 (Developer perspective),
     Browser B (private window) = user2, Browser C = peter. Terminal: the web
     terminal in the console, with the cheat-sheet:
     curl -sO http://slides.faa-demo.svc:8080/demo1-fundamentals/cheatsheet.sh
@@ -1102,23 +1102,23 @@ oc auth can-i get secrets \
     <aside class="notes">
 "Everything so far happened in a project, as a developer with the edit
       role." Browser C (peter, Developer perspective): Project → Project
-      access - peter admin, user1 edit, user2 view, and the pipeline service
+      access - peter admin, user3 edit, user2 view, and the pipeline service
       account edit: "roles aren't only for people". Only the admin sees this
       tab. These are project roles; there are also cluster-wide roles, for the
       platform team that runs the cluster itself - not today's topic.
       Browser B (user2): the same app, read-only - no scale arrows, Secrets →
       access denied (can't read the database password), no edit actions.
-      Roles are standard and bound per project: user1 could be admin in a
+      Roles are standard and bound per project: user3 could be admin in a
       sandbox and view in production.
       Press DOWN for backup screenshots.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Project access: who may do what in demo-intro</h3>
-    <div class="shot" data-src="images/demo1-rbac-project-access.webp" data-caption="Project → Project access as peter: peter Admin, the pipeline service account Edit, user1 Edit, user2 View"></div>
+    <div class="shot" data-src="images/demo1-rbac-project-access.webp" data-caption="Project → Project access as peter: peter Admin, the pipeline service account Edit, user3 Edit, user2 View"></div>
     <aside class="notes">
       The project's access list, as the project admin sees it (Project → Project
-      access - only an admin has this tab). peter is Admin, user1 (who built
+      access - only an admin has this tab). peter is Admin, user3 (who built
       everything so far) is Edit, user2 is View. The pipeline ServiceAccount
       also has Edit in this project: the builds run under their own identity,
       and need it to update the Deployment. Roles aren't only for people.

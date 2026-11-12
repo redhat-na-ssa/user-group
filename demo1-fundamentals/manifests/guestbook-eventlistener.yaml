@@ -1,4 +1,4 @@
-# Part 6: paste into the console (+Add -> Import YAML) as user1, or
+# Part 6: paste into the console (+Add -> Import YAML) as user3, or
 #   oc apply -f guestbook-eventlistener.yaml
 # Creates el-guestbook: the endpoint Gitea's webhook calls on every push to
 # main. It checks the webhook secret, then runs the guestbook TriggerTemplate

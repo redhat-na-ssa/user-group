@@ -4,7 +4,7 @@
 # On the presenter's laptop: common/workspace.sh demo3-resources puts this
 # file, the YAML files and one session per user in ~/faa-demo/demo3-resources;
 # open a tab per user with
-#   bash --rcfile ~/faa-demo/demo3-resources/user1.rc
+#   bash --rcfile ~/faa-demo/demo3-resources/user3.rc
 #   cheat                       # all demo commands
 #   cheat 4                     # only part 4
 #
@@ -12,7 +12,7 @@
 #   curl -sO http://slides.faa-demo.svc:8080/demo3-resources/cheatsheet.sh
 #   source cheatsheet.sh
 #
-# Parts 1-3, 5, 6: user1 (edit). Part 4 setup, nodes, metrics, Part 7: peter (admin).
+# Parts 1-3, 5, 6: user3 (edit). Part 4 setup, nodes, metrics, Part 7: peter (admin).
 
 # The cluster's apps domain, from the console URL (works for any user)
 CONSOLE=$(oc whoami --show-console 2>/dev/null)
@@ -37,14 +37,14 @@ cheat() {
 }
 return 0 2>/dev/null || true
 
-# ---------------------------------------------------------------- 1 - Used vs reserved (user1, then peter)
+# ---------------------------------------------------------------- 1 - Used vs reserved (user3, then peter)
 oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass   # BestEffort
 oc adm top pods                                    # what they really use
 # Console (peter): Observe -> Dashboards -> Kubernetes / Compute Resources / Namespace (Pods)
 oc get nodes
 oc describe $(oc get nodes -l node-role.kubernetes.io/worker -o name | head -1) | grep -A 8 'Allocated resources'   # peter: requests vs allocatable
 
-# ---------------------------------------------------------------- 2 - Requests and limits, the right way (user1)
+# ---------------------------------------------------------------- 2 - Requests and limits, the right way (user3)
 # Console: Deployment guestbook -> Actions -> Edit resource limits
 #   CPU request 50m, memory request 320Mi, memory limit 512Mi, no CPU limit
 oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml   # the same, as code
@@ -54,7 +54,7 @@ oc get pods                                        # one new pod Pending
 oc get events --field-selector reason=FailedScheduling   # Insufficient cpu
 oc rollout undo deployment/guestbook
 
-# ---------------------------------------------------------------- 3 - Hitting the ceiling (user1)
+# ---------------------------------------------------------------- 3 - Hitting the ceiling (user3)
 oc create -f memory-hog.yaml                       # 128Mi limit, allocates in a loop
 oc get pod memory-hog -w                           # OOMKilled -> CrashLoopBackOff (Ctrl-C)
 oc describe pod memory-hog | grep -A 4 'Last State'   # Reason: OOMKilled, Exit Code: 137
@@ -65,12 +65,12 @@ ab -k -c 10 -t 60 $GUESTBOOK_URL/                  # laptop; keep -c at 10
 #   rate(container_cpu_cfs_throttled_periods_total{namespace="demo-resources"}[1m])
 oc rollout undo deployment/guestbook
 
-# ---------------------------------------------------------------- 4 - A budget for each project (peter, then user1)
+# ---------------------------------------------------------------- 4 - A budget for each project (peter, then user3)
 oc create -f project-limits.yaml                   # peter: LimitRange
 oc create -f project-quota.yaml                    # peter: ResourceQuota
 oc describe quota
 oc describe limitrange
-oc scale deployment/guestbook --replicas=10        # user1
+oc scale deployment/guestbook --replicas=10        # user3
 oc get events --field-selector reason=FailedCreate # exceeded quota
 oc scale deployment/guestbook --replicas=2
 oc create -f no-requests-pod.yaml
@@ -78,13 +78,13 @@ oc get pod no-requests -o jsonpath='{.spec.containers[0].resources}'; echo   # L
 oc delete -f no-requests-pod.yaml
 oc create -f big-claim.yaml                        # exceeded quota: requests.storage
 
-# ---------------------------------------------------------------- 5 - How much storage is left? (user1)
+# ---------------------------------------------------------------- 5 - How much storage is left? (user3)
 oc get pvc
 oc exec deployment/postgresql -- df -h /var/lib/pgsql/data
 oc describe quota | grep storage
 # Observe -> Metrics (peter): kubelet_volume_stats_available_bytes{namespace="demo-resources"}
 
-# ---------------------------------------------------------------- 6 - Right-sizing (user1)
+# ---------------------------------------------------------------- 6 - Right-sizing (user3)
 oc create -f guestbook-hpa.yaml                    # 2-6 pods, 50% of the CPU request
 ab -k -c 10 -t 120 $GUESTBOOK_URL/                 # laptop
 oc get hpa guestbook -w                            # (Ctrl-C)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 4 - Self-healing, health probes, scaling and autoscaling. Runs as user1, then
+# Part 4 - Self-healing, health probes, scaling and autoscaling. Runs as user3, then
 # shows that user2 (view) is not allowed to scale.
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"

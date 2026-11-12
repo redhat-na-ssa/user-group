@@ -3,7 +3,7 @@
 # On the presenter's laptop: common/workspace.sh demo4-storage puts this
 # file, the YAML files and one session per user in ~/faa-demo/demo4-storage;
 # open a tab per user with
-#   bash --rcfile ~/faa-demo/demo4-storage/user1.rc
+#   bash --rcfile ~/faa-demo/demo4-storage/user3.rc
 #   cheat                       # all demo commands
 #   cheat 7                     # only part 7
 #
@@ -12,7 +12,7 @@
 #   curl -sO http://slides.faa-demo.svc:8080/demo4-storage/cheatsheet.sh
 #   source cheatsheet.sh
 #
-# Parts 1-5, 7, 8: user1 (edit). Parts 6 and 9, and listing PVs: peter (admin).
+# Parts 1-5, 7, 8: user3 (edit). Parts 6 and 9, and listing PVs: peter (admin).
 
 # The cluster's apps domain, from the console URL (works for any user)
 CONSOLE=$(oc whoami --show-console 2>/dev/null)
@@ -36,7 +36,7 @@ cheat() {
 }
 return 0 2>/dev/null || true
 
-# ---------------------------------------------------------------- 1 - Ephemeral by default (user1)
+# ---------------------------------------------------------------- 1 - Ephemeral by default (user3)
 oc get pods -l app=logbook -o wide                 # note the pod name
 curl -s $LOGBOOK_URL/logbook.txt | tail -3         # time, pod, node
 oc delete pod -l app=logbook                       # the Deployment starts a new pod
@@ -46,11 +46,11 @@ oc set volume deployment/logbook                   # why: volume "data" is an em
 #   chroot /host
 #   find /var/lib/kubelet/pods -path '*empty-dir/data/logbook.txt' | xargs tail -2
 
-# ---------------------------------------------------------------- 2 - Static volumes: plain NFS (peter, then user1)
+# ---------------------------------------------------------------- 2 - Static volumes: plain NFS (peter, then user3)
 oc get pv -l storage=nfs-static                    # peter: nfs-pv1..10, Available (1, 2, 5 GiB)
 oc get pv nfs-pv1 -o jsonpath='{.spec.nfs}{"\n"}'   # server + directory - that's all a PV is here
 oc get storageclass nfs-static                     # kubernetes.io/no-provisioner: nothing creates PVs
-oc create -f nfs-claim.yaml                        # user1: 1500Mi RWX
+oc create -f nfs-claim.yaml                        # user3: 1500Mi RWX
 oc get pvc nfs-claim                               # Bound to a 2Gi PV - the smallest that fits
 oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=nfs-claim
 # Console instead: Deployment -> YAML, under spec.template.spec.volumes replace
@@ -68,12 +68,12 @@ oc create -f nfs-claim-big.yaml                    # 10Gi - nothing on the shelf
 oc describe pvc nfs-claim-big | tail -3            # Pending: "...or manually by the system administrator"
 oc delete -f nfs-claim-big.yaml
 
-# ---------------------------------------------------------------- 3 - Dynamic storage: ODF (user1)
+# ---------------------------------------------------------------- 3 - Dynamic storage: ODF (user3)
 oc get storageclass | grep -E '^NAME|openshift-storage'   # the ODF classes: rbd, cephfs, noobaa
 # Console: Storage -> PersistentVolumeClaims -> Create: logbook-data, ceph-rbd, RWO, 1 GiB
 oc create -f logbook-data-pvc.yaml                 # ...or as code (skip if made in the console)
 oc get pvc logbook-data                            # Bound
-oc get pv                                          # user1: Forbidden - PVs are the platform's
+oc get pv                                          # user3: Forbidden - PVs are the platform's
 oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=logbook-data
 # Console instead: Deployment -> YAML, under spec.template.spec.volumes change
 #           claimName: nfs-claim
@@ -86,7 +86,7 @@ curl -s $LOGBOOK_URL/logbook.txt | head -3         # the new logbook on ODF surv
 oc delete pvc nfs-claim                            # static: its PV is now Released, not Available
 oc get pv -l storage=nfs-static                    # peter: STATUS Released, data still on the server
 
-# ---------------------------------------------------------------- 4 - RWO vs RWX (user1)
+# ---------------------------------------------------------------- 4 - RWO vs RWX (user3)
 oc create -f logbook-rwo.yaml                      # 3 pods, 3 nodes, one RWO claim
 oc get pods -l app=logbook-rwo -o wide             # 1 Running, 2 ContainerCreating
 oc get events --field-selector reason=FailedAttachVolume
@@ -95,7 +95,7 @@ oc create -f logbook-rwx.yaml                      # DaemonSet, one CephFS RWX c
 oc get pods -l app=logbook-rwx -o wide             # one per worker, all Running
 curl -s $LOGBOOK_RWX_URL/logbook.txt | tail        # lines from every node
 
-# ---------------------------------------------------------------- 5 - StatefulSet: a disk per replica (user1)
+# ---------------------------------------------------------------- 5 - StatefulSet: a disk per replica (user3)
 oc create -f logbook-sts.yaml
 oc get pods,pvc -l app=logbook-sts                 # data-logbook-sts-0, -1, -2
 oc exec logbook-sts-1 -- tail -3 /data/logbook.txt # only logbook-sts-1's lines
@@ -118,7 +118,7 @@ oc get volumesnapshotclass
 oc get prometheusrules -n openshift-storage        # the alert rules ODF ships
 oc get obc -A                                      # bucket claims (the OADP bucket)
 
-# ---------------------------------------------------------------- 7 - A volume fills up (user1)
+# ---------------------------------------------------------------- 7 - A volume fills up (user3)
 oc get prometheusrule logbook-volume -o yaml       # created at the end of Part 5
 oc exec deployment/logbook -- df -h /data          # ~92% used - df in the container is the truth
 # Console's Used / metrics only if the driver reports volume stats (ODF does):
@@ -130,7 +130,7 @@ oc get pvc logbook-data                            # CAPACITY 2Gi
 oc exec deployment/logbook -- df -h /data          # same pod, bigger filesystem
 oc exec deployment/logbook -- rm /data/ballast     # before Part 8
 
-# ---------------------------------------------------------------- 8 - Snapshots (user1)
+# ---------------------------------------------------------------- 8 - Snapshots (user3)
 oc create -f logbook-snapshot.yaml
 oc get volumesnapshot                              # READYTOUSE true
 oc exec deployment/logbook -- rm /data/logbook.txt # the "oops"

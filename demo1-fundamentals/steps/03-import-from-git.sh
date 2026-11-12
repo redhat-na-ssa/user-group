@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Part 3 - CATCH-UP for the console's "Import from Git": creates the
 # guestbook pipeline, image stream, deployment, service and route, runs the
-# first pipeline build, then wires the database secret in. Runs as user1.
+# first pipeline build, then wires the database secret in. Runs as user3.
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"
 source "${DEMO_DIR}/demo.env"

@@ -669,7 +669,7 @@
 
     Now switch to the browser: the OpenShift console as peter (Administrator
     perspective - this is an ops session), and the terminal tabs for peter
-    and user1 (bash --rcfile ~/faa-demo/demo4-storage/user1.rc).
+    and user3 (bash --rcfile ~/faa-demo/demo4-storage/user3.rc).
   </aside>
 </section>
 
@@ -808,7 +808,7 @@ As peter, Administrator perspective. Storage → PersistentVolumes, filter
       team." Storage → StorageClasses → nfs-static: provisioner
       kubernetes.io/no-provisioner - "a label for the shelf; nothing behind
       it creates volumes". (Not the default class - claims name it.)
-      As user1: oc create -f nfs-claim.yaml - 1.5 GiB, RWX, class nfs-static.
+      As user3: oc create -f nfs-claim.yaml - 1.5 GiB, RWX, class nfs-static.
       Bound within seconds - to a 2 GiB PV (6, 7 or 8): "the binder picks
       the smallest volume that fits, and I get all of it". Swap the logbook
       onto it:
@@ -833,7 +833,7 @@ As peter, Administrator perspective. Storage → PersistentVolumes, filter
       either by the external provisioner kubernetes.io/no-provisioner or
       manually by the system administrator". "Static storage means someone
       has to stock the shelf." oc delete -f nfs-claim-big.yaml.
-      The PV filter as user1: oc get pv - Forbidden; developers only see
+      The PV filter as user3: oc get pv - Forbidden; developers only see
       their claims.
       Press DOWN for the backup screenshot.
     </aside>
@@ -909,7 +909,7 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
       Filesystem. Create. Status Pending → Bound within seconds. Click the
       PersistentVolume link: a pvc-… object, cluster-scoped, made by the CSI
       driver - "nobody filed a ticket".
-      Developers can do this too: in the user1 tab, oc get pvc works, and
+      Developers can do this too: in the user3 tab, oc get pvc works, and
       oc get pv says Forbidden - claims are theirs, volumes are the platform's.
       Mount it instead of the NFS claim, as code (no console form replaces an existing volume):
       oc set volume deployment/logbook --add --overwrite --name=data --type=pvc --claim-name=logbook-data
@@ -920,7 +920,7 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
       are still there, followed by the new pod's. "The pod is disposable; the
       claim is not." (This logbook starts fresh: the NFS history stays on the
       NFS volume.)
-      The contrast with static storage: oc delete pvc nfs-claim (user1). As
+      The contrast with static storage: oc delete pvc nfs-claim (user3). As
       peter, Storage → PersistentVolumes: that nfs-pvX is now Released - not
       Available. Reclaim policy Retain: the data is still on the NFS server,
       and before anyone can use that PV again an admin must wipe the
@@ -941,25 +941,40 @@ Administrator perspective. Storage → StorageClasses: three from ODF -
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>The storage classes, and the claim form</h3>
     <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo4-pvc-storageclasses.webp" data-caption="Storage → StorageClasses: ceph-rbd, cephfs and noobaa"></div><figcaption>1 · The menu: the StorageClasses ODF provides</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo4-pvc-create.webp" data-caption="Create PersistentVolumeClaim: class, name, access mode, size"></div><figcaption>2 · A claim: class, name, access mode, size</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-pvc-storageclasses.webp" data-caption="Storage → StorageClasses, filtered on the name &quot;storage&quot;: the five ODF classes - cephfs, ceph-rbd (default), ceph-rbd-virtualization (default for VMs), ceph-rgw and noobaa"></div><figcaption>1 · The menu: the StorageClasses ODF provides</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo4-pvc-create.webp" data-caption="Create PersistentVolumeClaim as a developer: class ocs-storagecluster-ceph-rbd, a name, access mode RWO, 1 GiB, Filesystem"></div><figcaption>2 · A claim: class, name, access mode, size</figcaption></figure>
     </div>
     <aside class="notes">
-      Left: the storage classes on the cluster. The three ODF ones cover
-      block (ceph-rbd), file (cephfs) and object (noobaa). Right:
-      the claim form - everything a developer decides: which class, a name,
-      the access mode and the size. Nothing about disks, LUNs or servers.
+      Left: the storage classes ODF provides (the list is filtered on the
+      name "storage"; unfiltered it also shows the two classes without a
+      provisioner, local-volume and our nfs-static shelf). ceph-rbd is block
+      storage and the cluster default; a ceph-rbd variant is tuned and set as
+      the default for virtual machines; cephfs is shared file storage; ceph-rgw
+      and noobaa hand out buckets instead of volumes. All of them delete the
+      data when the claim goes away (Reclaim policy Delete) - unlike
+      nfs-static, which keeps it (Retain).
+      Right: the claim form, as a developer sees it - everything a
+      developer decides: which class, a name, the access mode and the size.
+      Nothing about disks, LUNs or servers. In the demo the claim is called
+      logbook-data.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Bound: the claim, and the volume made for it</h3>
-    <div class="shot" data-src="images/demo4-pvc-bound.webp" data-caption="PVC logbook-data: Bound to a pvc-... PersistentVolume, 1 GiB, RWO, ceph-rbd"></div>
+    <span class="backup-tag">Backup</span><h3>Bound: one volume made to measure, one from the shelf</h3>
+    <div class="shot" data-src="images/demo4-pvc-bound.webp" data-caption="PersistentVolumeClaims in demo-storage, as the developer: logbook-data Bound to a new pvc-... volume (1 GiB, ceph-rbd); nfs-claim Bound to the pre-made nfs-pv6 (2 GiB, nfs-static)"></div>
     <aside class="notes">
-      The claim seconds after it was created: status Bound, and the
-      PersistentVolume the CSI driver created for it (pvc-…). The PV is
-      cluster-scoped: an administrator can see it, a developer only sees the
-      claim. From now on the Deployment mounts the claim at /data, and the
-      logbook outlives every pod.
+      The project's claims as the developer (user3) sees them. logbook-data,
+      seconds after it was created: Bound to a PersistentVolume the CSI
+      driver made for it, named after the claim (pvc-…), exactly the 1 GiB
+      asked for. nfs-claim, from Part 2: Bound to nfs-pv6, a volume an admin
+      made in advance - 2 GiB for a 1.5 GiB request, the smallest on the
+      shelf that fits. Same list, both ways of providing storage. The
+      developer sees the volume's name but can't open it: PVs are
+      cluster-scoped, the platform's side. Used shows "-": no pod has mounted
+      either claim yet, and usage is measured on the node where it's mounted
+      (and only if the driver reports it - Part 7; df in the pod is the
+      number to trust). From now on the Deployment mounts
+      logbook-data at /data, and the logbook outlives every pod.
     </aside>
   </section>
 </section>
@@ -1010,7 +1025,7 @@ curl -s $LOGBOOK_RWX_URL/logbook.txt | tail</code></pre>
       </div>
     </div>
     <aside class="notes">
-"What if I scale my logbook to three pods?" In the user1 tab:
+"What if I scale my logbook to three pods?" In the user3 tab:
       oc create -f logbook-rwo.yaml - a claim on ceph-rbd (RWO) and a
       Deployment with 3 replicas that must land on different nodes (pod
       anti-affinity, so the demo is predictable).
@@ -1121,7 +1136,7 @@ oc get pvc -l app=logbook-sts</code></pre>
       </div>
     </div>
     <aside class="notes">
-oc create -f logbook-sts.yaml (user1). The StatefulSet has a
+oc create -f logbook-sts.yaml (user3). The StatefulSet has a
       volumeClaimTemplates section instead of a volume: "a recipe for a
       claim, used once per replica". Pods come up as logbook-sts-0, -1, -2 -
       fixed names, not random suffixes - and Storage → PersistentVolumeClaims
@@ -1304,7 +1319,7 @@ The first two lines ran at the end of Part 5 (if not, run them now and
       kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.8
       for 1 minute → VolumeAlmostFull, severity warning. "Alerts are code too
       - the app team owns this one, in its own namespace, with its own
-      threshold." (User workload monitoring is enabled by setup; user1 has the
+      threshold." (User workload monitoring is enabled by setup; user3 has the
       monitoring-rules-edit role.)
       How full is it? The reliable answer is df inside the container:
       logbook pod → Terminal tab → df -h /data (or

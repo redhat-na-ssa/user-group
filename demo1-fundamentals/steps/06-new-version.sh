@@ -2,7 +2,7 @@
 # Part 6 - Ship v2: create the EventListener (Import YAML in the console),
 # then commit a change to app.py in Gitea (what the presenter does in Gitea's
 # web editor). The webhook starts the pipeline, which builds
-# a new image; the image change rolls out the Deployment. Runs as user1.
+# a new image; the image change rolls out the Deployment. Runs as user3.
 #
 # Usage: 06-new-version.sh [VERSION]    (default 2.0)
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"

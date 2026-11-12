@@ -592,7 +592,7 @@
 
     Now switch to the browser: the OpenShift console as peter (Administrator
     perspective - this is an ops session), and the terminal tabs for peter
-    and user1 (bash --rcfile ~/faa-demo/demo3-resources/user1.rc).
+    and user3 (bash --rcfile ~/faa-demo/demo3-resources/user3.rc).
   </aside>
 </section>
 
@@ -619,7 +619,7 @@ oc describe $(oc get nodes -o name \
       </div>
     </div>
     <aside class="notes">
-DRAFT. As user1, Developer perspective, project demo-resources: Topology
+DRAFT. As user3, Developer perspective, project demo-resources: Topology
       shows guestbook (2 pods) and postgresql. Open a guestbook pod → Details:
       QoS class BestEffort. "Nobody said what this needs. It runs - until the
       node gets busy, and then it's the first to go."
@@ -680,7 +680,7 @@ oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. As user1. Topology → guestbook → the Deployment's page → Actions →
+DRAFT. As user3. Topology → guestbook → the Deployment's page → Actions →
       Edit resource limits: CPU request 50m, memory request 320Mi, memory
       limit 512Mi, no CPU limit (the values demo 1 uses - check them against
       what Part 1 measured). Save; a rollout. "Requests from measurements,
@@ -743,7 +743,7 @@ oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. As user1. oc create -f memory-hog.yaml - a small pod that
+DRAFT. As user3. oc create -f memory-hog.yaml - a small pod that
       allocates memory in a loop, with a 128Mi limit. oc get pod memory-hog -w:
       Running → OOMKilled → CrashLoopBackOff. Console: pod → Details: Last
       State Terminated, reason OOMKilled, exit code 137. "The kernel killed
@@ -796,7 +796,7 @@ DRAFT. As user1. oc create -f memory-hog.yaml - a small pod that
 oc create -f project-limits.yaml
 oc create -f project-quota.yaml
 oc describe quota
-# user1
+# user3
 oc scale deployment/guestbook --replicas=10
 oc get events \
   --field-selector reason=FailedCreate
@@ -812,7 +812,7 @@ DRAFT. As peter: oc create -f project-limits.yaml (default request and
       (requests.cpu, requests.memory, limits.memory, pods, requests.storage).
       Administration → ResourceQuotas → demo-resources: bars for used vs
       hard. "This is the department budget."
-      As user1: oc scale deployment/guestbook --replicas=10. Topology shows
+      As user3: oc scale deployment/guestbook --replicas=10. Topology shows
       fewer than 10 pods. oc get events --field-selector reason=FailedCreate
       → "exceeded quota: ... requested: requests.memory=320Mi, used: ...,
       limited: ...". Nothing already running is touched. Scale back to 2.
@@ -863,7 +863,7 @@ oc describe quota | grep storage</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. Short - the storage session has the details. As user1, Storage →
+DRAFT. Short - the storage session has the details. As user3, Storage →
       PersistentVolumeClaims → postgresql: the usage graph, used vs total.
       oc exec deployment/postgresql -- df -h /var/lib/pgsql/data shows the
       same from inside. As peter, Observe → Metrics:

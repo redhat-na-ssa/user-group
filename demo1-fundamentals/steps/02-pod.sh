@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Part 2 - A bare pod: create it, look inside, delete it, see that nothing
 # brings it back. In the demo this is done in the console (Import YAML);
-# this is the CLI equivalent. Runs as the developer (user1).
+# this is the CLI equivalent. Runs as the developer (user3).
 DEMO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${DEMO_DIR}/../common/lib.sh"
 source "${DEMO_DIR}/demo.env"
