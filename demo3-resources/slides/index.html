@@ -610,6 +610,17 @@
         <li><b>Compute → Nodes</b>: the node's own picture</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Deployment guestbook: two BestEffort pods, about 290Mi used each, nothing reserved">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT GUESTBOOK · NO REQUESTS</text>
+        <use href="#i-pod" x="30" y="62" width="110" height="110"/>
+        <use href="#i-pod" x="160" y="62" width="110" height="110"/>
+        <text class="dg-small" x="150" y="195">BestEffort</text>
+        <text class="dg-small" x="150" y="222">used ~290Mi · reserved 0</text>
+        <use href="#i-gauge" x="400" y="62" width="110" height="110"/>
+        <text class="dg-small" x="455" y="195">dashboards</text>
+        <text class="dg-small" x="455" y="222">used vs reserved</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc get pods -o custom-columns=\
 NAME:.metadata.name,QOS:.status.qosClass
@@ -680,6 +691,20 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
         <li>Roll back</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Guestbook pod with a CPU and memory request and a memory limit; a pod asking for 100 CPUs stays Pending">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT GUESTBOOK · SIZED</text>
+        <use href="#i-pod" x="30" y="62" width="110" height="110"/>
+        <text class="dg-small" x="85" y="195">Burstable</text>
+        <text class="dg-mono" x="160" y="85">requests:</text>
+        <text class="dg-mono" x="180" y="110">cpu: 50m</text>
+        <text class="dg-mono" x="180" y="135">memory: 320Mi</text>
+        <text class="dg-mono" x="160" y="170">limits:</text>
+        <text class="dg-mono" x="180" y="195">memory: 512Mi</text>
+        <use href="#i-pod-new" class="grey" x="460" y="62" width="110" height="110"/>
+        <text class="dg-small" x="515" y="195">cpu: 100</text>
+        <text class="dg-small" x="515" y="222">Pending</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc patch deployment/guestbook \
   --patch-file=guestbook-resources.patch.yaml
@@ -742,6 +767,18 @@ As user3. Topology → guestbook → the Deployment's page → Actions →
         <li>Roll back - and why many teams set no CPU limit</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Left: memory-hog over its 128Mi limit is OOMKilled. Right: the guestbook over its 100m CPU limit is throttled">
+        <rect class="dg-box grey" x="5" y="5" width="305" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">MEMORY · LIMIT 128Mi</text>
+        <use href="#i-pod-new" class="grey" x="102" y="62" width="110" height="110"/>
+        <text class="dg-small" x="157" y="195">memory-hog</text>
+        <text class="dg-small" x="157" y="222">OOMKilled · 137</text>
+        <rect class="dg-box grey" x="330" y="5" width="305" height="250" rx="12"/>
+        <text class="dg-label left" x="350" y="36">CPU · LIMIT 100m</text>
+        <use href="#i-pod" x="427" y="62" width="110" height="110"/>
+        <text class="dg-small" x="482" y="195">guestbook</text>
+        <text class="dg-small" x="482" y="222">throttled · slower</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f memory-hog.yaml
 oc get pod memory-hog -w
@@ -808,6 +845,21 @@ As user3. oc create -f memory-hog.yaml - a small pod that
         <li>A claim bigger than the storage budget: <b>refused</b></li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Project demo-resources with a ResourceQuota and LimitRange: pods up to 8, the next one refused">
+        <rect class="dg-box" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">PROJECT DEMO-RESOURCES</text>
+        <use href="#i-pod" x="25" y="60" width="95" height="95"/>
+        <use href="#i-pod" x="115" y="60" width="95" height="95"/>
+        <use href="#i-pod" x="205" y="60" width="95" height="95"/>
+        <use href="#i-pod-new" class="grey" x="295" y="60" width="95" height="95"/>
+        <text class="dg-small" x="342" y="175">refused</text>
+        <text class="dg-mono" x="420" y="85">pods: 8</text>
+        <text class="dg-mono" x="420" y="110">requests.cpu: 1</text>
+        <text class="dg-mono" x="420" y="135">memory: 6Gi</text>
+        <text class="dg-mono" x="420" y="160">storage: 10Gi</text>
+        <rect class="dg-panel" x="25" y="192" width="590" height="48" rx="8" style="stroke:#ee0000"/>
+        <text class="dg-small" x="320" y="223">ResourceQuota + LimitRange (defaults)</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash"># peter
 oc create -f project-limits.yaml
@@ -876,6 +928,20 @@ As peter: oc create -f project-limits.yaml (default request and
         <li>Admin: the storage system's own capacity</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="PostgreSQL pod, its claim postgresql, and the storage system behind it">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT POSTGRESQL · TWO LEVELS OF FREE</text>
+        <use href="#i-pod" x="30" y="62" width="110" height="110"/>
+        <text class="dg-small" x="85" y="195">postgresql</text>
+        <path class="dg-line" d="M145,117 H215" marker-end="url(#dg-arrow)"/>
+        <use href="#i-doc" x="222" y="72" width="90" height="90"/>
+        <text class="dg-small" x="267" y="195">claim · 1Gi</text>
+        <text class="dg-small" x="267" y="222">used inside: df</text>
+        <path class="dg-line" d="M317,117 H400" marker-end="url(#dg-arrow)"/>
+        <use href="#i-disk" x="407" y="62" width="110" height="110"/>
+        <text class="dg-small" x="462" y="195">storage system</text>
+        <text class="dg-small" x="462" y="222">raw vs used</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc get pvc
 oc exec deployment/postgresql -- \
@@ -926,6 +992,19 @@ DRAFT. Short - the storage session has the details. As user3, Storage →
         <li>For the size: <b>VPA</b> and <b>Cost Management</b> recommend requests</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Deployment guestbook scaled by an HPA from 2 to 6 pods under load">
+        <rect class="dg-box grey" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT GUESTBOOK · HPA 2 → 6</text>
+        <use href="#i-pod" x="20" y="62" width="95" height="95"/>
+        <use href="#i-pod" x="120" y="62" width="95" height="95"/>
+        <use href="#i-pod-new" class="grey" x="220" y="62" width="95" height="95"/>
+        <use href="#i-pod-new" class="grey" x="320" y="62" width="95" height="95"/>
+        <use href="#i-pod-new" class="grey" x="420" y="62" width="95" height="95"/>
+        <use href="#i-pod-new" class="grey" x="520" y="62" width="95" height="95"/>
+        <text class="dg-small" x="117" y="190">always</text>
+        <text class="dg-small" x="417" y="190">only under load</text>
+        <text class="dg-small" x="320" y="230">more copies, not bigger pods</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f guestbook-hpa.yaml
 ab -k -c 10 -t 120 https://$(oc get route \
@@ -986,6 +1065,18 @@ HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
         <li>The project's quota counts the VM too</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="A 2 vCPU, 2 GiB VM inside its virt-launcher pod, with the pod's CPU and memory requests">
+        <rect class="dg-box" x="5" y="5" width="630" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">POD VIRT-LAUNCHER</text>
+        <use href="#i-hex" x="40" y="62" width="110" height="110"/>
+        <text class="dg-small" x="95" y="195">VM small-vm</text>
+        <text class="dg-small" x="95" y="222">2 vCPU · 2 GiB</text>
+        <text class="dg-mono" x="190" y="85">requests:</text>
+        <text class="dg-mono" x="210" y="110">cpu: 200m (1/10 per vCPU)</text>
+        <text class="dg-mono" x="210" y="135">memory: 2324Mi (2Gi + overhead)</text>
+        <text class="dg-mono" x="190" y="170">limits:</text>
+        <text class="dg-mono" x="210" y="195">memory: 4648Mi (for the quota)</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">virtctl start small-vm
 oc get vm,vmi
@@ -1037,6 +1128,17 @@ As peter. Setup created small-vm stopped (it holds nothing until it
         <li>Every <code>oc new-project</code> gets them</li>
       </ol>
       <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="The project request template gives every new project a quota and a limit range">
+        <use href="#i-doc" x="30" y="72" width="100" height="100"/>
+        <text class="dg-small" x="80" y="195">project template</text>
+        <path class="dg-line" d="M140,122 H215" marker-end="url(#dg-arrow)"/>
+        <rect class="dg-box" x="225" y="20" width="400" height="65" rx="10"/>
+        <text class="dg-small" x="425" y="59">new project · quota + limits</text>
+        <rect class="dg-box" x="225" y="97" width="400" height="65" rx="10"/>
+        <text class="dg-small" x="425" y="136">new project · quota + limits</text>
+        <rect class="dg-box" x="225" y="174" width="400" height="65" rx="10"/>
+        <text class="dg-small" x="425" y="213">new project · quota + limits</text>
+      </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc adm create-bootstrap-project-template \
   -o yaml | less
