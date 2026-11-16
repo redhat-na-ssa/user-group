@@ -43,6 +43,8 @@ oc adm top pods                                    # what they really use
 # Under load (Part 3's ab) each BestEffort pod takes ~3 cores - whatever is idle
 oc get nodes                                       # peter: user3 may not list nodes
 oc describe $(oc get nodes -l node-role.kubernetes.io/worker -o name | head -1) | grep -A 8 'Allocated resources'   # peter: requests vs allocatable
+#   Limits < Requests? Limits only adds containers that HAVE a limit (many
+#   platform pods and VMs without a quota set requests only)
 
 # ---------------------------------------------------------------- 2 - Requests and limits, the right way (user3)
 # Console: Deployment guestbook -> Actions -> Edit resource limits (look only:

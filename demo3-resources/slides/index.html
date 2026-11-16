@@ -635,6 +635,18 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
       oc describe on a worker node, grep 'Allocated resources' (cheat 1) - requests
       and limits as a percentage of the node: "the scheduler's view, not the
       kernel's".
+      Expect the question "how can Limits be lower than Requests?" (memory
+      here: ~36Gi requested, ~25Gi limited). Per container a limit is never
+      below its request, but the Limits total only adds up containers that
+      HAVE a limit; a container with a request and no limit counts in
+      Requests and adds nothing to Limits. On this lab cluster about three
+      quarters of the requested memory has no limit: VMs in a project without
+      a quota (Part 7 shows why they then get none), Quay, and most of
+      OpenShift's own pods, which set requests only. So: Requests is what the
+      scheduler has promised away - why the next pod may not fit; Limits is a
+      partial sum, not the node's ceiling. Unlimited memory can grow until the
+      node is short, which is when the kubelet evicts - and why Part 2 gives
+      the guestbook a memory limit. Keep it to that; Part 2 is the real answer.
       Press DOWN for the backup screenshots.
     </aside>
   </section>
