@@ -793,8 +793,10 @@ oc delete -f memory-hog.yaml
 
 oc set resources deployment/guestbook \
   --limits=cpu=100m
-ab -k -c 10 -t 60 https://$(oc get route \
+ab -c 10 -t 60 https://$(oc get route \
   guestbook -o jsonpath='{.spec.host}')/
+oc exec deployment/guestbook -- \
+  grep throttled /sys/fs/cgroup/cpu.stat
 oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
@@ -805,13 +807,20 @@ As user3. oc create -f memory-hog.yaml - a small pod that
       State Terminated, reason OOMKilled, exit code 137. "The kernel killed
       it - no warning, no slowdown. That's memory." oc delete -f memory-hog.yaml.
       CPU: oc set resources deployment/guestbook --limits=cpu=100m. On the
-      laptop: ab -k -c 10 -t 60 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
-      (keep -c at 10, as in demo 1). Rehearsal numbers: without a limit about
-      250 requests/s at 40 ms; with 100m about 6/s at 1.6 s, and a few
-      requests time out at the router. (ab's "Failed requests: Length" isn't
-      an error - every page names its pod, so lengths differ.) Pod → Metrics,
-      or oc adm top pods: CPU flat at 100m. As peter, Observe → Metrics, the
-      share of CPU periods throttled (about 0.95 under load; query in cheat 3).
+      laptop: ab -c 10 -t 60 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
+      (no -k: each request opens its own connection, so the router can send
+      it to the least busy pod). Rehearsal numbers: without a limit about
+      290 requests/s at 35 ms, each pod using ~1.9 cores; with 100m about
+      11/s at 0.9 s - 26 times slower. (ab's "Failed requests: Length" isn't
+      an error - every page names its pod, so lengths differ.) The proof is
+      in the kernel, not the graphs (they lag): oc exec deployment/guestbook
+      -- cat /sys/fs/cgroup/cpu.max shows "10000 100000" - 10 ms of CPU per
+      100 ms period, which is what 100m means; grep throttled
+      /sys/fs/cgroup/cpu.stat, run twice during the load, shows nr_throttled
+      and throttled_usec climbing. oc adm top pods: CPU at 100m, never above.
+      If asked why pods differ: the nodes aren't identical (low-power Xeon D
+      vs EPYC) - the same request costs more CPU on one than the other; the
+      Route sends each request to the pod with the fewest in flight.
       "Nothing crashed - it just got slower. That's CPU."
       oc rollout undo deployment/guestbook. Talking point: with a CPU limit,
       an idle node still can't help a busy pod; with only a request, the
@@ -1012,7 +1021,7 @@ DRAFT. Short - the storage session has the details. As user3, Storage →
       </svg>
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc create -f guestbook-hpa.yaml
-ab -k -c 10 -t 120 https://$(oc get route \
+ab -c 10 -t 120 https://$(oc get route \
   guestbook -o jsonpath='{.spec.host}')/
 oc get hpa guestbook -w</code></pre>
       </div>
@@ -1020,7 +1029,7 @@ oc get hpa guestbook -w</code></pre>
     <aside class="notes">
 HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
       the CPU request (the same file as demo 1). On the laptop:
-      ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
+      ab -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
       oc get hpa guestbook -w: TARGETS climbs, REPLICAS goes up; Topology
       shows new pods; the page shows different pod names. Rehearsal: 6 pods
       within 20 seconds (each pod runs at many times its 50m request), back

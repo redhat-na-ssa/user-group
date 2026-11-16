@@ -85,8 +85,11 @@
                  and (gb[0].spec.template.spec.containers[0].resources | default({})) == {}
                  and gb_pods | length == 2
                  and gb_pods | map(attribute='status.qosClass') | unique | list == ['BestEffort'] }}
-          - name: "Guestbook answers at its Route"
-            ok: "{{ (page.status | default(0)) == 200 }}"
+          - name: "Guestbook answers at its Route, leastconn (no sticky cookie)"
+            ok: >-
+              {{ (page.status | default(0)) == 200
+                 and (st.route[0].metadata.annotations | default({})).get('haproxy.router.openshift.io/balance') == 'leastconn'
+                 and (st.route[0].metadata.annotations | default({})).get('haproxy.router.openshift.io/disable_cookies') == 'true' }}
           - name: "Nothing left from a previous run (quota, limit range, HPA, memory-hog, no-requests, big-claim)"
             ok: >-
               {{ st.quotas | length == 0 and st.limitranges | length == 0 and st.hpas | length == 0

@@ -214,6 +214,20 @@
         guestbook_image: "{{ istag.resources[0].image.dockerImageReference }}"
       when: guestbook.resources | length == 0
 
+    # Also on an existing Route (setup only creates the guestbook when missing)
+    - name: Guestbook - Route balances by least connections
+      kubernetes.core.k8s:
+        state: patched
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ ns }}"
+        name: guestbook
+        definition:
+          metadata:
+            annotations:
+              haproxy.router.openshift.io/balance: leastconn
+              haproxy.router.openshift.io/disable_cookies: "true"
+
     - name: Wait for the rollouts
       ansible.builtin.include_tasks: tasks/wait-rollout.yml
       loop: [postgresql, guestbook]

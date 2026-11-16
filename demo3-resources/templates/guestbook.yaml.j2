@@ -68,6 +68,14 @@ metadata:
   labels:
     app: guestbook
     app.kubernetes.io/part-of: guestbook
+  annotations:
+    # Least connections, no sticky cookie: each new request goes to the pod
+    # with the fewest in flight. Round robin isn't enough here - the nodes
+    # differ (Xeon D vs EPYC), so under a CPU limit the faster pod would sit
+    # half idle waiting for its turn. With ab (no -k) Part 3 throttles every
+    # pod and Part 6's new HPA pods get traffic at once.
+    haproxy.router.openshift.io/balance: leastconn
+    haproxy.router.openshift.io/disable_cookies: "true"
 spec:
   to:
     kind: Service

@@ -64,9 +64,11 @@ oc get pod memory-hog -w                           # OOMKilled -> CrashLoopBackO
 oc describe pod memory-hog | grep -A 4 'Last State'   # Reason: OOMKilled, Exit Code: 137
 oc delete -f memory-hog.yaml
 oc set resources deployment/guestbook --limits=cpu=100m
-ab -k -c 10 -t 60 $GUESTBOOK_URL/                  # laptop; keep -c at 10
-#   no limit: ~250 req/s, ~40 ms; 100m limit: ~6 req/s, ~1.6 s, a few non-2xx
+ab -c 10 -t 60 $GUESTBOOK_URL/                     # laptop; no -k: every request picks a pod
+#   no limit: ~290 req/s, ~35 ms; 100m limit: ~11 req/s, ~0.9 s
 #   ("Failed requests: Length" is not an error - every page names its pod)
+oc exec deployment/guestbook -- cat /sys/fs/cgroup/cpu.max   # 10000 100000 = 10ms per 100ms
+oc exec deployment/guestbook -- grep throttled /sys/fs/cgroup/cpu.stat   # run twice: it climbs
 oc adm top pods -l app=guestbook                   # CPU flat at 100m
 # Observe -> Metrics (peter) - share of CPU periods throttled (~0.95 under load):
 #   sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="demo-resources",container="guestbook"}[1m])) / sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="demo-resources",container="guestbook"}[1m]))
@@ -95,7 +97,7 @@ oc describe quota | grep storage
 
 # ---------------------------------------------------------------- 6 - Right-sizing (user3)
 oc create -f guestbook-hpa.yaml                    # 2-6 pods, 50% of the CPU request
-ab -k -c 10 -t 120 $GUESTBOOK_URL/                 # laptop
+ab -c 10 -t 120 $GUESTBOOK_URL/                    # laptop
 oc get hpa guestbook -w                            # 6 pods in ~20s; back to 2 ~80s after the load (Ctrl-C)
 
 # ---------------------------------------------------------------- 7 - Virtual machines (peter)
