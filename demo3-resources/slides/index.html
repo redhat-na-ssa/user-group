@@ -685,7 +685,7 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
     <div class="steps">
       <ol>
         <li>Deployment → <b>Actions → Edit resource limits</b></li>
-        <li>Requests from Part 1, a memory limit, no CPU limit</li>
+        <li>Fill in what Part 1 measured: CPU request <b>50m</b>, memory request <b>320Mi</b>, memory limit <b>512Mi</b> - CPU limit stays empty</li>
         <li>New pods: QoS <b>Burstable</b></li>
         <li>Ask for far too much CPU: the new pod is <b>Pending</b></li>
         <li>Roll back</li>
