@@ -1,0 +1,16 @@
+# Part 2: size the guestbook from what Part 1 measured (idle ~2m CPU and
+# ~290Mi memory per pod). A CPU request (the reservation), a memory request
+# and a memory limit (the ceiling) - and deliberately NO CPU limit: CPU can be
+# shared and taken back, memory can't (Part 3).
+#   oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: guestbook
+          resources:
+            requests:
+              cpu: 50m
+              memory: 320Mi
+            limits:
+              memory: 512Mi

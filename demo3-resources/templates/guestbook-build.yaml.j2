@@ -1,0 +1,53 @@
+# Setup only: the guestbook image, built from demo 1's source in Gitea with the
+# same s2i-python task the console's Import from Git uses. No deploy step -
+# demo 3 is about sizing the app, not building it; the Deployment follows the
+# ImageStream (image trigger).
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/part-of: guestbook
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: guestbook-build
+  labels:
+    app.kubernetes.io/part-of: guestbook
+spec:
+  params:
+    - {name: GIT_REPO, type: string, default: "{{ gitea_url }}/{{ gitea_org }}/{{ guestbook_repo }}.git"}
+    - {name: GIT_REVISION, type: string, default: "{{ guestbook_revision }}"}
+    - {name: IMAGE_NAME, type: string, default: "image-registry.openshift-image-registry.svc:5000/{{ ns }}/guestbook:latest"}
+  workspaces:
+    - name: workspace
+  tasks:
+    - name: fetch-repository
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: git-clone}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: URL, value: $(params.GIT_REPO)}
+        - {name: REVISION, value: $(params.GIT_REVISION)}
+        - {name: DELETE_EXISTING, value: "true"}
+      workspaces:
+        - {name: output, workspace: workspace}
+    - name: build
+      runAfter: [fetch-repository]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: s2i-python}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: IMAGE, value: $(params.IMAGE_NAME)}
+        - {name: TLS_VERIFY, value: "false"}
+        - {name: VERSION, value: 3.12-ubi9}
+      workspaces:
+        - {name: source, workspace: workspace}

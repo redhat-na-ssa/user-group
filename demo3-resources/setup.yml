@@ -1,0 +1,294 @@
+# Demo 3 - Resource Management: prepare the cluster. Safe to re-run.
+#
+#   .venv/bin/ansible-playbook demo3-resources/setup.yml    (from the repo root)
+#
+# Creates the project and its roles, PostgreSQL from the postgresql-demo
+# template, the guestbook image (built once from demo 1's source in Gitea) and
+# the guestbook itself with NO requests or limits, plus the stopped Part 7 VM.
+# No quota, limit range or HPA: the demo adds those live. Settings: demo.env.
+# Then run verify.yml.
+- name: Demo 3 - setup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    - name: Gitea has the guestbook source (demo1-fundamentals/setup.sh pushes it)
+      ansible.builtin.uri:
+        url: "{{ gitea_url }}/api/v1/repos/{{ gitea_org }}/{{ guestbook_repo }}"
+        user: "{{ gitea_user }}"
+        password: "{{ gitea_password }}"
+        force_basic_auth: true
+        validate_certs: false
+      register: repo
+      failed_when: repo.status != 200 or repo.json.empty
+
+    # ------------------------------------------------------------ project
+    - name: Project {{ ns }}
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ ns }}"
+            labels:
+              app.kubernetes.io/part-of: demo3-resources
+              # Cost Management collects resource optimization (Part 6
+              # recommendations) only from namespaces with this label
+              cost_management_optimizations: "true"
+            annotations:
+              openshift.io/display-name: "{{ ns_display }}"
+              openshift.io/description: "{{ ns_description }}"
+              openshift.io/requester: "{{ admin_user }}"
+
+    - name: Project access
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        definition:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: "{{ item.role }}-{{ item.user }}"
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: "{{ item.role }}"
+          subjects:
+            - {apiGroup: rbac.authorization.k8s.io, kind: User, name: "{{ item.user }}"}
+      loop:
+        - {role: admin, user: "{{ admin_user }}"}
+        - {role: edit, user: "{{ edit_user }}"}
+        - {role: view, user: "{{ view_user }}"}
+      loop_control:
+        label: "{{ item.user }}: {{ item.role }}"
+
+    # ------------------------------------------------------------ PostgreSQL (Part 5)
+    # Demo 1's template, staged in this project (it names demo-intro: override)
+    - name: Template postgresql-demo
+      kubernetes.core.k8s:
+        definition: >-
+          {{ lookup('file', playbook_dir + '/../demo1-fundamentals/manifests/postgresql-template.yaml') | from_yaml
+             | combine({'metadata': {'namespace': ns}}, recursive=true) }}
+
+    - name: PostgreSQL - present?
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ ns }}"
+        name: postgresql
+      register: pg_secret
+
+    # Once only: the template generates the password, a second run would change it
+    - name: PostgreSQL - instantiate the template
+      ansible.builtin.shell: |
+        set -euo pipefail
+        oc process -n "{{ ns }}" postgresql-demo | oc create -n "{{ ns }}" -f -
+      args:
+        executable: /bin/bash
+      when: pg_secret.resources | length == 0
+
+    # ------------------------------------------------------------ guestbook image
+    - name: Build pipeline and ImageStream
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        template: "{{ playbook_dir }}/templates/guestbook-build.yaml.j2"
+
+    # The Pipelines operator adds this to a new project a few seconds after
+    # it's created; a build started before then fails at once
+    - name: Service account pipeline
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ServiceAccount
+        namespace: "{{ ns }}"
+        name: pipeline
+      register: pipeline_sa
+      until: pipeline_sa.resources | length == 1
+      retries: 24
+      delay: 5
+
+    - name: Guestbook image - present?
+      kubernetes.core.k8s_info:
+        api_version: image.openshift.io/v1
+        kind: ImageStreamTag
+        namespace: "{{ ns }}"
+        name: guestbook:latest
+      register: istag
+
+    - name: Guestbook image - build
+      when: istag.resources | length == 0
+      block:
+        - name: Start the build
+          kubernetes.core.k8s:
+            namespace: "{{ ns }}"
+            definition:
+              apiVersion: tekton.dev/v1
+              kind: PipelineRun
+              metadata:
+                generateName: guestbook-build-
+              spec:
+                pipelineRef: {name: guestbook-build}
+                workspaces:
+                  - name: workspace
+                    volumeClaimTemplate:
+                      spec:
+                        accessModes: [ReadWriteOnce]
+                        resources: {requests: {storage: 1Gi}}
+          register: run
+
+        - name: Wait for the build
+          kubernetes.core.k8s_info:
+            api_version: tekton.dev/v1
+            kind: PipelineRun
+            namespace: "{{ ns }}"
+            name: "{{ run.result.metadata.name }}"
+          register: run_state
+          until: >-
+            run_state.resources | length > 0 and
+            (run_state.resources[0].status.conditions | default([]) | selectattr('type', 'equalto', 'Succeeded')
+             | rejectattr('status', 'equalto', 'Unknown') | list | length > 0)
+          retries: 60
+          delay: 10
+          failed_when: >-
+            (run_state.resources[0].status.conditions | selectattr('type', 'equalto', 'Succeeded')
+             | first).status != 'True'
+
+        # The build's PVC would count against the quota in Part 4
+        - name: Remove the build run and its workspace
+          kubernetes.core.k8s:
+            state: absent
+            api_version: tekton.dev/v1
+            kind: PipelineRun
+            namespace: "{{ ns }}"
+            name: "{{ run.result.metadata.name }}"
+            wait: true
+
+        # Tekton Results keeps the TaskRuns (and their finished pods) for a few
+        # minutes after that; the pods hold the workspace PVC. Remove them.
+        - name: Remove the build's pods
+          kubernetes.core.k8s:
+            state: absent
+            api_version: v1
+            kind: Pod
+            namespace: "{{ ns }}"
+            label_selectors: ["tekton.dev/pipelineRun={{ run.result.metadata.name }}"]
+            wait: true
+
+        - name: Wait for the workspace PVC to go
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: PersistentVolumeClaim
+            namespace: "{{ ns }}"
+          register: build_pvcs
+          until: build_pvcs.resources | map(attribute='metadata.name') | list == ['postgresql']
+          retries: 24
+          delay: 5
+
+        - name: Guestbook image - built
+          kubernetes.core.k8s_info:
+            api_version: image.openshift.io/v1
+            kind: ImageStreamTag
+            namespace: "{{ ns }}"
+            name: guestbook:latest
+          register: istag
+
+    # ------------------------------------------------------------ guestbook
+    # Only created when missing: after a run it has requests, limits, an HPA -
+    # re-running setup must not undo the demo (use reset.yml)
+    - name: Guestbook - present?
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ ns }}"
+        name: guestbook
+      register: guestbook
+
+    - name: Guestbook - Deployment (no resources), Service, Route
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        template: "{{ playbook_dir }}/templates/guestbook.yaml.j2"
+      vars:
+        guestbook_image: "{{ istag.resources[0].image.dockerImageReference }}"
+      when: guestbook.resources | length == 0
+
+    - name: Wait for the rollouts
+      ansible.builtin.include_tasks: tasks/wait-rollout.yml
+      loop: [postgresql, guestbook]
+      loop_control:
+        loop_var: deployment
+
+    # ------------------------------------------------------------ VM (Part 7)
+    - name: VM small-vm - present?
+      kubernetes.core.k8s_info:
+        api_version: kubevirt.io/v1
+        kind: VirtualMachine
+        namespace: "{{ ns }}"
+        name: small-vm
+      register: vm
+
+    - name: VM small-vm (stopped)
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        template: "{{ playbook_dir }}/templates/small-vm.yaml.j2"
+      when: vm.resources | length == 0
+
+    # ------------------------------------------------------------ background traffic
+    # Feeds Cost Management's recommendations (Part 6). Only created when
+    # missing, so re-running setup doesn't resume traffic paused by traffic.yml
+    - name: Project {{ traffic_ns }}
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ traffic_ns }}"
+            labels: {app.kubernetes.io/part-of: demo3-resources}
+            annotations:
+              openshift.io/display-name: "{{ ns_display }} - background traffic"
+              openshift.io/description: Hourly load on the guestbook, for Cost Management
+
+    - name: Traffic CronJob - present?
+      kubernetes.core.k8s_info:
+        api_version: batch/v1
+        kind: CronJob
+        namespace: "{{ traffic_ns }}"
+        name: guestbook-traffic
+      register: traffic_cj
+
+    - name: Traffic CronJob (hourly, on)
+      kubernetes.core.k8s:
+        namespace: "{{ traffic_ns }}"
+        template: "{{ playbook_dir }}/templates/traffic.yaml.j2"
+      when: traffic_cj.resources | length == 0
+
+    # ------------------------------------------------------------ check
+    - name: Guestbook - Route
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ ns }}"
+        name: guestbook
+      register: route
+
+    - name: Guestbook - answers at its Route (and reaches the database)
+      ansible.builtin.uri:
+        url: "https://{{ route.resources[0].spec.host }}/"
+        return_content: true
+        validate_certs: false
+      register: page
+      until: page.status == 200
+      retries: 12
+      delay: 5
+
+    - name: Ready
+      ansible.builtin.debug:
+        msg:
+          - "Project {{ ns }}: {{ admin_user }} admin, {{ edit_user }} edit, {{ view_user }} view"
+          - "Guestbook: https://{{ route.resources[0].spec.host }}/ (2 pods, no requests or limits)"
+          - "PostgreSQL: Deployment postgresql, PVC postgresql"
+          - "VM small-vm: stopped (started live in Part 7)"
+          - "Background traffic: CronJob guestbook-traffic in {{ traffic_ns }} (pause before a session: traffic.yml -e traffic=off)"
+          - "Next: verify.yml"

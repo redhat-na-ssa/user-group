@@ -1,0 +1,64 @@
+# Background traffic for Cost Management: without varied usage its resource
+# optimization has nothing interesting to recommend. Every hour, a few
+# minutes of requests to the guestbook - more threads on weekdays during
+# US business hours (13-22 UTC), fewer at night and at weekends.
+#
+# Lives in its own project so it doesn't count against the Part 4 quota or
+# show up in the demo's Topology. Pause it for the session:
+#   .venv/bin/ansible-playbook demo3-resources/traffic.yml -e traffic=off
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: guestbook-traffic
+  labels:
+    app.kubernetes.io/part-of: demo3-resources
+spec:
+  schedule: "17 * * * *"
+  suspend: {{ traffic_suspend | default(false) | bool | lower }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels: {app: guestbook-traffic}
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 600
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: traffic
+              image: image-registry.openshift-image-registry.svc:5000/openshift/python:3.12-minimal-ubi9
+              env:
+                - {name: URL, value: "http://guestbook.{{ ns }}.svc:8080/"}
+                - {name: DURATION, value: "300"}
+                - {name: BUSY_WORKERS, value: "6"}
+                - {name: QUIET_WORKERS, value: "1"}
+              command:
+                - python3
+                - -u
+                - -c
+                - |
+                  import os, threading, time, urllib.request
+                  url, duration = os.environ["URL"], int(os.environ["DURATION"])
+                  now = time.gmtime()
+                  busy = now.tm_wday < 5 and 13 <= now.tm_hour < 22
+                  workers = int(os.environ["BUSY_WORKERS" if busy else "QUIET_WORKERS"])
+                  end = time.time() + duration
+                  counts = {"ok": 0, "error": 0}
+                  def hit():
+                      while time.time() < end:
+                          try:
+                              urllib.request.urlopen(url, timeout=10).read()
+                              counts["ok"] += 1
+                          except Exception:
+                              counts["error"] += 1
+                              time.sleep(1)
+                  threads = [threading.Thread(target=hit) for _ in range(workers)]
+                  for t in threads: t.start()
+                  for t in threads: t.join()
+                  print(f"{'busy' if busy else 'quiet'}: {workers} workers, {duration}s, {counts}")
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+                limits: {memory: 256Mi}

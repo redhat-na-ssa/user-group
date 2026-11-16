@@ -1,0 +1,29 @@
+# Part 3: a pod that keeps allocating memory - 16 MiB every half second -
+# with a 128Mi limit. The kernel kills it (OOMKilled, exit code 137) after a
+# few seconds; OpenShift restarts it, it does the same again: CrashLoopBackOff.
+#   oc create -f memory-hog.yaml
+#   oc delete -f memory-hog.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: demo-resources
+  name: memory-hog
+  labels: {app: memory-hog}
+spec:
+  containers:
+    - name: hog
+      image: image-registry.openshift-image-registry.svc:5000/openshift/python:3.12-minimal-ubi9
+      command:
+        - python3
+        - -u
+        - -c
+        - |
+          import time
+          hog = []
+          while True:
+              hog.append(bytearray(16 * 1024 * 1024))
+              print(f"holding {len(hog) * 16} MiB", flush=True)
+              time.sleep(0.5)
+      resources:
+        requests: {cpu: 10m, memory: 64Mi}
+        limits: {memory: 128Mi}

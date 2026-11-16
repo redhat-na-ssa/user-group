@@ -1,0 +1,15 @@
+# Part 4: a pod with no resources section at all. With the LimitRange in
+# place it gets the project's defaults; without it, the quota would refuse
+# it ("must specify requests.cpu ...").
+#   oc create -f no-requests-pod.yaml
+#   oc get pod no-requests -o jsonpath='{.spec.containers[0].resources}'
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: demo-resources
+  name: no-requests
+spec:
+  containers:
+    - name: sleeper
+      image: image-registry.openshift-image-registry.svc:5000/openshift/python:3.12-minimal-ubi9
+      command: [sleep, infinity]

@@ -30,7 +30,14 @@
           - manifests/guestbook-eventlistener.yaml
       - name: demo3-resources
         title: Resource Management
-        files: []   # manifests to come - see demo3-resources/DEMO-SCRIPT.md
+        files:
+          - manifests/guestbook-resources.patch.yaml
+          - manifests/memory-hog.yaml
+          - manifests/project-limits.yaml
+          - manifests/project-quota.yaml
+          - manifests/no-requests-pod.yaml
+          - manifests/big-claim.yaml
+          - manifests/guestbook-hpa.yaml
       - name: demo4-storage
         title: OpenShift Storage
         files:

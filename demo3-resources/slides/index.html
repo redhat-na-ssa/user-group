@@ -514,12 +514,12 @@
       <rect class="dg-box" x="40" y="40" width="720" height="380" rx="14"/>
       <text class="dg-label left" x="65" y="75">POD VIRT-LAUNCHER</text>
       <rect class="dg-panel" x="80" y="110" width="400" height="270" rx="10" style="stroke:#ee0000"/>
-      <text class="dg-title left" x="100" y="150">VM: 2 vCPU, 4 GiB</text>
+      <text class="dg-title left" x="100" y="150">VM: 2 vCPU, 2 GiB</text>
       <use href="#i-node" x="210" y="190" width="140" height="140"/>
       <text class="dg-mono" x="510" y="170">cpu request:</text>
       <text class="dg-mono" x="510" y="195">  200m (1/10 per vCPU)</text>
       <text class="dg-mono" x="510" y="245">memory request:</text>
-      <text class="dg-mono" x="510" y="270">  4Gi + overhead</text>
+      <text class="dg-mono" x="510" y="270">  2Gi + overhead</text>
       <text class="dg-small" x="400" y="480">same scheduler, same quotas, same dashboards</text>
     </svg>
   </div>
@@ -534,8 +534,9 @@
     idle most of the time (the ratio is a cluster setting). Memory is not
     overcommitted by default: the pod requests the guest's memory plus an
     overhead for the virtualization layer. Higher density through memory
-    overcommit exists, but it's an opt-in. Check the numbers against the
-    release in use before quoting them.
+    overcommit exists, but it's an opt-in. Measured on this cluster: a 2
+    vCPU, 2 GiB VM's pod requests 200m CPU and 2324Mi memory (2 GiB plus
+    about 276Mi overhead).
   </aside>
 </section>
 </section>
@@ -660,8 +661,8 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
     <p class="subheading">Reserve what it really uses - cap the memory</p>
     <div class="steps">
       <ol>
-        <li>Deployment → <b>Actions → Edit resource limits</b></li>
-        <li>Requests from what Part 1 showed, a memory limit, no CPU limit</li>
+        <li>The console form: one value per resource - not what we want</li>
+        <li>As code: requests from Part 1, a memory limit, no CPU limit</li>
         <li>New pods: QoS <b>Burstable</b></li>
         <li>Ask for far too much CPU: the new pod is <b>Pending</b></li>
         <li>Roll back</li>
@@ -674,25 +675,26 @@ oc get pods -o custom-columns=\
 NAME:.metadata.name,QOS:.status.qosClass
 oc set resources deployment/guestbook \
   --requests=cpu=100
-oc get events \
+oc get events --sort-by=.eventTime \
   --field-selector reason=FailedScheduling
 oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. As user3. Topology → guestbook → the Deployment's page → Actions →
-      Edit resource limits: CPU request 50m, memory request 320Mi, memory
-      limit 512Mi, no CPU limit (the values demo 1 uses - check them against
-      what Part 1 measured). Save; a rollout. "Requests from measurements,
-      not guesses. A memory ceiling, because memory can't be taken back. No
-      CPU ceiling - Part 3 shows why."
-      Now as code, to make the point that the form isn't how real changes
-      are made: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
-      (same values; nothing changes - "the file is what goes into Git").
-      New pods: QoS Burstable.
+As user3. Topology → guestbook → the Deployment's page → Actions →
+      Edit resource limits: show the form - it takes one value per resource,
+      so it can't express "reserve 50m, no CPU ceiling". Cancel. "The form is
+      for looking; the real change is a file."
+      In the terminal: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
+      - CPU request 50m, memory request 320Mi, memory limit 512Mi, no CPU
+      limit. Measured in rehearsal: about 2m CPU and 290Mi per pod idle. "Requests
+      from measurements, not guesses. A memory ceiling, because memory can't
+      be taken back. No CPU ceiling - Part 3 shows why." Topology: a rollout;
+      new pods: QoS Burstable (pod details, or the custom-columns command).
       Ask for too much: oc set resources deployment/guestbook --requests=cpu=100
-      One new pod stays Pending: oc get events --field-selector reason=FailedScheduling
-      → "0/6 nodes are available: ... Insufficient cpu". The old pods keep
+      One new pod stays Pending: oc get events --sort-by=.eventTime --field-selector reason=FailedScheduling | tail -1
+      → "0/6 nodes are available: ... 6 Insufficient cpu" (the console:
+      the pod's Events tab). The old pods keep
       serving - a rolling update never removes the old before the new is
       ready. "The scheduler doesn't care that the node is idle - it counts
       reservations." Undo: oc rollout undo deployment/guestbook.
@@ -743,17 +745,20 @@ oc rollout undo deployment/guestbook</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. As user3. oc create -f memory-hog.yaml - a small pod that
+As user3. oc create -f memory-hog.yaml - a small pod that
       allocates memory in a loop, with a 128Mi limit. oc get pod memory-hog -w:
       Running → OOMKilled → CrashLoopBackOff. Console: pod → Details: Last
       State Terminated, reason OOMKilled, exit code 137. "The kernel killed
       it - no warning, no slowdown. That's memory." oc delete -f memory-hog.yaml.
       CPU: oc set resources deployment/guestbook --limits=cpu=100m. On the
       laptop: ab -k -c 10 -t 60 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
-      (keep -c at 10, as in demo 1). Pod → Metrics: CPU flat at the limit
-      line. As peter, Observe → Metrics:
-      rate(container_cpu_cfs_throttled_periods_total{namespace="demo-resources"}[1m])
-      - the throttling. "Nothing crashed - it just got slower. That's CPU."
+      (keep -c at 10, as in demo 1). Rehearsal numbers: without a limit about
+      250 requests/s at 40 ms; with 100m about 6/s at 1.6 s, and a few
+      requests time out at the router. (ab's "Failed requests: Length" isn't
+      an error - every page names its pod, so lengths differ.) Pod → Metrics,
+      or oc adm top pods: CPU flat at 100m. As peter, Observe → Metrics, the
+      share of CPU periods throttled (about 0.95 under load; query in cheat 3).
+      "Nothing crashed - it just got slower. That's CPU."
       oc rollout undo deployment/guestbook. Talking point: with a CPU limit,
       an idle node still can't help a busy pod; with only a request, the
       pod is guaranteed its share and may use spare cycles. Memory: request
@@ -807,18 +812,22 @@ oc create -f big-claim.yaml</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. As peter: oc create -f project-limits.yaml (default request and
-      limit per container, a maximum) and oc create -f project-quota.yaml
-      (requests.cpu, requests.memory, limits.memory, pods, requests.storage).
+As peter: oc create -f project-limits.yaml (default request and
+      memory limit per container, a memory maximum) and oc create -f project-quota.yaml
+      (pods, requests.cpu, requests.memory, limits.memory, requests.storage,
+      claims). user3 can't create these - edit doesn't include them.
       Administration → ResourceQuotas → demo-resources: bars for used vs
       hard. "This is the department budget."
       As user3: oc scale deployment/guestbook --replicas=10. Topology shows
-      fewer than 10 pods. oc get events --field-selector reason=FailedCreate
-      → "exceeded quota: ... requested: requests.memory=320Mi, used: ...,
-      limited: ...". Nothing already running is touched. Scale back to 2.
+      7 guestbook pods. oc get events --sort-by=.eventTime --field-selector reason=FailedCreate | tail -1
+      → "exceeded quota: project-quota, requested: pods=1, used: pods=8,
+      limited: pods=8". Nothing already running is touched. Scale back to 2,
+      and wait until oc get pods shows 3 - pods still terminating count
+      against the quota, so creating the next pod too early is refused.
       oc create -f no-requests-pod.yaml - a pod with no resources section;
       oc get pod no-requests -o jsonpath='{.spec.containers[0].resources}'
-      shows the LimitRange's defaults filled in. Without the LimitRange, the
+      shows the LimitRange's defaults filled in (cpu 50m, memory 256Mi,
+      limit 512Mi), and its kubernetes.io/limit-ranger annotation says so. Without the LimitRange, the
       quota would have rejected it ("must specify requests.cpu...").
       Storage is budgeted too: oc create -f big-claim.yaml (20Gi) →
       "exceeded quota: requests.storage". Quotas can also be per storage
@@ -913,12 +922,13 @@ oc get hpa guestbook -w</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT. HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
+HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
       the CPU request (the same file as demo 1). On the laptop:
       ab -k -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
       oc get hpa guestbook -w: TARGETS climbs, REPLICAS goes up; Topology
-      shows new pods; the page shows different pod names. After the load,
-      down to 2 within a minute or two. "Capacity reserved only while it's
+      shows new pods; the page shows different pod names. Rehearsal: 6 pods
+      within 20 seconds (each pod runs at many times its 50m request), back
+      to 2 about 80 seconds after the load stops. "Capacity reserved only while it's
       needed - and six small pods survive a node failure better than one
       big one."
       Mention only, no demo: the VerticalPodAutoscaler (an optional operator)
@@ -958,27 +968,33 @@ DRAFT. HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
     <p class="subheading">A VM's CPU and memory - as the scheduler sees them</p>
     <div class="steps">
       <ol>
-        <li>A VM: 2 vCPU, 4 GiB</li>
+        <li>Start a VM: 2 vCPU, 2 GiB</li>
         <li>Its <b>virt-launcher</b> pod: the requests behind it</li>
         <li>CPU overcommitted by default, memory not</li>
         <li>The project's quota counts the VM too</li>
       </ol>
       <div>
         <p class="cli-label">The same, as code</p>
-<pre><code class="language-bash">oc get vm,vmi
+<pre><code class="language-bash">virtctl start small-vm
+oc get vm,vmi
 oc get pod -l kubevirt.io=virt-launcher \
   -o jsonpath='{.items[0].spec.containers[0].resources}'
 oc describe quota</code></pre>
       </div>
     </div>
     <aside class="notes">
-DRAFT - depends on a VM being available (see DEMO-SCRIPT.md "Still to do").
-      oc get vm,vmi: the VM, 2 vCPU and 4 GiB. Its pod: oc get pod -l
-      kubevirt.io=virt-launcher -o jsonpath='{.items[0].spec.containers[0].resources}'
-      - CPU request a tenth per vCPU (200m), memory request the guest's 4Gi
-      plus overhead. "The scheduler sees a pod - the same rules as every
-      other workload." oc describe quota: the VM's requests count against
-      the project's budget.
+As peter. Setup created small-vm stopped (it holds nothing until it
+      runs). Virtualization → VirtualMachines → small-vm → Start (or
+      virtctl start small-vm); it boots in under a minute. oc get vm,vmi.
+      Its pod: oc get pod -l kubevirt.io=virt-launcher -o jsonpath='{.items[0].spec.containers[0].resources}'
+      - CPU request a tenth per vCPU (200m), memory request the guest's 2Gi
+      plus overhead (2324Mi). And a memory limit of 4648Mi nobody wrote:
+      because the project's quota has limits.memory, OpenShift
+      Virtualization sets one itself (twice the request), or the quota
+      would refuse the pod. "The scheduler sees a pod - the same rules as
+      every other workload." Administration → ResourceQuotas: the VM counts
+      against the budget (oc describe quota shows the memory in bytes - the
+      console reads better). Stop the VM afterwards: virtctl stop small-vm.
       The cluster-wide knobs (admin, look only): the HyperConverged
       resource's CPU allocation ratio, and the opt-in memory overcommit for
       higher density.
@@ -987,9 +1003,9 @@ DRAFT - depends on a VM being available (see DEMO-SCRIPT.md "Still to do").
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>A VM and the pod that runs it</h3>
-    <div class="shot" data-src="images/demo3-vm-launcher.webp" data-caption="virt-launcher pod: CPU and memory requests for a 2 vCPU, 4 GiB VM"></div>
+    <div class="shot" data-src="images/demo3-vm-launcher.webp" data-caption="virt-launcher pod: CPU and memory requests for a 2 vCPU, 2 GiB VM"></div>
     <aside class="notes">
-      The pod that runs a 2 vCPU, 4 GiB virtual machine. Its CPU request is
+      The pod that runs a 2 vCPU, 2 GiB virtual machine. Its CPU request is
       a fraction of a core per vCPU (CPU is overcommitted by default); its
       memory request is the guest's memory plus overhead. Quotas and the
       scheduler treat it like any other pod.

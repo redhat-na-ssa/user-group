@@ -1,0 +1,121 @@
+# Demo 3 - Resource Management: is everything ready to present? Changes
+# nothing.
+#
+#   .venv/bin/ansible-playbook demo3-resources/verify.yml
+#
+# Ends with "All good - ready to present Demo 3", or the list of problems.
+- name: Demo 3 - verify
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    - name: Read the cluster state
+      kubernetes.core.k8s_info:
+        api_version: "{{ item.api }}"
+        kind: "{{ item.kind }}"
+        namespace: "{{ (item.ns | default(ns)) or omit }}"
+        name: "{{ item.name | default(omit) }}"
+      loop:
+        - {key: project, api: v1, kind: Namespace, name: "{{ ns }}", ns: ""}
+        - {key: bindings, api: rbac.authorization.k8s.io/v1, kind: RoleBinding}
+        - {key: template, api: template.openshift.io/v1, kind: Template, name: postgresql-demo}
+        - {key: deployments, api: apps/v1, kind: Deployment}
+        - {key: pods, api: v1, kind: Pod}
+        - {key: pvcs, api: v1, kind: PersistentVolumeClaim}
+        - {key: route, api: route.openshift.io/v1, kind: Route, name: guestbook}
+        - {key: quotas, api: v1, kind: ResourceQuota}
+        - {key: limitranges, api: v1, kind: LimitRange}
+        - {key: hpas, api: autoscaling/v2, kind: HorizontalPodAutoscaler}
+        - {key: vm, api: kubevirt.io/v1, kind: VirtualMachine, name: small-vm}
+        - {key: vmis, api: kubevirt.io/v1, kind: VirtualMachineInstance}
+        - {key: metrics, api: metrics.k8s.io/v1beta1, kind: PodMetrics}
+        - {key: traffic, api: batch/v1, kind: CronJob, ns: "{{ traffic_ns }}", name: guestbook-traffic}
+        - {key: traffic_jobs, api: batch/v1, kind: Job, ns: "{{ traffic_ns }}"}
+        - {key: costmgmt, api: costmanagement-metrics-cfg.openshift.io/v1beta1, kind: CostManagementMetricsConfig, ns: costmanagement-metrics-operator}
+      loop_control:
+        label: "{{ item.key }}"
+      register: reads
+
+    - name: Index the results
+      ansible.builtin.set_fact:
+        st: "{{ dict(reads.results | map(attribute='item.key') | zip(reads.results | map(attribute='resources'))) }}"
+
+    - name: Guestbook answers at its Route
+      ansible.builtin.uri:
+        url: "https://{{ st.route[0].spec.host }}/readyz"
+        validate_certs: false
+      register: page
+      failed_when: false
+      when: st.route | length > 0
+
+    - name: Load generator (ab) on this laptop
+      ansible.builtin.command: which ab
+      register: ab
+      changed_when: false
+      failed_when: false
+
+    - name: Checks
+      vars:
+        gb: "{{ st.deployments | selectattr('metadata.name', 'equalto', 'guestbook') | list }}"
+        pg: "{{ st.deployments | selectattr('metadata.name', 'equalto', 'postgresql') | list }}"
+        gb_pods: "{{ st.pods | selectattr('metadata.labels.app', 'defined') | selectattr('metadata.labels.app', 'equalto', 'guestbook')
+                     | selectattr('status.phase', 'equalto', 'Running')
+                     | rejectattr('metadata.deletionTimestamp', 'defined') | list }}"
+        roles: "{{ st.bindings | map(attribute='metadata.name') | list }}"
+      ansible.builtin.set_fact:
+        checks:
+          - name: "Project {{ ns }}: {{ admin_user }} admin, {{ edit_user }} edit, {{ view_user }} view"
+            ok: >-
+              {{ st.project | length == 1 and
+                 ['admin-' ~ admin_user, 'edit-' ~ edit_user, 'view-' ~ view_user] | difference(roles) | length == 0 }}
+          - name: "PostgreSQL running, PVC postgresql Bound"
+            ok: >-
+              {{ pg | length == 1 and (pg[0].status.availableReplicas | default(0)) == 1
+                 and st.pvcs | selectattr('metadata.name', 'equalto', 'postgresql')
+                     | selectattr('status.phase', 'equalto', 'Bound') | list | length == 1 }}
+          - name: "Guestbook: 2 pods, no requests or limits (BestEffort)"
+            ok: >-
+              {{ gb | length == 1 and gb[0].spec.replicas == 2
+                 and (gb[0].status.availableReplicas | default(0)) == 2
+                 and (gb[0].spec.template.spec.containers[0].resources | default({})) == {}
+                 and gb_pods | length == 2
+                 and gb_pods | map(attribute='status.qosClass') | unique | list == ['BestEffort'] }}
+          - name: "Guestbook answers at its Route"
+            ok: "{{ (page.status | default(0)) == 200 }}"
+          - name: "Nothing left from a previous run (quota, limit range, HPA, memory-hog, no-requests, big-claim)"
+            ok: >-
+              {{ st.quotas | length == 0 and st.limitranges | length == 0 and st.hpas | length == 0
+                 and st.pods | selectattr('metadata.name', 'in', ['memory-hog', 'no-requests']) | list | length == 0
+                 and st.pvcs | map(attribute='metadata.name') | list == ['postgresql'] }}
+          - name: "VM small-vm present and stopped (Part 7)"
+            ok: "{{ st.vm | length == 1 and st.vm[0].spec.runStrategy == 'Halted' and st.vmis | length == 0 }}"
+          - name: "Pod metrics available (oc adm top, dashboards)"
+            ok: "{{ st.metrics | length > 0 }}"
+          - name: "Cost Management: source registered, uploading, {{ ns }} labelled for optimizations (Part 6)"
+            ok: >-
+              {{ st.costmgmt | length == 1
+                 and (st.costmgmt[0].status.source.source_defined | default(false))
+                 and (st.costmgmt[0].status.upload.last_successful_upload_time | default(none)) is not none
+                 and (st.project[0].metadata.labels | default({})).get('cost_management_optimizations') == 'true' }}
+          - name: "Background traffic paused, none running (traffic.yml -e traffic=off; turn it on after the session)"
+            ok: >-
+              {{ st.traffic | length == 1 and st.traffic[0].spec.suspend | default(false)
+                 and st.traffic_jobs | rejectattr('status.completionTime', 'defined')
+                     | rejectattr('status.failed', 'defined') | list | length == 0 }}
+          - name: "ab installed on this laptop (Parts 3 and 6)"
+            ok: "{{ ab.rc == 0 }}"
+
+    - name: Results
+      ansible.builtin.debug:
+        msg: "{{ checks | map(attribute='ok') | map('ternary', 'ok     ', 'FAILED ') | zip(checks | map(attribute='name')) | map('join') | list }}"
+
+    - name: Verdict
+      ansible.builtin.assert:
+        that: checks | rejectattr('ok') | list | length == 0
+        fail_msg: "Not ready - fix the FAILED lines above (reset.yml clears a previous run)"
+        success_msg: "All good - ready to present Demo 3 (run common/workspace.sh demo3-resources shortly before)"

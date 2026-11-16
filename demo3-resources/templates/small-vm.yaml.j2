@@ -1,0 +1,29 @@
+# Setup only: the Part 7 virtual machine - 2 vCPU, 2 GiB, Fedora from a
+# container disk (no PVC, so it adds nothing to the storage quota). Created
+# stopped: it holds no resources until the presenter starts it in Part 7.
+# reset.yml stops it again.
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: small-vm
+  labels:
+    app.kubernetes.io/part-of: guestbook
+  annotations:
+    description: Part 7 - the same rules for VMs
+spec:
+  runStrategy: Halted
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: small-vm
+    spec:
+      domain:
+        cpu: {cores: 2}
+        memory: {guest: 2Gi}
+        devices:
+          disks:
+            - {name: root, disk: {bus: virtio}}
+      volumes:
+        - name: root
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest

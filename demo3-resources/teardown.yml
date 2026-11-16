@@ -1,0 +1,27 @@
+# Demo 3 - Resource Management: remove everything the demo created - the
+# project, and with it the guestbook, its image, PostgreSQL and its volume,
+# and the VM - and the background traffic project. Nothing outside the two
+# projects is changed.
+#
+#   .venv/bin/ansible-playbook demo3-resources/teardown.yml
+- name: Demo 3 - teardown
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    - name: Remove the projects
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ item }}"
+        wait: true
+        wait_timeout: 600
+      loop:
+        - "{{ traffic_ns }}"
+        - "{{ ns }}"

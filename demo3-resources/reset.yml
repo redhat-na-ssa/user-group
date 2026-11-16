@@ -1,0 +1,113 @@
+# Demo 3 - Resource Management: back to the start after a rehearsal or a run,
+# in place (keeps the image, the database and its PVC - no rebuild):
+# removes what the demo adds (HPA, quota, limit range, memory-hog, no-requests,
+# big-claim), stops the VM and puts the guestbook back to 2 pods with no
+# requests or limits.
+#
+#   .venv/bin/ansible-playbook demo3-resources/reset.yml
+#
+# For a clean slate (new project, new build) use teardown.yml, then setup.yml.
+- name: Demo 3 - reset
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    # Quota first: while it exists, pods leaving and arriving below are counted
+    - name: Remove what the demo created
+      kubernetes.core.k8s:
+        state: absent
+        api_version: "{{ item.api }}"
+        kind: "{{ item.kind }}"
+        namespace: "{{ ns }}"
+        name: "{{ item.name }}"
+      loop:
+        - {api: v1, kind: ResourceQuota, name: project-quota}
+        - {api: v1, kind: LimitRange, name: project-limits}
+        - {api: autoscaling/v2, kind: HorizontalPodAutoscaler, name: guestbook}
+        - {api: v1, kind: Pod, name: memory-hog}
+        - {api: v1, kind: Pod, name: no-requests}
+        - {api: v1, kind: PersistentVolumeClaim, name: big-claim}
+      loop_control:
+        label: "{{ item.kind }}/{{ item.name }}"
+      register: removed
+
+    # The API server's LimitRange admission caches the project's LimitRanges
+    # (up to 30s): a pod created right after the delete still gets the
+    # defaults, i.e. a "BestEffort" guestbook pod that is Burstable
+    - name: Let the API server forget the LimitRange
+      ansible.builtin.pause:
+        seconds: 35
+      when: removed.results | selectattr('item.kind', 'equalto', 'LimitRange') | selectattr('changed') | list | length > 0
+
+    - name: VM small-vm - stop
+      kubernetes.core.k8s:
+        state: patched
+        api_version: kubevirt.io/v1
+        kind: VirtualMachine
+        namespace: "{{ ns }}"
+        name: small-vm
+        definition:
+          spec:
+            runStrategy: Halted
+
+    - name: Guestbook image
+      kubernetes.core.k8s_info:
+        api_version: image.openshift.io/v1
+        kind: ImageStreamTag
+        namespace: "{{ ns }}"
+        name: guestbook:latest
+      register: istag
+      failed_when: istag.resources | length == 0
+
+    # Replace, not apply: drops the resources section and any other change
+    # made during the demo (a rollout only if the template really changed).
+    # Only the Deployment: the demo doesn't touch the Service and Route (and a
+    # Route can't be replaced without its resourceVersion).
+    - name: Guestbook - back to 2 pods, no requests or limits
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        definition: >-
+          {{ lookup('template', playbook_dir + '/templates/guestbook.yaml.j2') | from_yaml_all
+             | selectattr('kind', 'equalto', 'Deployment') | first }}
+        force: true
+      vars:
+        guestbook_image: "{{ istag.resources[0].image.dockerImageReference }}"
+
+    - name: Wait for the rollouts
+      ansible.builtin.include_tasks: tasks/wait-rollout.yml
+      loop: [postgresql, guestbook]
+      loop_control:
+        loop_var: deployment
+
+    # The rollout is done before the old pods are gone: wait for those too, so
+    # the project looks like the start of the demo (and verify agrees)
+    - name: Guestbook - wait for the old pods to go
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ ns }}"
+        label_selectors: [app=guestbook]
+      register: gb_pods
+      until: gb_pods.resources | length == 2
+      retries: 36
+      delay: 5
+
+    - name: VM small-vm - wait until stopped
+      kubernetes.core.k8s_info:
+        api_version: kubevirt.io/v1
+        kind: VirtualMachineInstance
+        namespace: "{{ ns }}"
+        name: small-vm
+      register: vmi
+      until: vmi.resources | length == 0
+      retries: 36
+      delay: 5
+
+    - name: Done
+      ansible.builtin.debug:
+        msg: "Reset to the start of the demo. Next: verify.yml"

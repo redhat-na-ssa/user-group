@@ -1,0 +1,79 @@
+# Setup only: the guestbook as many applications arrive - working, 2 replicas,
+# and NO requests or limits (QoS BestEffort). Part 2 sizes it; reset.yml puts
+# this version back (replace, so added resources are removed again).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/component: guestbook
+    app.kubernetes.io/instance: guestbook
+    app.kubernetes.io/name: guestbook
+    app.kubernetes.io/part-of: guestbook
+    app.openshift.io/runtime: python
+  annotations:
+    app.openshift.io/vcs-uri: "{{ gitea_url }}/{{ gitea_org }}/{{ guestbook_repo }}.git"
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"postgresql"}]'
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"guestbook:latest"},
+        "fieldPath":"spec.template.spec.containers[?(@.name==\"guestbook\")].image","paused":false}]
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: guestbook
+  template:
+    metadata:
+      labels:
+        app: guestbook
+        deployment: guestbook
+    spec:
+      containers:
+        - name: guestbook
+          image: "{{ guestbook_image }}"
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef: {name: postgresql, key: database-user}
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: postgresql, key: database-password}
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef: {name: postgresql, key: database-name}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/part-of: guestbook
+spec:
+  selector:
+    app: guestbook
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+    app.kubernetes.io/part-of: guestbook
+spec:
+  to:
+    kind: Service
+    name: guestbook
+  port:
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

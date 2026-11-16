@@ -1,0 +1,17 @@
+# Like `oc rollout status deployment/<deployment>`: every replica runs the
+# current template and is available
+- name: Wait for deployment/{{ deployment }}
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ ns }}"
+    name: "{{ deployment }}"
+  register: rollout
+  until: >-
+    rollout.resources | length > 0 and
+    (rollout.resources[0].status.observedGeneration | default(0)) >= rollout.resources[0].metadata.generation and
+    (rollout.resources[0].status.updatedReplicas | default(0)) == rollout.resources[0].spec.replicas and
+    (rollout.resources[0].status.availableReplicas | default(0)) == rollout.resources[0].spec.replicas and
+    (rollout.resources[0].status.replicas | default(0)) == rollout.resources[0].spec.replicas
+  retries: 60
+  delay: 5

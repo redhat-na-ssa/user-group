@@ -1,0 +1,44 @@
+# Demo 3 - Resource Management: pause or resume the background traffic that
+# feeds Cost Management (CronJob guestbook-traffic, see templates/traffic.yaml.j2).
+# Pause it before a session - a burst would show up in Parts 1 and 6 - and
+# resume it afterwards. verify.yml checks that it's paused.
+#
+#   .venv/bin/ansible-playbook demo3-resources/traffic.yml -e traffic=off
+#   .venv/bin/ansible-playbook demo3-resources/traffic.yml -e traffic=on
+- name: Demo 3 - background traffic
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../common/vars.yml
+  tasks:
+    - name: Settings
+      ansible.builtin.include_tasks: tasks/settings.yml
+
+    - name: Check the argument
+      ansible.builtin.assert:
+        that: traffic is defined and traffic | string in ['on', 'off', 'True', 'False']
+        fail_msg: "Use -e traffic=on or -e traffic=off"
+        quiet: true
+
+    - name: Traffic {{ traffic }}
+      kubernetes.core.k8s:
+        state: patched
+        api_version: batch/v1
+        kind: CronJob
+        namespace: "{{ traffic_ns }}"
+        name: guestbook-traffic
+        definition:
+          spec:
+            suspend: "{{ traffic | string in ['off', 'False'] }}"
+
+    # A job already running keeps going after a suspend: stop it too
+    - name: Stop a run in progress
+      kubernetes.core.k8s:
+        state: absent
+        api_version: batch/v1
+        kind: Job
+        namespace: "{{ traffic_ns }}"
+        label_selectors: [app=guestbook-traffic]
+        delete_options: {propagationPolicy: Background}
+      when: traffic | string in ['off', 'False']

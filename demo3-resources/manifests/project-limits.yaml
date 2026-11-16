@@ -1,0 +1,20 @@
+# Part 4 (admin): defaults for every container in the project that doesn't
+# set its own - a request, and a memory limit. No CPU limit by default, the
+# same rule as Part 2. Also a per-container memory maximum (room for the
+# Part 7 VM's pod, ~4.5Gi limit).
+#   oc create -f project-limits.yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  namespace: demo-resources
+  name: project-limits
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 50m
+        memory: 256Mi
+      default:
+        memory: 512Mi
+      max:
+        memory: 6Gi

@@ -1,0 +1,18 @@
+# Part 4 (admin): the project's budget. Sized for the demo: the guestbook at
+# up to 6 pods (Part 6), PostgreSQL and the Part 7 VM fit - 10 guestbook pods
+# don't (pods: 8).
+#   oc create -f project-quota.yaml
+#   oc describe quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  namespace: demo-resources
+  name: project-quota
+spec:
+  hard:
+    pods: "8"
+    requests.cpu: "1"
+    requests.memory: 6Gi
+    limits.memory: 10Gi
+    requests.storage: 10Gi
+    persistentvolumeclaims: "5"
