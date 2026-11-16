@@ -47,9 +47,10 @@ oc describe $(oc get nodes -l node-role.kubernetes.io/worker -o name | head -1) 
 #   platform pods and VMs without a quota set requests only)
 
 # ---------------------------------------------------------------- 2 - Requests and limits, the right way (user3)
-# Console: Deployment guestbook -> Actions -> Edit resource limits (look only:
-#   one value per resource - not how we want it), Cancel
-oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml   # cpu 50m, memory 320Mi/512Mi
+# Console: Deployment guestbook -> Actions -> Edit resource limits
+#   CPU request 50m, CPU limit 0 (none), memory request 320Mi, limit 512Mi
+oc get deployment guestbook -o jsonpath='{.spec.template.spec.containers[0].resources}'; echo   # no cpu limit?
+oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml   # the same, as code
 oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass   # Burstable
 oc set resources deployment/guestbook --requests=cpu=100   # far too much
 oc get pods                                        # one new pod Pending

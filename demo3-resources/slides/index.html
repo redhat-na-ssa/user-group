@@ -684,8 +684,8 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
     <p class="subheading">Reserve what it really uses - cap the memory</p>
     <div class="steps">
       <ol>
-        <li>The console form: one value per resource - not what we want</li>
-        <li>As code: requests from Part 1, a memory limit, no CPU limit</li>
+        <li>Deployment → <b>Actions → Edit resource limits</b></li>
+        <li>Requests from Part 1, a memory limit, no CPU limit</li>
         <li>New pods: QoS <b>Burstable</b></li>
         <li>Ask for far too much CPU: the new pod is <b>Pending</b></li>
         <li>Roll back</li>
@@ -719,15 +719,15 @@ oc rollout undo deployment/guestbook</code></pre>
     </div>
     <aside class="notes">
 As user3. Topology → guestbook → the Deployment's page → Actions →
-      Edit resource limits: show the form - it takes one value per resource,
-      so it can't express "reserve 50m, no CPU ceiling". Cancel. "The form is
-      for looking; the real change is a file."
-      In the terminal: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
-      - CPU request 50m, memory request 320Mi, memory limit 512Mi, no CPU
-      limit. Measured in rehearsal: about 2m CPU and 290Mi per pod idle. "Requests
+      Edit resource limits: CPU Request 50 millicores, CPU Limit left at 0
+      (no ceiling), Memory Request 320 Mi, Memory Limit 512 Mi. Save.
+      Measured in rehearsal: about 2m CPU and 290Mi per pod idle. "Requests
       from measurements, not guesses. A memory ceiling, because memory can't
       be taken back. No CPU ceiling - Part 3 shows why." Topology: a rollout;
       new pods: QoS Burstable (pod details, or the custom-columns command).
+      Now as code, to make the point that the form isn't how real changes
+      are made: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
+      - the same values, so nothing changes: "the file is what goes into Git".
       Ask for too much: oc set resources deployment/guestbook --requests=cpu=100
       One new pod stays Pending: oc get events --sort-by=.eventTime --field-selector reason=FailedScheduling | tail -1
       → "0/6 nodes are available: ... 6 Insufficient cpu" (the console:
