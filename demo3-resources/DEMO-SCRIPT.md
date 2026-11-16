@@ -62,7 +62,7 @@ The quota (`project-quota.yaml`) is sized so the HPA's 6 guestbook pods + Postgr
 | Part | Time | Point to make | Where |
 |---|---|---|---|
 | 1 · Used vs reserved | 3 min | Without requests a pod is BestEffort and the scheduler knows nothing about it. Usage and reservations are different numbers. | Pod details (QoS), Observe → Dashboards → *Compute Resources / Namespace (Pods)*, Compute → Nodes, `oc describe node` |
-| 2 · Requests and limits, the right way | 5 min | Requests from measurements, a memory limit, no CPU limit. Set it in the console form (separate request and limit fields; CPU limit left at 0), then the same as a patch file. A request that fits nowhere stays Pending, even on idle nodes. | Actions → Edit resource limits; `oc patch`; FailedScheduling event; `oc rollout undo` |
+| 2 · Requests and limits, the right way | 5 min | Requests from measurements, a memory limit, no CPU limit. The console form refuses a CPU request without a CPU limit (Kubernetes allows it): show the error, Cancel, and apply the patch file. A request that fits nowhere stays Pending, even on idle nodes. | Actions → Edit resource limits; `oc patch`; FailedScheduling event; `oc rollout undo` |
 | 3 · Hitting the ceiling | 4 min | Memory over the limit: OOMKilled (137). CPU over the limit: throttled, not killed. That's why CPU overcommits safely and memory doesn't. | `memory-hog` pod; CPU limit + `ab` load; throttling metric |
 | 4 · A budget for each project | 5 min | ResourceQuota caps the project (CPU, memory, pods, storage); LimitRange fills in defaults. Over-budget pods are refused at creation; running ones are untouched. | Administration → ResourceQuotas; scale to 10; `no-requests` pod; `big-claim` |
 | 5 · How much storage is left? | 3 min | Two levels of "free": inside the claim, and in the storage system behind it (thin provisioning). Quota is the third view. Details: the storage session. | PVC page, `df`, `kubelet_volume_stats_available_bytes`, Data Foundation overview |
@@ -84,7 +84,6 @@ The speaker notes on each demo slide have the clicks and commands (marked DRAFT 
 
 - [ ] Presentation date on the title slide.
 - [ ] Rehearse the console side (Parts 1 and 5, the bonus are still DRAFT; check the Part 1 dashboard name on this release).
-- [ ] Part 2: confirm that CPU Limit 0 in Edit resource limits leaves no CPU limit (not `cpu: 0`) - the cheat-sheet's `oc get deployment ... resources` shows it.
 - [X] Cost Management: install the Cost Management Metrics Operator so console.redhat.com has days of data (or seed it) before the session, then take the backup screenshot.
 - [x] Cost Management source registered (integration `homeocpdemo`), first upload 2026-11-16 16:13 UTC. The CostManagementMetricsConfig's `spec.source.name` must match the integration's name: left empty, the operator looks for a source named after the cluster ID and keeps reporting "no source" (and only re-checks every `check_cycle` minutes, default 1440).
 - [ ] Cost Management: wait for the recommendations (from ~2026-11-17), then take the backup screenshot. Setup labels `demo-resources` with `cost_management_optimizations=true` (without it, no optimization data). Recommendations need ~24 h of data after the first upload (every 6 h); verify.yml checks all of it. Don't run teardown.yml in between - a new project starts the data over.

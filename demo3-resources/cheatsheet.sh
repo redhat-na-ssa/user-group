@@ -48,9 +48,10 @@ oc describe $(oc get nodes -l node-role.kubernetes.io/worker -o name | head -1) 
 
 # ---------------------------------------------------------------- 2 - Requests and limits, the right way (user3)
 # Console: Deployment guestbook -> Actions -> Edit resource limits
-#   CPU request 50m, CPU limit 0 (none), memory request 320Mi, limit 512Mi
-oc get deployment guestbook -o jsonpath='{.spec.template.spec.containers[0].resources}'; echo   # no cpu limit?
-oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml   # the same, as code
+#   CPU request 50m, memory request 320Mi, limit 512Mi, CPU limit 0:
+#   refused ("CPU request must be less than or equal to limit") -> Cancel
+oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml   # what the form can't do
+oc get deployment guestbook -o jsonpath='{.spec.template.spec.containers[0].resources}'; echo   # no cpu limit
 oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass   # Burstable
 oc set resources deployment/guestbook --requests=cpu=100   # far too much
 oc get pods                                        # one new pod Pending

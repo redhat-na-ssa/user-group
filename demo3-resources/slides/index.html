@@ -684,8 +684,8 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
     <p class="subheading">Reserve what it really uses - cap the memory</p>
     <div class="steps">
       <ol>
-        <li>Deployment → <b>Actions → Edit resource limits</b></li>
-        <li>Fill in what Part 1 measured: CPU request <b>50m</b>, memory request <b>320Mi</b>, memory limit <b>512Mi</b> - CPU limit stays empty</li>
+        <li>Deployment → <b>Actions → Edit resource limits</b>: CPU request <b>50m</b>, memory request <b>320Mi</b>, memory limit <b>512Mi</b>, no CPU limit</li>
+        <li>The form refuses - it insists on a CPU limit. Kubernetes doesn't: <b>as code</b></li>
         <li>New pods: QoS <b>Burstable</b></li>
         <li>Ask for far too much CPU: the new pod is <b>Pending</b></li>
         <li>Roll back</li>
@@ -719,15 +719,18 @@ oc rollout undo deployment/guestbook</code></pre>
     </div>
     <aside class="notes">
 As user3. Topology → guestbook → the Deployment's page → Actions →
-      Edit resource limits: CPU Request 50 millicores, CPU Limit left at 0
-      (no ceiling), Memory Request 320 Mi, Memory Limit 512 Mi. Save.
-      Measured in rehearsal: about 2m CPU and 290Mi per pod idle. "Requests
-      from measurements, not guesses. A memory ceiling, because memory can't
-      be taken back. No CPU ceiling - Part 3 shows why." Topology: a rollout;
-      new pods: QoS Burstable (pod details, or the custom-columns command).
-      Now as code, to make the point that the form isn't how real changes
-      are made: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
-      - the same values, so nothing changes: "the file is what goes into Git".
+      Edit resource limits - all four fields start at 0. Fill in what Part 1
+      measured (about 2m CPU and 290Mi per pod idle): CPU Request 50
+      millicores, Memory Request 320 Mi, Memory Limit 512 Mi, and leave CPU
+      Limit at 0. The form flags it: "CPU request must be less than or equal
+      to limit" - it treats 0 as a ceiling of zero, and emptying the field
+      doesn't help (the 0 comes back on Save). "The form insists on a CPU
+      ceiling. Kubernetes doesn't - and Part 3 shows why we don't want one.
+      A memory ceiling yes, because memory can't be taken back." Cancel.
+      As code: oc patch deployment/guestbook --patch-file=guestbook-resources.patch.yaml
+      - CPU request 50m, memory 320Mi / 512Mi, no CPU limit. "The form is for
+      learning; the file is what goes into Git." Topology: a rollout; new
+      pods: QoS Burstable (pod details, or the custom-columns command).
       Ask for too much: oc set resources deployment/guestbook --requests=cpu=100
       One new pod stays Pending: oc get events --sort-by=.eventTime --field-selector reason=FailedScheduling | tail -1
       → "0/6 nodes are available: ... 6 Insufficient cpu" (the console:
@@ -741,13 +744,15 @@ As user3. Topology → guestbook → the Deployment's page → Actions →
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>Setting requests and limits - and a request that doesn't fit</h3>
     <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo3-requests-form.webp" data-caption="Edit resource limits: CPU and memory requests and limits"></div><figcaption>1 · The form: requests and a memory limit</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-requests-form.webp" data-caption="Edit resource limits: a CPU request with no CPU limit is refused"></div><figcaption>1 · The form insists on a CPU limit</figcaption></figure>
       <figure><div class="shot" data-src="images/demo3-requests-pending.webp" data-caption="A pod Pending: Insufficient cpu"></div><figcaption>2 · Too big: Pending, Insufficient cpu</figcaption></figure>
     </div>
     <aside class="notes">
       Left: the console form behind Actions → Edit resource limits - a
       request (the reservation) and a limit (the ceiling) for CPU and for
-      memory. Right: what happens when a pod asks for more CPU than any node
+      memory. It won't save a CPU request without a CPU limit, although
+      Kubernetes allows it; the same change made as a patch file sets the
+      requests and the memory limit and leaves CPU unlimited. Right: what happens when a pod asks for more CPU than any node
       has left to reserve: it stays Pending, and its events say why. The
       running pods are not affected.
     </aside>
