@@ -74,7 +74,7 @@ oc adm top pods -l app=guestbook                   # CPU flat at 100m
 #   sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="demo-resources",container="guestbook"}[1m])) / sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="demo-resources",container="guestbook"}[1m]))
 oc rollout undo deployment/guestbook
 
-# ---------------------------------------------------------------- 4 - A budget for each project (peter, then user3)
+# ---------------------------------------------------------------- 4 - A quota for each project (peter, then user3)
 oc create -f project-limits.yaml                   # peter: LimitRange (user3 may not)
 oc create -f project-quota.yaml                    # peter: ResourceQuota
 oc describe quota

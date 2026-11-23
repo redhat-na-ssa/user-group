@@ -1,4 +1,4 @@
-# Part 4: a 20Gi volume claim - more than the project's storage budget
+# Part 4: a 20Gi volume claim - more than the project's storage quota
 # (requests.storage: 10Gi). Refused at creation: "exceeded quota".
 #   oc create -f big-claim.yaml
 apiVersion: v1

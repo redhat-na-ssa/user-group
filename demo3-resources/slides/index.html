@@ -115,7 +115,7 @@
     <li>What an application really uses - and what it has set aside</li>
     <li>Reserving the right amount, and setting a ceiling</li>
     <li>What happens when an application hits its ceiling</li>
-    <li>A budget for each team</li>
+    <li>A quota for each team</li>
     <li>How much storage is left</li>
     <li>Sizing for real use: more copies, not bigger ones</li>
     <li>Virtual machines on the same platform</li>
@@ -128,7 +128,7 @@
     use, and a ceiling. We'll push it into that ceiling on purpose to see
     what happens, which is different for processor time and for memory.
 
-    Then the platform team's side: a budget per team, so one project can't
+    Then the platform team's side: a quota per team, so one project can't
     take the whole cluster; a quick look at storage and how to tell how
     much space is left; tools that recommend the right size; and why the
     answer to more load is usually more copies of the application rather
@@ -422,7 +422,7 @@
   <div class="term">
     <div>
       <h2>Quotas &amp; limit ranges</h2>
-      <p class="def">A quota is the project's budget.<br>A limit range sets defaults and bounds per container.</p>
+      <p class="def">A quota caps the whole project.<br>A limit range sets defaults and bounds per container.</p>
       <p class="where">In the demo: <b>Part 4</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="A project with a quota and a limit range">
@@ -442,16 +442,15 @@
       <use href="#i-pod" x="200" y="285" width="100" height="100"/>
       <use href="#i-pod" x="320" y="285" width="100" height="100"/>
       <use href="#i-pod-new" class="grey" x="460" y="285" width="100" height="100"/>
-      <text class="dg-small" x="510" y="410">over budget: rejected</text>
+      <text class="dg-small" x="510" y="410">over quota: rejected</text>
       <text class="dg-small" x="400" y="490">the developer's YAML can't exceed what the platform team allows</text>
     </svg>
   </div>
   <aside class="notes">
     A ResourceQuota caps the total for a project: CPU and memory requests
     and limits, number of pods, number of claims, storage per storage class.
-    Anything that would take the project over its budget is refused when
-    it's created - the existing pods keep running. It's the "department
-    budget" of the platform.
+    Anything that would take the project over its quota is refused when
+    it's created - the existing pods keep running.
 
     A LimitRange works per container: it fills in a default request and
     limit for containers that don't set any, and rejects ones outside a
@@ -587,7 +586,7 @@
     requests and no limits at all.
 
     During the demo we'll look at what it uses, size it, push it into its
-    limits, put the project on a budget, check the database's storage,
+    limits, give the project a quota, check the database's storage,
     let the autoscalers do the sizing, and finish with how the same rules
     apply to a virtual machine.
 
@@ -848,15 +847,15 @@ As user3. oc create -f memory-hog.yaml - a small pod that
 <!-- Part 4 -->
 <section>
   <section>
-    <h3>4 · A budget for each project</h3>
-    <p class="subheading">The platform team sets the budget - the developer works within it</p>
+    <h3>4 · A quota for each project</h3>
+    <p class="subheading">The platform team sets the quota - the developer works within it</p>
     <div class="steps">
       <ol>
         <li>Admin: a <b>LimitRange</b> and a <b>ResourceQuota</b></li>
         <li><b>Administration → ResourceQuotas</b>: used vs hard</li>
         <li>Developer: scale to 10 - only some pods start</li>
         <li>A pod without requests gets the <b>defaults</b></li>
-        <li>A claim bigger than the storage budget: <b>refused</b></li>
+        <li>A claim bigger than the storage quota: <b>refused</b></li>
       </ol>
       <div>
         <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Project demo-resources with a ResourceQuota and LimitRange: pods up to 8, the next one refused">
@@ -895,7 +894,7 @@ As peter: oc create -f project-limits.yaml (default request and
       (pods, requests.cpu, requests.memory, limits.memory, requests.storage,
       claims). user3 can't create these - edit doesn't include them.
       Administration → ResourceQuotas → demo-resources: bars for used vs
-      hard. "This is the department budget."
+      hard.
       As user3: oc scale deployment/guestbook --replicas=10. Topology shows
       7 guestbook pods. oc get events --sort-by=.eventTime --field-selector reason=FailedCreate | tail -1
       → "exceeded quota: project-quota, requested: pods=1, used: pods=8,
@@ -907,14 +906,14 @@ As peter: oc create -f project-limits.yaml (default request and
       shows the LimitRange's defaults filled in (cpu 50m, memory 256Mi,
       limit 512Mi), and its kubernetes.io/limit-ranger annotation says so. Without the LimitRange, the
       quota would have rejected it ("must specify requests.cpu...").
-      Storage is budgeted too: oc create -f big-claim.yaml (20Gi) →
+      Storage counts too: oc create -f big-claim.yaml (20Gi) →
       "exceeded quota: requests.storage". Quotas can also be per storage
       class (gold vs bronze).
       Press DOWN for the backup screenshots.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>The project's budget, and a scale-up that hits it</h3>
+    <span class="backup-tag">Backup</span><h3>The project's quota, and a scale-up that hits it</h3>
     <div class="shot-pair">
       <figure><div class="shot" data-src="images/demo3-quota-usage.webp" data-caption="ResourceQuota details: used vs hard for CPU, memory, pods and storage"></div><figcaption>1 · The quota: used vs hard</figcaption></figure>
       <figure><div class="shot" data-src="images/demo3-quota-exceeded.webp" data-caption="ReplicaSet events: exceeded quota"></div><figcaption>2 · Scaling past it: exceeded quota</figcaption></figure>
@@ -923,7 +922,7 @@ As peter: oc create -f project-limits.yaml (default request and
       Left: the project's ResourceQuota - for each resource, how much is in
       use and the hard limit. Right: the events after scaling the guestbook
       to ten pods - the ReplicaSet could only create the pods that fit in
-      the budget; the rest were refused with "exceeded quota". Running pods
+      the quota; the rest were refused with "exceeded quota". Running pods
       are never stopped by a quota.
     </aside>
   </section>
@@ -1110,7 +1109,7 @@ As peter. Setup created small-vm stopped (it holds nothing until it
       Virtualization sets one itself (twice the request), or the quota
       would refuse the pod. "The scheduler sees a pod - the same rules as
       every other workload." Administration → ResourceQuotas: the VM counts
-      against the budget (oc describe quota shows the memory in bytes - the
+      against the quota (oc describe quota shows the memory in bytes - the
       console reads better). Stop the VM afterwards: virtctl stop small-vm.
       The cluster-wide knobs (admin, look only): the HyperConverged
       resource's CPU allocation ratio, and the opt-in memory overcommit for
@@ -1134,7 +1133,7 @@ As peter. Setup created small-vm stopped (it holds nothing until it
 <section>
   <section>
     <h3>Bonus · New project defaults</h3>
-    <p class="subheading">Every new project starts with a budget - no ticket needed</p>
+    <p class="subheading">Every new project starts with a quota - no ticket needed</p>
     <div class="steps">
       <ol>
         <li>The <b>project request template</b></li>
@@ -1167,7 +1166,7 @@ DRAFT. Only if there's time. When a user creates a project, OpenShift
       that default; add a LimitRange and a ResourceQuota to it, store it in
       openshift-config, and point projects.config.openshift.io/cluster
       (spec.projectRequestTemplate.name) at it. From then on every new
-      project starts with a budget and sane defaults.
+      project starts with a quota and sane defaults.
       Show only - changing it affects every user of the cluster.
     </aside>
   </section>
@@ -1193,7 +1192,7 @@ DRAFT. Only if there's time. When a user creates a project, OpenShift
     gets a limit, CPU usually doesn't. Over a CPU limit a container is
     throttled; over a memory limit it's OOMKilled - which is why CPU is safe
     to overcommit and memory isn't. Quotas and limit ranges are the
-    project's budget and defaults; volumes and the storage behind them both
+    project's ceiling and defaults; volumes and the storage behind them both
     need watching; the HPA adds copies under load, and the VPA and Cost
     Management recommend sizes; and VMs follow the same rules through their
     pods.

@@ -22,7 +22,7 @@ From the repo root (the venv and collections as in the root CLAUDE.md):
 Then `common/workspace.sh demo3-resources` shortly before presenting (user tokens expire).
 
 **Length:** aim for about 34 minutes: up to 8 minutes of slides, then about 26 minutes of live demo, mostly in the console. Part 7 and the bonus are the first to drop if it runs long.
-**Audience:** operations. **Takeaway:** the scheduler counts reservations, the kernel enforces ceilings. Size from measurements (requests), cap memory (limits), budget each project (quotas and limit ranges), and answer load with more copies, not bigger pods. VMs follow the same rules.
+**Audience:** operations. **Takeaway:** the scheduler counts reservations, the kernel enforces ceilings. Size from measurements (requests), cap memory (limits), cap each project (quotas and limit ranges), and answer load with more copies, not bigger pods. VMs follow the same rules.
 
 Most of this is upstream Kubernetes; the session calls it OpenShift throughout.
 
@@ -54,7 +54,7 @@ The quota (`project-quota.yaml`) is sized so the HPA's 6 guestbook pods + Postgr
 ## Slides (≤ 8 min)
 
 1. Title, Who we are, What to expect, What we will cover today (plain words, mirrors the wrap-up).
-2. **From servers to OpenShift**: the mapping slide for VM admins (reserved physical CPU and memory → requests, configured vCPU and memory → limits, hypervisor overcommit → the room between request and limit, budgets → quotas, top/sar/df → Prometheus, resize the VM → autoscaling). Optional concept slides below it (DOWN): Requests, Limits, CPU bends / memory breaks, Quality of service, Quotas & limit ranges, Scale out not up, Virtual machines too.
+2. **From servers to OpenShift**: the mapping slide for VM admins (reserved physical CPU and memory → requests, configured vCPU and memory → limits, hypervisor overcommit → the room between request and limit, department budgets and disk quotas → quotas (the one place the "budget" analogy is used), top/sar/df → Prometheus, resize the VM → autoscaling). Optional concept slides below it (DOWN): Requests, Limits, CPU bends / memory breaks, Quality of service, Quotas & limit ranges, Scale out not up, Virtual machines too.
 3. **Live demo: today's setup**: the guestbook, the project's guardrails, what's around it.
 
 ## Demo (≈ 26 min)
@@ -64,7 +64,7 @@ The quota (`project-quota.yaml`) is sized so the HPA's 6 guestbook pods + Postgr
 | 1 · Used vs reserved | 3 min | Without requests a pod is BestEffort and the scheduler knows nothing about it. Usage and reservations are different numbers. | Pod details (QoS), Observe → Dashboards → *Compute Resources / Namespace (Pods)*, Compute → Nodes, `oc describe node` |
 | 2 · Requests and limits, the right way | 5 min | Requests from measurements, a memory limit, no CPU limit. The console form refuses a CPU request without a CPU limit (Kubernetes allows it): show the error, Cancel, and apply the patch file. A request that fits nowhere stays Pending, even on idle nodes. | Actions → Edit resource limits; `oc patch`; FailedScheduling event; `oc rollout undo` |
 | 3 · Hitting the ceiling | 4 min | Memory over the limit: OOMKilled (137). CPU over the limit: throttled, not killed. That's why CPU overcommits safely and memory doesn't. | `memory-hog` pod; CPU limit + `ab` load; the cgroup's `cpu.max` / `cpu.stat` (graphs lag) |
-| 4 · A budget for each project | 5 min | ResourceQuota caps the project (CPU, memory, pods, storage); LimitRange fills in defaults. Over-budget pods are refused at creation; running ones are untouched. | Administration → ResourceQuotas; scale to 10; `no-requests` pod; `big-claim` |
+| 4 · A quota for each project | 5 min | ResourceQuota caps the project (CPU, memory, pods, storage); LimitRange fills in defaults. Over-quota pods are refused at creation; running ones are untouched. | Administration → ResourceQuotas; scale to 10; `no-requests` pod; `big-claim` |
 | 5 · How much storage is left? | 3 min | Two levels of "free": inside the claim, and in the storage system behind it (thin provisioning). Quota is the third view. Details: the storage session. | PVC page, `df`, `kubelet_volume_stats_available_bytes`, Data Foundation overview |
 | 6 · Right-sizing | 4 min | HPA adds pods under load and removes them after: don't build one big pod. For the size itself, mention (no demo) the VPA in recommend-only mode and Cost Management across clusters with cost. | HPA + `ab`; console.redhat.com backup slide |
 | 7 · Virtual machines | 2 min | A VM is a virt-launcher pod: CPU request 1/10 per vCPU (200m, overcommitted by default), memory = guest + overhead (2324Mi). With a `limits.memory` quota, OpenShift Virtualization adds a memory limit itself (2× the request). Same scheduler, same quota. | Start `small-vm` (console or `virtctl`), `oc get vm,vmi`, the pod's resources, the quota |

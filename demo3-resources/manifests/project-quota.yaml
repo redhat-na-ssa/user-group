@@ -1,4 +1,4 @@
-# Part 4 (admin): the project's budget. Sized for the demo: the guestbook at
+# Part 4 (admin): the project's quota. Sized for the demo: the guestbook at
 # up to 6 pods (Part 6), PostgreSQL and the Part 7 VM fit - 10 guestbook pods
 # don't (pods: 8).
 #   oc create -f project-quota.yaml
