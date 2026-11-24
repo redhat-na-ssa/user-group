@@ -23,7 +23,7 @@
   </div>
   <h1>Resource Management in OpenShift</h1>
   <p class="sub">Red Hat User Group for FAA</p>
-  <p class="meta">Date TBD</p>
+  <p class="meta">December 8th, 2026</p>
   <aside class="notes">
     Put this up while people join. Once you start: welcome everyone, thank
     them for their time, and say what the next half hour looks like - a few
@@ -186,7 +186,7 @@
       <rect class="dg-panel" x="20" y="515" width="720" height="70" rx="8"/>
       <text class="dg-title left" x="45" y="558">Resize the VM</text>
       <path class="dg-line" d="M750,550 H870" marker-end="url(#dg-arrow)"/>
-      <rect class="dg-panel" x="880" y="515" width="700" height="70" rx="8" style="stroke:#ee0000"/>
+      <rect class="dg-panel" x="880" y="515" width="700" height="70" rx="8"/>
       <text class="dg-title left" x="905" y="558">Autoscaling: HPA (more pods), VPA (right size)</text>
     </g>
   </svg>
@@ -207,7 +207,8 @@
     the node, first come, first served. Departments get budgets and disk
     quotas; projects get quotas. Monitoring is built in. And instead of
     resizing a machine, you let autoscalers add copies or recommend a
-    better size. If the audience is new to these words, press
+    better size. The last row is the only real change of habit: don't
+    resize, add copies. If the audience is new to these words, press
     DOWN for one slide per concept; otherwise go RIGHT to the demo.
   </aside>
 </section>
@@ -469,7 +470,7 @@
       <p class="where">In the demo: <b>Part 6</b></p>
     </div>
     <svg class="diagram" viewBox="0 0 800 520" aria-label="HPA adds pods, VPA recommends sizes, cluster autoscaler adds nodes">
-      <rect class="dg-panel" x="20" y="30" width="760" height="130" rx="10" style="stroke:#ee0000"/>
+      <rect class="dg-panel" x="20" y="30" width="760" height="130" rx="10"/>
       <text class="dg-title left" x="40" y="70">HPA - more pods</text>
       <use href="#i-pod" x="430" y="50" width="80" height="80"/>
       <use href="#i-pod" x="520" y="50" width="80" height="80"/>
@@ -605,7 +606,7 @@
       <ol>
         <li>Topology: <b>guestbook</b> and <b>postgresql</b></li>
         <li>A pod's details: QoS class <b>BestEffort</b></li>
-        <li><b>Observe → Dashboards</b>: usage vs requests - there are none</li>
+        <li>Load from the laptop, then <b>Observe → Dashboards</b>: usage vs requests - there are none</li>
         <li><b>Compute → Nodes</b>: the node's own picture</li>
       </ol>
       <div>
@@ -623,6 +624,8 @@
         <p class="cli-label">The same, as code</p>
 <pre><code class="language-bash">oc get pods -o custom-columns=\
 NAME:.metadata.name,QOS:.status.qosClass
+ab -c 10 -t 120 https://$(oc get route \
+  guestbook -o jsonpath='{.spec.host}')/
 oc adm top pods
 oc describe $(oc get nodes -o name \
   -l node-role.kubernetes.io/worker | head -1) \
@@ -635,7 +638,14 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
       QoS class BestEffort. "Nobody said what this needs. It runs - until the
       node gets busy, and then it's the first to go."
       oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass
-      oc adm top pods - what each pod really uses right now.
+      Start the load now (the dashboards lag a minute): on the laptop,
+      ab -c 10 -t 120 https://$(oc get route guestbook -o jsonpath='{.spec.host}')/
+      (no -k: every request opens a connection and goes to the least busy
+      pod). oc adm top pods - what each pod really uses: 2-3 cores each
+      under load (idle: ~2m), with nothing reserved. ab's own summary:
+      "Requests per second" (rehearsal ~290) - the app is fast because it
+      takes whatever CPU is idle. "It takes whatever is
+      idle on the node - and the scheduler doesn't know.
       As peter, Administrator perspective: Observe → Dashboards →
       "Kubernetes / Compute Resources / Namespace (Pods)", namespace
       demo-resources: CPU and memory usage per pod, and the request and limit
@@ -645,6 +655,14 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
       oc describe on a worker node, grep 'Allocated resources' (cheat 1) - requests
       and limits as a percentage of the node: "the scheduler's view, not the
       kernel's".
+      A true story from this lab cluster: when the Vertical Pod Autoscaler
+      operator was installed, its pods were pinned to the storage nodes,
+      because the control-plane nodes were too full on CPU requests to take
+      more - while their real CPU use was far lower (2026-11-24: ocpnode1 65%
+      requested, 20% used). The nodes weren't busy; they were promised away.
+      "Even the people who built this demo have a cluster that needs tuning."
+      Check the current numbers before the session: oc describe node
+      ocpnode1... | grep -A6 'Allocated resources' and oc adm top nodes.
       Expect the question "how can Limits be lower than Requests?" (memory
       here: ~36Gi requested, ~25Gi limited). Per container a limit is never
       below its request, but the Limits total only adds up containers that
@@ -810,8 +828,13 @@ As user3. oc create -f memory-hog.yaml - a small pod that
       (no -k: each request opens its own connection, so the router can send
       it to the least busy pod). Rehearsal numbers: without a limit about
       290 requests/s at 35 ms, each pod using ~1.9 cores; with 100m about
-      11/s at 0.9 s - 26 times slower. (ab's "Failed requests: Length" isn't
-      an error - every page names its pod, so lengths differ.) The proof is
+      11/s at 0.9 s - 26 times slower (2.6/s at 3.8 s with both pods on a
+      Xeon D node and the background traffic running). Read "Requests per
+      second", the first "Time per request" and "Non-2xx responses" (a
+      request that waited 30 s for the router: the real failures). Ignore
+      "Failed requests: Length": ab compares each reply's size with the
+      first one it got, and if that was the router's 92-byte 504 page, every
+      real 2251-byte page counts as "failed". The proof is
       in the kernel, not the graphs (they lag): oc exec deployment/guestbook
       -- cat /sys/fs/cgroup/cpu.max shows "10000 100000" - 10 ms of CPU per
       100 ms period, which is what 100m means; grep throttled
@@ -1035,14 +1058,81 @@ HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
       to 2 about 80 seconds after the load stops. "Capacity reserved only while it's
       needed - and six small pods survive a node failure better than one
       big one."
-      Mention only, no demo: the VerticalPodAutoscaler (an optional operator)
-      watches what pods use and recommends requests - in "Off" mode it only
-      recommends, the safe way to start; in its other modes it applies them
-      by restarting pods. Don't let it change CPU while an HPA scales on CPU.
+      For the size: the VerticalPodAutoscaler (an optional operator) watches
+      what pods use and recommends requests - in "Off" mode it only
+      recommends, the safe way to start. Optional demo: DOWN, the next slide.
+      Don't let it change CPU while an HPA scales on CPU.
       Cost Management: console.redhat.com → OpenShift → Optimizations (backup
       screenshot - it needs days of data): recommendations per container,
       short/medium/long term, cost or performance.
-      Press DOWN for the backup screenshots.
+      Press DOWN for the optional VPA step, then the backup screenshots.
+    </aside>
+  </section>
+  <section>
+    <h3>6 · Optional: the VPA recommends the size</h3>
+    <p class="subheading">The HPA decides how many - the VPA how big</p>
+    <div class="steps">
+      <ol>
+        <li><b>VPA</b> in <b>Off</b> mode: it recommends, changes nothing</li>
+        <li>Compare it with the sizes we set in Part 2</li>
+        <li>Optional: <b>Initial</b> mode - memory only, when a pod starts</li>
+        <li>CPU stays with the HPA</li>
+      </ol>
+      <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="The VPA watches the guestbook pods' usage and recommends requests">
+        <rect class="dg-box grey" x="5" y="5" width="380" height="250" rx="12"/>
+        <text class="dg-label left" x="25" y="36">DEPLOYMENT GUESTBOOK</text>
+        <use href="#i-pod" x="40" y="70" width="95" height="95"/>
+        <use href="#i-pod" x="150" y="70" width="95" height="95"/>
+        <text class="dg-small" x="195" y="215">usage, every minute</text>
+        <path class="dg-line" d="M395,130 H455" marker-end="url(#dg-arrow)"/>
+        <use href="#i-gauge" x="475" y="70" width="110" height="110"/>
+        <text class="dg-small" x="530" y="215">VPA: requests</text>
+      </svg>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc describe vpa guestbook
+oc patch vpa guestbook --type=merge \
+  --patch-file=guestbook-vpa-initial.patch.yaml
+oc rollout restart deployment/guestbook</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+OPTIONAL - only when there's time or the audience asks; RIGHT skips it.
+      DRAFT, not rehearsed yet.
+      The VPA was created by setup, not now: it recommends from usage
+      history, so it has been watching the guestbook (and the background
+      traffic) for days. The file is guestbook-vpa.yaml (cat it): target
+      Deployment guestbook, updateMode "Off" - recommend only, it never
+      touches a pod. "Off" is how you start.
+      As user3: oc get vpa guestbook (CPU and MEM columns: the target; MEM is
+      in bytes - 476450463 is about 454Mi), then
+      oc describe vpa guestbook → Status, Recommendation: Lower Bound, Target,
+      Upper Bound per container. Compare with Part 2's guess (50m CPU,
+      320Mi memory): "measured over days, not one rehearsal". The cluster
+      sets a floor (25m CPU, 250Mi memory): the recommendation never goes
+      below it. Console: Search → VerticalPodAutoscaler → guestbook → YAML,
+      the status at the bottom.
+      Optional, apply it: oc patch vpa guestbook --type=merge
+      --patch-file=guestbook-vpa-initial.patch.yaml - mode "Initial" (set
+      requests when a pod is created, never restart one) and memory only:
+      the HPA scales on CPU as a percentage of the request, so a VPA changing
+      the CPU request would fight it. Rule: HPA for CPU, VPA for memory - or
+      VPA recommend-only. Wait until oc get vpa guestbook shows an empty CPU
+      column (up to a minute: the recommender drops CPU on its next pass, and
+      a pod created before that still gets a CPU request). Then
+      oc rollout restart deployment/guestbook and
+      oc get pods -l app=guestbook -o jsonpath='{.items[*].spec.containers[0].resources}':
+      the memory request is the VPA's target, and the limit moved with it
+      (same ratio as 320Mi/512Mi). Rehearsal (2026-11-24, after one minute of
+      history): target 25m CPU (the floor) and ~454Mi memory, more than our
+      320Mi; re-check it before the session. The pod's vpaUpdates annotation says the
+      VPA did it.
+      The modes, as an escalation: Off → Initial → InPlace / Recreate - from
+      looking, to sizing new pods, to changing running ones (InPlace resizes
+      a running pod without a restart, Recreate evicts it, InPlaceOrRecreate
+      tries the first and falls back to the second; Auto is the old name for
+      Recreate). Say it out loud: a VPA with no updateMode is Recreate - it
+      starts evicting pods. That's why guestbook-vpa.yaml sets "Off".
     </aside>
   </section>
   <section class="backup">
@@ -1061,6 +1151,16 @@ HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
       resource optimization view recommends requests and limits for each
       container, over short, medium and long periods, tuned either for cost
       or for performance - for every connected cluster, in one place.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>VPA: a recommendation from measured use</h3>
+    <div class="shot" data-src="images/demo3-rightsize-vpa.webp" data-caption="oc describe vpa guestbook: lower bound, target and upper bound for each container"></div>
+    <aside class="notes">
+      The VerticalPodAutoscaler for the guestbook in recommend-only mode
+      ("Off"): from days of measured use it recommends a request for each
+      container - a target, with a lower and an upper bound. It changes
+      nothing until you let it.
     </aside>
   </section>
 </section>

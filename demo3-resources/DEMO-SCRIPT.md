@@ -8,9 +8,9 @@ From the repo root (the venv and collections as in the root CLAUDE.md):
 
 | Playbook | What it does | Time |
 |---|---|---|
-| `setup.yml` | Project `demo-resources` and roles; PostgreSQL from demo 1's `postgresql-demo` template; the guestbook image, built once by a pipeline from Gitea `ocpdemo/guestbook` (demo 1's source - run `demo1-fundamentals/setup.sh` first if Gitea doesn't have it); the guestbook with **no** requests or limits; VM `small-vm`, stopped. Safe to re-run: never undoes a run in progress. | ~4 min first time |
+| `setup.yml` | Project `demo-resources` and roles; PostgreSQL from demo 1's `postgresql-demo` template; the guestbook image, built once by a pipeline from Gitea `ocpdemo/guestbook` (demo 1's source - run `demo1-fundamentals/setup.sh` first if Gitea doesn't have it); the guestbook with **no** requests or limits; VPA `guestbook` in recommend-only mode (needs the Vertical Pod Autoscaler operator; created early so it has usage history); VM `small-vm`, stopped. Safe to re-run: never undoes a run in progress. | ~4 min first time |
 | `verify.yml` | Read-only: the start state, nothing left from a run, pod metrics, `ab` on the laptop. | seconds |
-| `reset.yml` | In place, after a rehearsal or a session: removes quota, limit range, HPA, `memory-hog`, `no-requests`, `big-claim`; stops the VM; puts the guestbook back (2 pods, no resources). Keeps the image and the database. | ~1 min |
+| `reset.yml` | In place, after a rehearsal or a session: removes quota, limit range, HPA, `memory-hog`, `no-requests`, `big-claim`; puts the VPA back to recommend-only (keeps its history); stops the VM; puts the guestbook back (2 pods, no resources). Keeps the image and the database. | ~1 min |
 | `traffic.yml -e traffic=off` / `on` | Pauses / resumes the background traffic (below). | seconds |
 | `teardown.yml` | Deletes the project (image, database, VM and all) and the traffic project. Nothing else is changed. | ~1 min |
 
@@ -36,10 +36,11 @@ The same Python/Flask guestbook and PostgreSQL as in demo 1, in a project of its
 |---|---|---|
 | Deployment `guestbook` (2 pods) | no resources: BestEffort | 1, 2, 3, 4, 6 |
 | Deployment `postgresql` + PVC `postgresql` | from the `postgresql-demo` template (it sets a small request and limit) | 5 |
+| VPA `guestbook` | `Off` (recommend-only), CPU and memory, created by setup | 6 (optional) |
 | Pod `memory-hog` | 128Mi limit, allocates 16 MiB every 0.5 s | 3 |
 | VM `small-vm` (Fedora container disk, no PVC) | 2 vCPU, 2 GiB, **stopped** until Part 7 | 7 |
 
-Measured (rehearsal, 2026-11-16): the guestbook idles at ~2m CPU and ~290Mi per pod; under `ab -c 10` with no limits each pod takes ~3 cores. Hence Part 2's 50m / 320Mi / 512Mi (as in demo 1).
+Measured (rehearsal, 2026-11-16): the guestbook idles at ~2m CPU and ~290Mi per pod; under `ab -c 10` with no limits each pod takes 2-3 cores (more on a Xeon D node). Hence Part 2's 50m / 320Mi / 512Mi (as in demo 1).
 
 The quota (`project-quota.yaml`) is sized so the HPA's 6 guestbook pods + PostgreSQL + the VM fit, and 10 guestbook pods don't: the limit that bites is `pods: 8`. Memory alone can't do both, because the VM's request (2324Mi) is bigger than the gap.
 
@@ -61,12 +62,12 @@ The quota (`project-quota.yaml`) is sized so the HPA's 6 guestbook pods + Postgr
 
 | Part | Time | Point to make | Where |
 |---|---|---|---|
-| 1 · Used vs reserved | 3 min | Without requests a pod is BestEffort and the scheduler knows nothing about it. Usage and reservations are different numbers. | Pod details (QoS), Observe → Dashboards → *Compute Resources / Namespace (Pods)*, Compute → Nodes, `oc describe node` |
+| 1 · Used vs reserved | 3 min | Without requests a pod is BestEffort and the scheduler knows nothing about it. Usage and reservations are different numbers. | Pod details (QoS), `ab` from the laptop, `oc adm top pods`, Observe → Dashboards → *Compute Resources / Namespace (Pods)*, Compute → Nodes, `oc describe node` |
 | 2 · Requests and limits, the right way | 5 min | Requests from measurements, a memory limit, no CPU limit. The console form refuses a CPU request without a CPU limit (Kubernetes allows it): show the error, Cancel, and apply the patch file. A request that fits nowhere stays Pending, even on idle nodes. | Actions → Edit resource limits; `oc patch`; FailedScheduling event; `oc rollout undo` |
 | 3 · Hitting the ceiling | 4 min | Memory over the limit: OOMKilled (137). CPU over the limit: throttled, not killed. That's why CPU overcommits safely and memory doesn't. | `memory-hog` pod; CPU limit + `ab` load; the cgroup's `cpu.max` / `cpu.stat` (graphs lag) |
 | 4 · A quota for each project | 5 min | ResourceQuota caps the project (CPU, memory, pods, storage); LimitRange fills in defaults. Over-quota pods are refused at creation; running ones are untouched. | Administration → ResourceQuotas; scale to 10; `no-requests` pod; `big-claim` |
 | 5 · How much storage is left? | 3 min | Two levels of "free": inside the claim, and in the storage system behind it (thin provisioning). Quota is the third view. Details: the storage session. | PVC page, `df`, `kubelet_volume_stats_available_bytes`, Data Foundation overview |
-| 6 · Right-sizing | 4 min | HPA adds pods under load and removes them after: don't build one big pod. For the size itself, mention (no demo) the VPA in recommend-only mode and Cost Management across clusters with cost. | HPA + `ab`; console.redhat.com backup slide |
+| 6 · Right-sizing | 4 min | HPA adds pods under load and removes them after: don't build one big pod. For the size itself: the VPA recommends (optional step, DOWN: show it, and optionally apply it for memory only at pod start, so it doesn't fight the HPA on CPU) and Cost Management does the same across clusters, with cost. | HPA + `ab`; `oc describe vpa`, VPA patch + `oc rollout restart`; console.redhat.com backup slide |
 | 7 · Virtual machines | 2 min | A VM is a virt-launcher pod: CPU request 1/10 per vCPU (200m, overcommitted by default), memory = guest + overhead (2324Mi). With a `limits.memory` quota, OpenShift Virtualization adds a memory limit itself (2× the request). Same scheduler, same quota. | Start `small-vm` (console or `virtctl`), `oc get vm,vmi`, the pod's resources, the quota |
 | Bonus · New project defaults | – | The project request template can give every new project a LimitRange and quota. Show only: it's cluster-wide. | `oc adm create-bootstrap-project-template` |
 
@@ -76,18 +77,24 @@ The speaker notes on each demo slide have the clicks and commands (marked DRAFT 
 
 - `oc get events ... | tail` picks the wrong lines: new-style events have no `lastTimestamp`. Use `--sort-by=.eventTime`.
 - After scaling back from 10 to 2, terminating pods still count against `pods: 8`: wait for `oc get pods` to show 3 before `no-requests-pod.yaml`, or it's refused.
-- `ab` reports most requests as "Failed (Length)" with a CPU limit: not errors, the pages differ by pod name. The real ones are the few "Non-2xx" (router timeouts).
+- `ab` reports most requests as "Failed (Length)" with a CPU limit: not errors. `ab` compares every reply's size with the first one it recorded; when that was the router's 504 timeout page (92 bytes), every real page (2251 bytes) counts as "failed". The real failures are the few "Non-2xx" (router timeouts after 30 s). Read "Requests per second" and "Time per request" instead.
+- Part 3's numbers depend on where the pods land and on the background traffic: 11 req/s in rehearsal, 2.6 req/s (2026-11-24) with both pods on ocpnode1 (Xeon D) while the traffic was on. Pause the traffic before a session (it is, when verify.yml passes).
 - The nodes differ (ocpnode1-3 low-power Xeon D, 4-6 EPYC): the same request costs about twice the CPU on a Xeon D. With round robin and `ab -k`, a throttled Xeon D pod paced the EPYC pod, which sat at ~50m of its 100m. Fixed with the Route on `leastconn` (setup) and `ab` without `-k` (every request opens a connection and goes to the least busy pod): both pods at 100m, 11 req/s vs 290 without the limit.
 - The dashboards and Pod → Metrics lag too much to show throttling live: show `cpu.max` and `cpu.stat` from the cgroup (`cheat 3`) and `ab`'s own numbers.
 - The LimitRange admission caches LimitRanges for up to 30 s after a delete: `reset.yml` waits, or the "no resources" guestbook comes back Burstable.
 - The OpenShift Virtualization console plugin is currently **enabled**. Demo 3 doesn't mind (and Part 7 uses its pages); demo 1's `verify.sh` fails until it's disabled again (it hides the `postgresql-demo` template there).
 
+- VPA `Initial` mode applies the recommendation *as stored*: right after the patch it still has CPU in it, and pods created then get a CPU request too. Wait for an empty CPU column in `oc get vpa guestbook` (one recommender pass, up to a minute) before `oc rollout restart`.
+- The VPA shows memory in bytes (`476450463` = about 454Mi), in `oc get vpa` and in the pods it sizes. Its floor on this cluster is 25m CPU and 250Mi memory (VerticalPodAutoscalerController `default`): the guestbook's CPU target is the floor.
+- reset.yml must put the VPA back to `Off` *before* it recreates the guestbook pods, or they come back with requests (Burstable) instead of BestEffort.
+
 ## Still to do
 
-- [ ] Presentation date on the title slide.
+- [x] Presentation date on the title slide (December 8th, 2026).
 - [ ] Rehearse the console side (Parts 1 and 5, the bonus are still DRAFT; check the Part 1 dashboard name on this release).
 - [X] Cost Management: install the Cost Management Metrics Operator so console.redhat.com has days of data (or seed it) before the session, then take the backup screenshot.
 - [x] Cost Management source registered (integration `homeocpdemo`), first upload 2026-11-16 16:13 UTC. The CostManagementMetricsConfig's `spec.source.name` must match the integration's name: left empty, the operator looks for a source named after the cluster ID and keeps reporting "no source" (and only re-checks every `check_cycle` minutes, default 1440).
 - [ ] Cost Management: wait for the recommendations (from ~2026-11-17), then take the backup screenshot. Setup labels `demo-resources` with `cost_management_optimizations=true` (without it, no optimization data). Recommendations need ~24 h of data after the first upload (every 6 h); verify.yml checks all of it. Don't run teardown.yml in between - a new project starts the data over.
+- [ ] Rehearse the optional VPA step (DRAFT); re-check the recommendation after a few days of traffic and update the notes' numbers. Backup screenshot `images/demo3-rightsize-vpa.webp` (`oc describe vpa guestbook`).
 - [ ] Console screenshots for the backup slides (`images/demo3-<part>-<what>.webp`, lossless WebP).
 - [ ] Time a full run (target ~34 min).

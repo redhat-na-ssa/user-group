@@ -1,0 +1,25 @@
+# Part 6 (optional): a VerticalPodAutoscaler for the guestbook, recommend-only.
+# updateMode "Off": the VPA watches what the pods use and writes recommended
+# requests into its status - it never changes a pod. The safe way to start.
+# Always set the mode: left out, it defaults to "Recreate" (evicts pods).
+# Created by setup.yml, not live: a recommendation needs usage history (the
+# background traffic provides it), so it must run for days before a session.
+# reset.yml puts it back to this file's settings.
+#   oc get vpa guestbook
+#   oc describe vpa guestbook
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  namespace: demo-resources
+  name: guestbook
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guestbook
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: guestbook
+        controlledResources: [cpu, memory]

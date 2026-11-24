@@ -20,7 +20,8 @@ BASE=https://slides-faa-demo.$APPS/demo3-resources/files
 
 # The demo's YAML files (the deck's "files" in faa-demo/playbook.yml)
 for f in guestbook-resources.patch.yaml memory-hog.yaml project-limits.yaml \
-         project-quota.yaml no-requests-pod.yaml big-claim.yaml guestbook-hpa.yaml; do
+         project-quota.yaml no-requests-pod.yaml big-claim.yaml guestbook-hpa.yaml \
+         guestbook-vpa.yaml guestbook-vpa-initial.patch.yaml; do
   [ -f "$f" ] || curl -sfO "$BASE/$f" || echo "could not download $f"   # kept if already here
 done
 oc project demo-resources >/dev/null 2>&1
@@ -38,9 +39,9 @@ return 0 2>/dev/null || true
 
 # ---------------------------------------------------------------- 1 - Used vs reserved (user3, then peter)
 oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass   # BestEffort
-oc adm top pods                                    # what they really use
+ab -c 10 -t 120 $GUESTBOOK_URL/                    # laptop; start it first, the dashboards lag
+oc adm top pods                                    # under load 2-3 cores per pod (idle ~2m), nothing reserved
 # Console (peter): Observe -> Dashboards -> Kubernetes / Compute Resources / Namespace (Pods)
-# Under load (Part 3's ab) each BestEffort pod takes ~3 cores - whatever is idle
 oc get nodes                                       # peter: user3 may not list nodes
 oc describe $(oc get nodes -l node-role.kubernetes.io/worker -o name | head -1) | grep -A 8 'Allocated resources'   # peter: requests vs allocatable
 #   Limits < Requests? Limits only adds containers that HAVE a limit (many
@@ -65,8 +66,9 @@ oc describe pod memory-hog | grep -A 4 'Last State'   # Reason: OOMKilled, Exit 
 oc delete -f memory-hog.yaml
 oc set resources deployment/guestbook --limits=cpu=100m
 ab -c 10 -t 60 $GUESTBOOK_URL/                     # laptop; no -k: every request picks a pod
-#   no limit: ~290 req/s, ~35 ms; 100m limit: ~11 req/s, ~0.9 s
-#   ("Failed requests: Length" is not an error - every page names its pod)
+#   read: Requests per second, Time per request (mean), Non-2xx (= real failures)
+#   no limit: ~290 req/s, ~35 ms; 100m limit: ~11 req/s, ~0.9 s (2.6/s on a Xeon D node)
+#   ignore "Failed requests: Length": sizes compared with the 1st reply (a 504 page = 92 bytes)
 oc exec deployment/guestbook -- cat /sys/fs/cgroup/cpu.max   # 10000 100000 = 10ms per 100ms
 oc exec deployment/guestbook -- grep throttled /sys/fs/cgroup/cpu.stat   # run twice: it climbs
 oc adm top pods -l app=guestbook                   # CPU flat at 100m
@@ -99,6 +101,15 @@ oc describe quota | grep storage
 oc create -f guestbook-hpa.yaml                    # 2-6 pods, 50% of the CPU request
 ab -c 10 -t 120 $GUESTBOOK_URL/                    # laptop
 oc get hpa guestbook -w                            # 6 pods in ~20s; back to 2 ~80s after the load (Ctrl-C)
+# Optional (DOWN): the VPA - created by setup, recommend-only ("Off")
+cat guestbook-vpa.yaml
+oc get vpa guestbook                               # CPU / MEM: the target (MEM in bytes)
+oc describe vpa guestbook                          # Lower Bound, Target, Upper Bound
+#   apply it: memory only, at pod start - the HPA keeps CPU
+oc patch vpa guestbook --type=merge --patch-file=guestbook-vpa-initial.patch.yaml
+oc get vpa guestbook                               # wait for an empty CPU column (up to 1 min)
+oc rollout restart deployment/guestbook
+oc get pods -l app=guestbook -o jsonpath='{range .items[*]}{.metadata.name}{"  "}{.spec.containers[0].resources}{"\n"}{end}'
 
 # ---------------------------------------------------------------- 7 - Virtual machines (peter)
 # Console: Virtualization -> VirtualMachines -> small-vm -> Start (or:)

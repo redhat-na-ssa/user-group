@@ -31,6 +31,7 @@
         - {key: quotas, api: v1, kind: ResourceQuota}
         - {key: limitranges, api: v1, kind: LimitRange}
         - {key: hpas, api: autoscaling/v2, kind: HorizontalPodAutoscaler}
+        - {key: vpas, api: autoscaling.k8s.io/v1, kind: VerticalPodAutoscaler}
         - {key: vm, api: kubevirt.io/v1, kind: VirtualMachine, name: small-vm}
         - {key: vmis, api: kubevirt.io/v1, kind: VirtualMachineInstance}
         - {key: metrics, api: metrics.k8s.io/v1beta1, kind: PodMetrics}
@@ -63,6 +64,7 @@
       vars:
         gb: "{{ st.deployments | selectattr('metadata.name', 'equalto', 'guestbook') | list }}"
         pg: "{{ st.deployments | selectattr('metadata.name', 'equalto', 'postgresql') | list }}"
+        vpa: "{{ st.vpas | selectattr('metadata.name', 'equalto', 'guestbook') | list }}"
         gb_pods: "{{ st.pods | selectattr('metadata.labels.app', 'defined') | selectattr('metadata.labels.app', 'equalto', 'guestbook')
                      | selectattr('status.phase', 'equalto', 'Running')
                      | rejectattr('metadata.deletionTimestamp', 'defined') | list }}"
@@ -95,6 +97,11 @@
               {{ st.quotas | length == 0 and st.limitranges | length == 0 and st.hpas | length == 0
                  and st.pods | selectattr('metadata.name', 'in', ['memory-hog', 'no-requests']) | list | length == 0
                  and st.pvcs | map(attribute='metadata.name') | list == ['postgresql'] }}
+          - name: "VPA guestbook: recommend-only (Off), cpu and memory, has a recommendation (Part 6)"
+            ok: >-
+              {{ vpa | length == 1 and vpa[0].spec.updatePolicy.updateMode == 'Off'
+                 and vpa[0].spec.resourcePolicy.containerPolicies[0].controlledResources | sort == ['cpu', 'memory']
+                 and (vpa[0].status.recommendation.containerRecommendations | default([])) | length > 0 }}
           - name: "VM small-vm present and stopped (Part 7)"
             ok: "{{ st.vm | length == 1 and st.vm[0].spec.runStrategy == 'Halted' and st.vmis | length == 0 }}"
           - name: "Pod metrics available (oc adm top, dashboards)"

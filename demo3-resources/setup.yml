@@ -4,7 +4,8 @@
 #
 # Creates the project and its roles, PostgreSQL from the postgresql-demo
 # template, the guestbook image (built once from demo 1's source in Gitea) and
-# the guestbook itself with NO requests or limits, plus the stopped Part 7 VM.
+# the guestbook itself with NO requests or limits, a recommend-only VPA for it
+# (Part 6; needs the VPA operator) and the stopped Part 7 VM.
 # No quota, limit range or HPA: the demo adds those live. Settings: demo.env.
 # Then run verify.yml.
 - name: Demo 3 - setup
@@ -233,6 +234,31 @@
       loop: [postgresql, guestbook]
       loop_control:
         loop_var: deployment
+
+    # ------------------------------------------------------------ VPA (Part 6, optional)
+    # Created now, not live: its recommendation comes from usage history.
+    # Only when missing - during a run it may be in "Initial" mode (reset.yml).
+    - name: VPA operator installed
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: verticalpodautoscalers.autoscaling.k8s.io
+      register: vpa_crd
+      failed_when: vpa_crd.resources | length == 0
+
+    - name: VPA guestbook - present?
+      kubernetes.core.k8s_info:
+        api_version: autoscaling.k8s.io/v1
+        kind: VerticalPodAutoscaler
+        namespace: "{{ ns }}"
+        name: guestbook
+      register: vpa
+
+    - name: VPA guestbook (recommend-only)
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        src: "{{ playbook_dir }}/manifests/guestbook-vpa.yaml"
+      when: vpa.resources | length == 0
 
     # ------------------------------------------------------------ VM (Part 7)
     - name: VM small-vm - present?

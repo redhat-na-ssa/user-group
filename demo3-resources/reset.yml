@@ -1,8 +1,8 @@
 # Demo 3 - Resource Management: back to the start after a rehearsal or a run,
 # in place (keeps the image, the database and its PVC - no rebuild):
 # removes what the demo adds (HPA, quota, limit range, memory-hog, no-requests,
-# big-claim), stops the VM and puts the guestbook back to 2 pods with no
-# requests or limits.
+# big-claim), puts the VPA back to recommend-only (keeping its history), stops
+# the VM and puts the guestbook back to 2 pods with no requests or limits.
 #
 #   .venv/bin/ansible-playbook demo3-resources/reset.yml
 #
@@ -16,6 +16,14 @@
   tasks:
     - name: Settings
       ansible.builtin.include_tasks: tasks/settings.yml
+
+    # Before the guestbook pods are recreated below: in "Initial" mode the VPA
+    # would give the new pods requests, and they wouldn't be BestEffort.
+    # Apply (not delete): the VPA keeps its usage history.
+    - name: VPA guestbook - back to recommend-only
+      kubernetes.core.k8s:
+        namespace: "{{ ns }}"
+        src: "{{ playbook_dir }}/manifests/guestbook-vpa.yaml"
 
     # Quota first: while it exists, pods leaving and arriving below are counted
     - name: Remove what the demo created

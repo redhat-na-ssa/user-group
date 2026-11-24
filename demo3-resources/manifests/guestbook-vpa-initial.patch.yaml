@@ -1,0 +1,14 @@
+# Part 6 (optional): let the VPA apply its recommendation - memory only, and
+# only when a pod starts ("Initial": it never restarts a running pod).
+# CPU stays with the HPA: the HPA scales on CPU as a percentage of the
+# request, so a VPA changing that request would make the two fight.
+# The memory limit follows the request at the same ratio (512Mi / 320Mi).
+#   oc patch vpa guestbook --type=merge --patch-file=guestbook-vpa-initial.patch.yaml
+#   oc rollout restart deployment/guestbook
+spec:
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: guestbook
+        controlledResources: [memory]
