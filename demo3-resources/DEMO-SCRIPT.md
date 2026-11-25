@@ -55,7 +55,7 @@ The quota (`project-quota.yaml`) is sized so the HPA's 6 guestbook pods + Postgr
 ## Slides (≤ 8 min)
 
 1. Title, Who we are, What to expect, What we will cover today (plain words, mirrors the wrap-up).
-2. **From servers to OpenShift**: the mapping slide for VM admins (reserved physical CPU and memory → requests, configured vCPU and memory → limits, hypervisor overcommit → the room between request and limit, department budgets and disk quotas → quotas (the one place the "budget" analogy is used), top/sar/df → Prometheus, resize the VM → autoscaling). Optional concept slides below it (DOWN): Requests, Limits, CPU bends / memory breaks, Quality of service, Quotas & limit ranges, Scale out not up, Virtual machines too.
+2. **From servers to OpenShift**: the mapping slide for VM admins (reserved physical CPU and memory → requests, configured vCPU and memory → limits, hypervisor overcommit → the room between request and limit, department budgets and disk quotas → quotas (the one place the "budget" analogy is used), top/sar/df → Prometheus, automatically adjusting CPU and memory as needs change → autoscaling: HPA and VPA. The slide is about applications running as containers - VMs in OpenShift are resized as today, see Part 7's notes). Optional concept slides below it (DOWN): Requests, Limits, CPU bends / memory breaks, Quality of service, Quotas & limit ranges, Scale out not up, Virtual machines too.
 3. **Live demo: today's setup**: the guestbook, the project's guardrails, what's around it.
 
 ## Demo (≈ 26 min)

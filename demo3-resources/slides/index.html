@@ -184,7 +184,7 @@
     </g>
     <g>
       <rect class="dg-panel" x="20" y="515" width="720" height="70" rx="8"/>
-      <text class="dg-title left" x="45" y="558">Resize the VM</text>
+      <text class="dg-title left" x="45" y="558">Automatically adjusting CPU and memory as needs change</text>
       <path class="dg-line" d="M750,550 H870" marker-end="url(#dg-arrow)"/>
       <rect class="dg-panel" x="880" y="515" width="700" height="70" rx="8"/>
       <text class="dg-title left" x="905" y="558">Autoscaling: HPA (more pods), VPA (right size)</text>
@@ -205,10 +205,13 @@
     node - those are guaranteed - and the room between a pod's request and
     its limit is the overcommitted part: shared with every other pod on
     the node, first come, first served. Departments get budgets and disk
-    quotas; projects get quotas. Monitoring is built in. And instead of
-    resizing a machine, you let autoscalers add copies or recommend a
-    better size. The last row is the only real change of habit: don't
-    resize, add copies. If the audience is new to these words, press
+    quotas; projects get quotas. Monitoring is built in. And when an
+    application needs more, you don't open a ticket to resize its server:
+    the HPA adds copies under load and removes them after, and the VPA
+    recommends the right size from what it really uses (Part 6). This
+    slide is about applications running as containers; a VM running in
+    OpenShift is resized the way you resize VMs today (Part 7). If the
+    audience is new to these words, press
     DOWN for one slide per concept; otherwise go RIGHT to the demo.
   </aside>
 </section>
@@ -1381,6 +1384,11 @@ As peter. Setup created small-vm stopped (it holds nothing until it
       number) - the console page reads better. Read the VM's own numbers from
       its pod, above. Stop the VM afterwards (virtctl stop small-vm) - or
       after the optional "same network" step below (DOWN).
+      If asked "can the HPA or VPA scale a VM?": no. A VM is one
+      virt-launcher pod; more pods would be more VMs, not a bigger one. A VM
+      is resized the VM way - edit its CPU and memory; a live migration
+      applies it to the running VM (at the next restart if it can't
+      migrate). Slide 5 says the same.
       The cluster-wide knobs (admin, look only): the HyperConverged
       resource's CPU allocation ratio, and the opt-in memory overcommit for
       higher density.
