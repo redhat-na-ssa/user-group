@@ -605,7 +605,7 @@
     <div class="steps">
       <ol>
         <li>Topology: <b>guestbook</b> and <b>postgresql</b></li>
-        <li>A pod's details: QoS class <b>BestEffort</b></li>
+        <li>A pod's YAML: QoS class <b>BestEffort</b></li>
         <li>Load from the laptop, then <b>Observe → Dashboards</b>: usage vs requests - there are none</li>
         <li><b>Compute → Nodes</b>: the node's own picture</li>
       </ol>
@@ -634,8 +634,17 @@ oc describe $(oc get nodes -o name \
     </div>
     <aside class="notes">
 DRAFT. As user3, Developer perspective, project demo-resources: Topology
-      shows guestbook (2 pods) and postgresql. Open a guestbook pod → Details:
-      QoS class BestEffort. "Nobody said what this needs. It runs - until the
+      shows guestbook (2 pods) and postgresql. Open a guestbook pod → YAML,
+      at the end under status: qosClass: BestEffort (the Details tab doesn't
+      show it; Ctrl+F "qos" in the editor jumps there). Or the terminal, which
+      shows every pod at once - the backup slide: BestEffort guestbook,
+      Burstable PostgreSQL. The console's only list of all pods with their
+      QoS class: Observe → Metrics (peter),
+      sum by (pod, qos_class) (kube_pod_status_qos_class{namespace="demo-resources"}) == 1
+      - one row per pod, columns pod and qos_class ("sum by" drops the other
+      label columns; without "== 1" every pod appears once per class). The
+      table covers the graph's time range: pods deleted in the last 30
+      minutes show too - set the range to 5 minutes after a rehearsal. "Nobody said what this needs. It runs - until the
       node gets busy, and then it's the first to go."
       oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass
       Start the load now (the dashboards lag a minute): on the laptop,
@@ -648,8 +657,20 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
       idle on the node - and the scheduler doesn't know.
       As peter, Administrator perspective: Observe → Dashboards →
       "Kubernetes / Compute Resources / Namespace (Pods)", namespace
-      demo-resources: CPU and memory usage per pod, and the request and limit
-      columns empty. Then the same dashboard for a busy namespace to show
+      demo-resources, time range 5 minutes, with the load running. The tiles
+      at the top: "CPU Utilisation (from requests)" around 10,000% - the
+      project's CPU use divided by its CPU requests. Only PostgreSQL has a
+      request (50m); the guestbook uses cores and reserves nothing: "this
+      project uses a hundred times what it reserved - the scheduler planned
+      for 50m and got five cores." "From limits" shows "-": no CPU limits at
+      all. Memory from limits over 100% although no pod is over its own
+      limit: the guestbook's memory counts, its missing limit doesn't.
+      The CPU Usage graph: PostgreSQL bursts too (about 2.4 cores on a 50m
+      request, no CPU limit). Then
+      scroll to the tables "CPU Quota" and "Memory Quota" (per-pod requests
+      and limits next to usage - not the Part 4 ResourceQuota, despite the
+      name): the guestbook rows have usage and empty request and limit
+      cells; postgresql has its 50m / 128Mi request and 512Mi limit. Then the same dashboard for a busy namespace to show
       what a gap between requested and used looks like.
       Compute → Nodes → a worker → Overview: utilization. In the terminal:
       oc describe on a worker node, grep 'Allocated resources' (cheat 1) - requests
@@ -681,15 +702,25 @@ DRAFT. As user3, Developer perspective, project demo-resources: Topology
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>No requests: BestEffort, and nothing reserved</h3>
     <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo3-used-qos.webp" data-caption="Pod details: QoS class BestEffort"></div><figcaption>1 · The pod: QoS class BestEffort</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo3-used-dashboard.webp" data-caption="Compute Resources / Namespace (Pods): usage, empty request and limit columns"></div><figcaption>2 · The dashboard: usage, but no requests</figcaption></figure>
+      <figure>
+<pre><code class="language-plaintext">$ oc get pods -o custom-columns=\
+NAME:.metadata.name,QOS:.status.qosClass
+NAME                          QOS
+guestbook-6c6476c97f-hpznx    BestEffort
+guestbook-6c6476c97f-zg78k    BestEffort
+postgresql-6f9fb94b99-769g5   Burstable</code></pre>
+        <figcaption>1 · QoS class: the guestbook BestEffort, PostgreSQL Burstable</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-used-dashboard.webp" data-caption="Compute Resources / Namespace (Pods) under load: CPU use at 10,000% of the project's requests - only PostgreSQL reserved anything"></div><figcaption>2 · Under load: 10,000% of what was reserved</figcaption></figure>
     </div>
     <aside class="notes">
-      Left: a guestbook pod's details - QoS class BestEffort, because none
-      of its containers sets a request or a limit. Right: the namespace
-      dashboard - CPU and memory the pods actually use, with the request and
-      limit columns empty. The scheduler placed these pods without knowing
-      what they need.
+      Left: the pods' QoS class - the guestbook pods are BestEffort, because
+      none of their containers sets a request or a limit; PostgreSQL is
+      Burstable (its template sets a small request and a higher limit). Right: the namespace
+      dashboard under load. "CPU Utilisation (from requests)" is the
+      project's CPU use divided by its CPU requests: over 10,000%, because
+      only PostgreSQL reserved anything (50m) while the pods used about five
+      cores. No CPU limits at all ("-"). The scheduler placed these pods
+      without knowing what they need.
     </aside>
   </section>
 </section>
@@ -759,19 +790,28 @@ As user3. Topology → guestbook → the Deployment's page → Actions →
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Setting requests and limits - and a request that doesn't fit</h3>
-    <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo3-requests-form.webp" data-caption="Edit resource limits: a CPU request with no CPU limit is refused"></div><figcaption>1 · The form insists on a CPU limit</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo3-requests-pending.webp" data-caption="A pod Pending: Insufficient cpu"></div><figcaption>2 · Too big: Pending, Insufficient cpu</figcaption></figure>
-    </div>
+    <span class="backup-tag">Backup</span><h3>Setting requests and limits in the console</h3>
+    <div class="shot" data-src="images/demo3-requests-form.webp" data-caption="Edit resource limits: a CPU request with no CPU limit is refused"></div>
     <aside class="notes">
-      Left: the console form behind Actions → Edit resource limits - a
-      request (the reservation) and a limit (the ceiling) for CPU and for
-      memory. It won't save a CPU request without a CPU limit, although
-      Kubernetes allows it; the same change made as a patch file sets the
-      requests and the memory limit and leaves CPU unlimited. Right: what happens when a pod asks for more CPU than any node
-      has left to reserve: it stays Pending, and its events say why. The
-      running pods are not affected.
+      The console form behind Actions → Edit resource limits - a request
+      (the reservation) and a limit (the ceiling) for CPU and for memory. It
+      won't save a CPU request without a CPU limit, although Kubernetes
+      allows it; the same change made as a patch file sets the requests and
+      the memory limit and leaves CPU unlimited.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>A request that fits nowhere: Pending</h3>
+    <div class="shot" data-src="images/demo3-requests-pending.webp" data-caption="The new pod's events: 0/6 nodes are available - Insufficient cpu on all six"></div>
+    <aside class="notes">
+      A pod that asks for more CPU than any node has left to reserve stays
+      Pending, and its events say why: the scheduler checked all six nodes
+      and none has the requested CPU free to promise - even though the nodes
+      are mostly idle. Preemption doesn't help either: there's nothing of
+      lower priority to move out of the way. The pod belongs to the new
+      ReplicaSet of the rollout; the two pods of the old one keep running
+      and serving, so the failed change doesn't take the app down. A rollout
+      undo puts the Deployment back.
     </aside>
   </section>
 </section>
@@ -852,17 +892,37 @@ As user3. oc create -f memory-hog.yaml - a small pod that
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Memory over the limit: killed. CPU over the limit: throttled.</h3>
-    <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo3-limits-oomkilled.webp" data-caption="Pod details: last state Terminated, OOMKilled, exit code 137"></div><figcaption>1 · Memory: OOMKilled, exit code 137</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo3-limits-throttled.webp" data-caption="Pod metrics: CPU flat at the limit under load"></div><figcaption>2 · CPU: flat at the limit, throttled</figcaption></figure>
-    </div>
+    <span class="backup-tag">Backup</span><h3>Memory over the limit: killed</h3>
+    <div class="shot" data-src="images/demo3-limits-oomkilled.webp" data-caption="Pod memory-hog: status OOMKilled"></div>
+<pre class="fit"><code class="language-plaintext">$ oc get pod memory-hog
+NAME         READY   STATUS      RESTARTS      AGE
+memory-hog   0/1     OOMKilled   4 (87s ago)   2m22s
+$ oc describe pod memory-hog | grep -A 2 'Last State'
+    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137</code></pre>
     <aside class="notes">
-      Left: a pod that used more memory than its limit. The kernel killed
-      it (OOMKilled, exit code 137) and OpenShift restarted it - over and
-      over, since it does the same thing every time. Right: the guestbook
-      under load with a CPU limit of a tenth of a core - its CPU use is
-      flat at the limit: requests wait, but nothing crashes.
+      A pod that used more memory than its 128Mi limit. The kernel killed
+      it - OOMKilled, exit code 137 (128 + signal 9, SIGKILL) - and
+      OpenShift restarted it, over and over, since it does the same thing
+      every time (four restarts in two minutes). There is no separate
+      "OOMKilled" event: the reason is in the container's last state, which
+      the console shows as the pod's status and oc describe shows in full.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>CPU over the limit: throttled</h3>
+    <div class="shot" data-src="images/demo3-limits-throttled.webp" data-caption="Observe - Metrics: the share of CPU periods each guestbook pod was throttled in, 0.8 to 1.0 under load"></div>
+    <aside class="notes">
+      The guestbook under load with a CPU limit of a tenth of a core. A
+      limit of 100m means 10 ms of CPU time in every 100 ms period; the
+      query divides the periods in which a pod ran out of its 10 ms by the
+      periods in which it wanted CPU. Both pods sit at 0.8 to 1.0: in most
+      of the time they wanted to run, the kernel paused them until the next
+      period. They answer slowly - but nothing crashes, nothing restarts.
+      That's the difference from memory: CPU can be taken back, memory
+      can't. OpenShift's built-in CPUThrottlingHigh alert uses the same
+      ratio.
     </aside>
   </section>
 </section>
@@ -917,7 +977,10 @@ As peter: oc create -f project-limits.yaml (default request and
       (pods, requests.cpu, requests.memory, limits.memory, requests.storage,
       claims). user3 can't create these - edit doesn't include them.
       Administration → ResourceQuotas → demo-resources: bars for used vs
-      hard.
+      hard. Then Administration → LimitRanges → project-limits (check the
+      menu on this release; Search → LimitRange always works): the table of
+      default request, default limit and max per container - what the
+      no-requests pod gets filled in with below.
       As user3: oc scale deployment/guestbook --replicas=10. Topology shows
       7 guestbook pods. oc get events --sort-by=.eventTime --field-selector reason=FailedCreate | tail -1
       → "exceeded quota: project-quota, requested: pods=1, used: pods=8,
@@ -936,17 +999,39 @@ As peter: oc create -f project-limits.yaml (default request and
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>The project's quota, and a scale-up that hits it</h3>
+    <span class="backup-tag">Backup</span><h3>The project's quota: before and after scaling to ten</h3>
     <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo3-quota-usage.webp" data-caption="ResourceQuota details: used vs hard for CPU, memory, pods and storage"></div><figcaption>1 · The quota: used vs hard</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo3-quota-exceeded.webp" data-caption="ReplicaSet events: exceeded quota"></div><figcaption>2 · Scaling past it: exceeded quota</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-quota-before.webp" data-caption="Project overview, ResourceQuotas: 3 of 8 pods, none at quota"></div><figcaption>1 · Before: 3 of 8 pods, none at quota</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-quota-after.webp" data-caption="Project overview, ResourceQuotas after scaling to ten: 8 of 8 pods, 1 resource reached quota"></div><figcaption>2 · After scaling to ten: pods 8 of 8, quota reached</figcaption></figure>
     </div>
     <aside class="notes">
-      Left: the project's ResourceQuota - for each resource, how much is in
-      use and the hard limit. Right: the events after scaling the guestbook
-      to ten pods - the ReplicaSet could only create the pods that fit in
-      the quota; the rest were refused with "exceeded quota". Running pods
-      are never stopped by a quota.
+      The project's ResourceQuota on the project overview: one gauge per
+      resource it caps - the memory limits and requests of all pods, the
+      number of volume claims, the number of pods, the CPU requests and the
+      storage requested. Before: the guestbook's 2 pods plus PostgreSQL, 3
+      of the 8 pods allowed. After asking for ten guestbook pods: pods at
+      8 of 8, the gauge turns yellow and the summary says "1 resource
+      reached quota" - the quota stopped the rest. CPU and memory went up
+      (40% of the limits.memory and requests.cpu budget) but still have room:
+      here the pod count is what bites. Everything new in the project is checked against these numbers
+      when it's created.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Scaling past the quota: exceeded quota</h3>
+    <div class="shot" data-src="images/demo3-quota-exceeded.webp" data-caption="ReplicaSet events: forbidden - exceeded quota, pods=8 of 8"></div>
+    <div class="shot" data-src="images/demo3-quota-conditions.webp" data-caption="Deployment conditions: Available False, ReplicaFailure True - FailedCreate"></div>
+    <aside class="notes">
+      After scaling the guestbook to ten pods. Top: the ReplicaSet's events -
+      it could only create the pods that fit in the quota; every other
+      attempt is refused at creation ("forbidden: exceeded quota ...
+      requested: pods=1, used: pods=8, limited: pods=8"), and it keeps
+      retrying - 39 times in an hour, combined into one event. Bottom: the
+      Deployment's conditions say the same one level up: ReplicaFailure
+      (FailedCreate) and Available False - it has 7 of the 10 pods it was
+      asked for, below its own minimum, although the app answers fine.
+      Running pods are never stopped by a quota. CLI:
+      oc get deploy/guestbook -o jsonpath='{range .status.conditions[*]}{.type}{"\t"}{.status}{"\t"}{.message}{"\n"}{end}'
     </aside>
   </section>
 </section>
@@ -996,7 +1081,12 @@ DRAFT. Short - the storage session has the details. As user3, Storage →
       system that provides the claims - Storage → Data Foundation overview
       shows raw and used capacity. With thin provisioning, the claims can
       add up to more than the storage has: watch the second number, not
-      just the first. And the quota from Part 4 is the third view: how much
+      just the first. This lab cluster does exactly that (2026-11-24): 10.9
+      TiB raw, 3 copies of everything - about 3.6 TiB usable - while the
+      claims on it ask for 4.1 TiB. Fine while they're mostly empty (this
+      1Gi claim uses 47M); the raw used number (4.1 TiB) is the one that
+      must never reach the top. Careful with "Available: 6.8 TiB" on the
+      card: it's raw, before the three copies - about 2.3 TiB of real data. And the quota from Part 4 is the third view: how much
       storage this project may still ask for.
       Press DOWN for the backup screenshot.
     </aside>
@@ -1004,13 +1094,25 @@ DRAFT. Short - the storage session has the details. As user3, Storage →
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>A volume's usage - and the storage system's capacity</h3>
     <div class="shot-pair">
-      <figure><div class="shot" data-src="images/demo3-storage-pvc.webp" data-caption="PVC details: used vs capacity graph"></div><figcaption>1 · The claim: used vs capacity</figcaption></figure>
-      <figure><div class="shot" data-src="images/demo3-storage-capacity.webp" data-caption="Data Foundation overview: raw and used capacity"></div><figcaption>2 · The storage system: raw and used</figcaption></figure>
+      <figure>
+<pre><code class="language-plaintext">$ oc get pvc postgresql
+NAME         STATUS   CAPACITY   ACCESS MODES
+postgresql   Bound    1Gi        RWO
+$ oc exec deployment/postgresql -- \
+    df -h /var/lib/pgsql/data
+Filesystem   Size  Used Avail Use%
+/dev/rbd7    974M   47M  912M   5%</code></pre>
+        <figcaption>1 · The claim: 1Gi asked, 47M used</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-storage-capacity.webp" data-caption="Data Foundation, Raw capacity: 4.11 TiB used of 10.92 TiB"></div><figcaption>2 · The storage system: 4.11 of 10.92 TiB raw</figcaption></figure>
     </div>
     <aside class="notes">
-      Left: the database's claim - how much of its volume is used. Right: the
-      storage system behind all the claims. Both need watching: a volume can
-      fill up, and so can the pool that thin-provisioned volumes share.
+      Left: the database's claim - 1Gi asked for, a 974M filesystem inside,
+      47M used. Right: the storage system behind all the claims - raw
+      capacity, 4.11 TiB used of 10.92 TiB. Raw means before copies: every
+      block is stored three times, so the 6.8 TiB "available" holds about
+      2.3 TiB of data, while the claims (4.1 TiB asked for) could grow past
+      that. Both need watching: a volume can fill up, and so can the pool
+      that thin-provisioned volumes share.
     </aside>
   </section>
 </section>
@@ -1064,7 +1166,12 @@ HPA: oc create -f guestbook-hpa.yaml - 2 to 6 replicas, target 50% of
       Don't let it change CPU while an HPA scales on CPU.
       Cost Management: console.redhat.com → OpenShift → Optimizations (backup
       screenshot - it needs days of data): recommendations per container,
-      short/medium/long term, cost or performance.
+      short/medium/long term, cost or performance. Our own example, for
+      PostgreSQL: "cost" says 4m CPU, "performance" says 2.9 cores - 700
+      times apart, both as request and limit. Neither fits: 4m throttles
+      the peaks (Part 3), 2.9 cores reserves three cores for an idle
+      database. Read the recommendations, don't just apply them - Part 2's
+      rule (small request, no CPU limit) is the answer.
       Press DOWN for the optional VPA step, then the backup screenshots.
     </aside>
   </section>
@@ -1103,30 +1210,30 @@ OPTIONAL - only when there's time or the audience asks; RIGHT skips it.
       history, so it has been watching the guestbook (and the background
       traffic) for days. The file is guestbook-vpa.yaml (cat it): target
       Deployment guestbook, updateMode "Off" - recommend only, it never
-      touches a pod. "Off" is how you start.
-      As user3: oc get vpa guestbook (CPU and MEM columns: the target; MEM is
-      in bytes - 476450463 is about 454Mi), then
+      touches a pod. "Off" is how you start. And memory only: CPU belongs to
+      the HPA, which scales on CPU as a percentage of the request - a VPA
+      changing that request would fight it. Rule: HPA for CPU, VPA for memory.
+      As user3: oc get vpa guestbook (MEM column: the target, in bytes -
+      476450463 is about 454Mi; CPU stays empty), then
       oc describe vpa guestbook → Status, Recommendation: Lower Bound, Target,
-      Upper Bound per container. Compare with Part 2's guess (50m CPU,
-      320Mi memory): "measured over days, not one rehearsal". The cluster
-      sets a floor (25m CPU, 250Mi memory): the recommendation never goes
-      below it. Console: Search → VerticalPodAutoscaler → guestbook → YAML,
+      Upper Bound per container. Compare with Part 2's 320Mi: "measured over
+      days, not one rehearsal". The cluster sets a floor (250Mi memory): the
+      recommendation never goes below it. Console: Search → VerticalPodAutoscaler → guestbook → YAML,
       the status at the bottom.
       Optional, apply it: oc patch vpa guestbook --type=merge
-      --patch-file=guestbook-vpa-initial.patch.yaml - mode "Initial" (set
-      requests when a pod is created, never restart one) and memory only:
-      the HPA scales on CPU as a percentage of the request, so a VPA changing
-      the CPU request would fight it. Rule: HPA for CPU, VPA for memory - or
-      VPA recommend-only. Wait until oc get vpa guestbook shows an empty CPU
-      column (up to a minute: the recommender drops CPU on its next pass, and
-      a pod created before that still gets a CPU request). Then
+      --patch-file=guestbook-vpa-initial.patch.yaml - mode "Initial": set
+      requests when a pod is created, never restart one. "Restart" means new
+      pods, and new pods are where the VPA steps in:
       oc rollout restart deployment/guestbook and
       oc get pods -l app=guestbook -o jsonpath='{.items[*].spec.containers[0].resources}':
       the memory request is the VPA's target, and the limit moved with it
-      (same ratio as 320Mi/512Mi). Rehearsal (2026-11-24, after one minute of
-      history): target 25m CPU (the floor) and ~454Mi memory, more than our
-      320Mi; re-check it before the session. The pod's vpaUpdates annotation says the
-      VPA did it.
+      (same ratio as 320Mi/512Mi); CPU is still Part 2's 50m. Rehearsal
+      (2026-11-24): ~454Mi after one minute of history, ~392Mi an hour later;
+      re-check it before the session. The pod's vpaUpdates annotation says the
+      VPA did it. The catch: oc get deployment guestbook still says 320Mi -
+      the VPA changes pods, not the Deployment, so the YAML (and Git, and
+      Argo CD) no longer describe what runs. Another reason to start with
+      "Off" and copy the number into the Deployment yourself.
       The modes, as an escalation: Off → Initial → InPlace / Recreate - from
       looking, to sizing new pods, to changing running ones (InPlace resizes
       a running pod without a restart, Recreate evicts it, InPlaceOrRecreate
@@ -1137,30 +1244,88 @@ OPTIONAL - only when there's time or the audience asks; RIGHT skips it.
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>More pods under load</h3>
-    <div class="shot" data-src="images/demo3-rightsize-hpa.webp" data-caption="HPA scaling the guestbook out under load"></div>
+    <div class="shot-pair">
+      <figure class="natural"><div class="shot" data-src="images/demo3-rightsize-hpa.webp" data-caption="Deployment guestbook: autoscaled to 6 pods"></div><figcaption>1 · The Deployment: autoscaled to 6 pods</figcaption></figure>
+      <figure>
+<pre><code class="language-plaintext">$ oc get hpa guestbook
+NAME        TARGETS          MINPODS   MAXPODS   REPLICAS
+guestbook   cpu: 2768%/50%   2         6         6</code></pre>
+        <figcaption>2 · Why: CPU at 2768% of the request, target 50%</figcaption></figure>
+    </div>
     <aside class="notes">
-      The HorizontalPodAutoscaler adding guestbook pods while load runs
-      against the app, and removing them again afterwards.
+      The HorizontalPodAutoscaler under load. Left: the Deployment, scaled
+      by the HPA to its maximum of 6 pods. Right: the reason - the pods use
+      on average 2768% of their CPU request (50m each, so about 1.4 cores
+      per pod) against a target of 50%. It would add more pods if it could;
+      6 is the maximum set in the HPA. When the load stops, it scales back
+      to 2 after its one-minute stabilization window.
     </aside>
   </section>
   <section class="backup">
-    <span class="backup-tag">Backup</span><h3>Cost Management: optimization recommendations</h3>
-    <div class="shot" data-src="images/demo3-rightsize-cost.webp" data-caption="console.redhat.com Cost Management: resource optimization recommendations for a container"></div>
+    <span class="backup-tag">Backup</span><h3>Cost Management: two recommendations, 700&times; apart</h3>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-rightsize-cost-top.webp" data-caption="Cost optimizations, last 24 hours: PostgreSQL's container - 4m CPU, 63Mi memory, request and limit"></div><figcaption>1 · Cost: 4m CPU (request and limit)</figcaption></figure>
+      <figure><div class="shot" data-src="images/demo3-rightsize-perf-top.webp" data-caption="Performance optimizations, last 7 days: the same container - 2.9 cores CPU, 78Mi memory, request and limit"></div><figcaption>2 · Performance: 2.9 cores (request and limit)</figcaption></figure>
+    </div>
+<pre class="fit"><code class="language-plaintext">PostgreSQL     today    cost (24 h)   performance (7 days)
+cpu request    50m      4m            2917m
+cpu limit      -        4m            2917m
+mem request    128Mi    63Mi          78Mi
+mem limit      512Mi    63Mi          78Mi</code></pre>
     <aside class="notes">
-      Cost Management on console.redhat.com, included with OpenShift. Its
-      resource optimization view recommends requests and limits for each
-      container, over short, medium and long periods, tuned either for cost
-      or for performance - for every connected cluster, in one place.
+      Cost Management on console.redhat.com (included with OpenShift),
+      Optimizations, project demo-resources, PostgreSQL's container. Today:
+      the postgresql-demo template's 50m CPU and 128Mi requests, a 512Mi
+      memory limit, no CPU limit (the warning sign). Left, "Cost
+      optimizations" (last 24 hours): 4m CPU and 63Mi, as request and limit.
+      Right, "Performance optimizations" (last 7 days): 2.9 cores and 78Mi,
+      as request and limit - 700 times the cost answer's CPU. Neither is
+      right as it stands: a 4m CPU limit would throttle every peak (Part 3);
+      a 2.9-core request would reserve three cores around the clock for a
+      database that is idle most of the day, on a cluster already short of
+      unreserved CPU. The answer is Part 2's rule: a small CPU request near
+      typical use and no CPU limit, so it can burst to the peaks; memory
+      request and limit near the 63-78Mi both tabs agree on. Read the
+      recommendations, don't just apply them.
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>Cost Management: a week of PostgreSQL's CPU and memory</h3>
+    <div class="shot" data-src="images/demo3-rightsize-perf-charts.webp" data-caption="Last 7 days: CPU mostly near zero with daily peaks near 3 cores; memory 20-65Mi"></div>
+    <aside class="notes">
+      What the recommendations are based on: seven days of PostgreSQL's CPU
+      and memory. CPU is near zero almost all the time, with peaks up to
+      about 3 cores (the hourly background traffic); memory between about
+      20 and 65Mi. The red lines are the performance recommendation's
+      limits. "Typical" and "peak" are far apart - which is exactly why the
+      CPU request should follow the typical use and the peaks should be
+      left to burst, without a CPU limit.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>VPA: a recommendation from measured use</h3>
-    <div class="shot" data-src="images/demo3-rightsize-vpa.webp" data-caption="oc describe vpa guestbook: lower bound, target and upper bound for each container"></div>
+<pre class="fit"><code class="language-yaml">$ oc get vpa guestbook -o yaml     # status, after a day of traffic
+status:
+  conditions:
+  - type: RecommendationProvided
+    status: "True"
+  recommendation:
+    containerRecommendations:
+    - containerName: guestbook
+      lowerBound:
+        memory: "350652848"     # 334Mi
+      target:
+        memory: "380258472"     # 363Mi - Part 2 set 320Mi
+      upperBound:
+        memory: "730273816"     # 696Mi</code></pre>
     <aside class="notes">
       The VerticalPodAutoscaler for the guestbook in recommend-only mode
-      ("Off"): from days of measured use it recommends a request for each
-      container - a target, with a lower and an upper bound. It changes
-      nothing until you let it.
+      ("Off"), memory only - CPU is left to the HPA. From a day of measured
+      use it recommends a memory request of about 363Mi (the target), with
+      a lower bound of 334Mi and an upper bound of 696Mi; Part 2 had set
+      320Mi from one rehearsal. The VPA writes memory in bytes - the Mi
+      values are added here. It changes nothing until you let it ("Initial"
+      mode applies the target to new pods).
     </aside>
   </section>
 </section>
@@ -1209,22 +1374,150 @@ As peter. Setup created small-vm stopped (it holds nothing until it
       Virtualization sets one itself (twice the request), or the quota
       would refuse the pod. "The scheduler sees a pod - the same rules as
       every other workload." Administration → ResourceQuotas: the VM counts
-      against the quota (oc describe quota shows the memory in bytes - the
-      console reads better). Stop the VM afterwards: virtctl stop small-vm.
+      against the quota. The quota shows the project's total, not the VM:
+      Used grows by the VM pod's 2324Mi request and 4648Mi limit (plus 1M /
+      40M for a KubeVirt helper container). oc describe quota shows the
+      memory in bytes (Mi and KubeVirt's decimal M don't add up to a round
+      number) - the console page reads better. Read the VM's own numbers from
+      its pod, above. Stop the VM afterwards (virtctl stop small-vm) - or
+      after the optional "same network" step below (DOWN).
       The cluster-wide knobs (admin, look only): the HyperConverged
       resource's CPU allocation ratio, and the opt-in memory overcommit for
       higher density.
-      Press DOWN for the backup screenshot.
+      Press DOWN for the optional "same network" step, then the backup
+      screenshots.
+    </aside>
+  </section>
+  <section>
+    <h3>7 · Optional: a VM on the same network</h3>
+    <p class="subheading">Same addresses, same Service names, same database</p>
+    <div class="steps">
+      <ol>
+        <li>The VM's address: a pod IP, like every pod</li>
+        <li><b>psql</b> in the VM: <b>postgresql</b> by name - the same rows</li>
+        <li>A <b>Service</b> and a <b>Route</b> in front of the VM</li>
+        <li>Sign in the VM's guestbook, read it in the pods'</li>
+      </ol>
+      <div>
+        <svg class="mini diagram" viewBox="0 0 640 260" aria-label="Guestbook pods, PostgreSQL and the VM small-vm on the same pod network">
+        <use href="#i-pod" x="40" y="35" width="90" height="90"/>
+        <text class="dg-small" x="85" y="148">guestbook pods</text>
+        <use href="#i-pod" x="275" y="35" width="90" height="90"/>
+        <text class="dg-small" x="320" y="148">postgresql</text>
+        <rect class="dg-box grey" x="440" y="15" width="185" height="150" rx="12"/>
+        <use href="#i-hex" x="487" y="30" width="90" height="90"/>
+        <text class="dg-small" x="532" y="148">VM small-vm</text>
+        <path class="dg-line grey" d="M85,160 V200 M320,160 V200 M532,168 V200"/>
+        <path class="dg-line" d="M20,200 H620"/>
+        <text class="dg-small" x="320" y="238">one pod network - one DNS - one set of Services</text>
+      </svg>
+        <p class="cli-label">The same, as code</p>
+<pre><code class="language-bash">oc get vmi small-vm; oc get pods -o wide
+virtctl console small-vm
+oc create -f guestbook-vm-service.yaml
+oc create route edge guestbook-vm \
+  --service=guestbook-vm</code></pre>
+      </div>
+    </div>
+    <aside class="notes">
+OPTIONAL - only when there's time or the audience asks; RIGHT skips it.
+      DRAFT, not rehearsed yet. Not about resources: it answers "do VMs need
+      their own network?" - no.
+      The VM started in Part 7 runs the same guestbook as the pods, installed
+      by cloud-init at boot (dnf: psql, Flask; app.py from Gitea - the same
+      source). It's ready about a minute after the start, so by now it is.
+      As peter: oc get vmi small-vm - its IP is on the pod network; oc get
+      pods -o wide - the guestbook pods' IPs, same range. No VLAN, no IP plan:
+      the VM is one more address on the cluster network, behind the same
+      DNS, Services, Routes and network policies.
+      virtctl console small-vm, log in as fedora (password: VM_PASSWORD in
+      demo.env, welcome1 by default): psql -c 'select name, message, pod
+      from entries order by id desc limit 5' - no host, no password typed
+      typed: psql reaches "postgresql", the same Service name the pods use,
+      with the login from the same Secret. The guestbook Deployment reads
+      Secret postgresql as environment variables; the VM gets it as a small
+      read-only disk: ls /run/secrets/postgresql - one file per key
+      (database-user, database-password, database-name), like a pod's secret
+      volume. One Secret, two consumers; change the password once. (Like a
+      pod's env vars, the VM sees a changed Secret at its next start.)
+      Show it in the VM's YAML: volumes → db-secret → secret: postgresql.
+      Ctrl+] leaves the console.
+      oc create -f guestbook-vm-service.yaml - a Service whose selector is a
+      label on the VM (kubevirt.io/domain: small-vm), port 8080, exactly as
+      for pods; oc describe service guestbook-vm - Endpoints: the VM's IP.
+      The one-line equivalent: virtctl expose vm small-vm
+      --name=guestbook-vm --port=8080 ("oc expose" doesn't know VMs;
+      virtctl expose takes the VM's labels as the selector, as oc expose
+      does for a Deployment). oc create
+      route edge guestbook-vm --service=guestbook-vm, open it: the guestbook
+      with a purple banner, "served by small-vm". Sign it there, reload the
+      pods' guestbook: the entry is there. In psql, the pod column says
+      small-vm for that row.
+      If asked "but inside the VM?": with the default masquerade binding the
+      guest sees a private address (ip addr: 10.0.2.2) and KubeVirt
+      translates to the pod's IP - like a pod's container, it never needs to
+      know. Bridged or secondary networks (Multus, NMState) are for VMs that
+      need their own address on a VLAN: the storage and networking sessions.
+      Afterwards: virtctl stop small-vm (reset.yml removes the Service and
+      Route).
+    </aside>
+  </section>
+  <section class="backup">
+    <span class="backup-tag">Backup</span><h3>The same guestbook, running in a VM</h3>
+    <div class="shot" data-src="images/demo3-vm-guestbook.webp" data-caption="The guestbook served by small-vm: one entry written by a pod, one by the VM - the same database"></div>
+<pre class="fit"><code class="language-plaintext">$ oc describe service guestbook-vm
+Selector:    kubevirt.io/domain=small-vm    # a label on the VM
+Endpoints:   10.128.0.214:8080              # the VM's IP, on the pod network
+$ oc create route edge guestbook-vm --service=guestbook-vm
+route.route.openshift.io/guestbook-vm created</code></pre>
+    <aside class="notes">
+      The guestbook installed directly in the VM small-vm (purple banner,
+      "served by pod: small-vm"), using the same PostgreSQL by its Service
+      name: the list holds an entry written by a guestbook pod and one
+      written by the VM - one database, two kinds of front end. Below: how
+      it's reached. The Service selects the VM by a label, exactly as it
+      would select pods, and its endpoint is the VM's own IP on the pod
+      network; a Route in front of the Service gives it an https address,
+      as for any app.
     </aside>
   </section>
   <section class="backup">
     <span class="backup-tag">Backup</span><h3>A VM and the pod that runs it</h3>
-    <div class="shot" data-src="images/demo3-vm-launcher.webp" data-caption="virt-launcher pod: CPU and memory requests for a 2 vCPU, 2 GiB VM"></div>
+    <div class="shot-pair">
+      <figure><div class="shot" data-src="images/demo3-vm-config.webp" data-caption="VirtualMachine small-vm, Configuration: 2 CPU, 2 GiB memory"></div><figcaption>1 · The VM: 2 CPU, 2 GiB</figcaption></figure>
+      <figure>
+<pre><code class="language-json">$ oc get pod -l kubevirt.io=virt-launcher \
+    -o jsonpath='{.items[0].spec.containers[0].resources}' | jq .
+{
+  "limits": {
+    "devices.kubevirt.io/kvm": "1",
+    "devices.kubevirt.io/tun": "1",
+    "devices.kubevirt.io/vhost-net": "1",
+    "memory": "4648Mi"
+  },
+  "requests": {
+    "cpu": "200m",
+    "devices.kubevirt.io/kvm": "1",
+    "devices.kubevirt.io/tun": "1",
+    "devices.kubevirt.io/vhost-net": "1",
+    "ephemeral-storage": "50M",
+    "memory": "2324Mi"
+  }
+}</code></pre>
+        <figcaption>2 · Its pod: 200m CPU, 2324Mi requested</figcaption></figure>
+    </div>
     <aside class="notes">
-      The pod that runs a 2 vCPU, 2 GiB virtual machine. Its CPU request is
-      a fraction of a core per vCPU (CPU is overcommitted by default); its
-      memory request is the guest's memory plus overhead. Quotas and the
-      scheduler treat it like any other pod.
+      Left: the VM as its owner sees it - 2 CPU, 2 GiB memory (the boot
+      order also lists db-secret, the database Secret attached as a disk).
+      Right: the pod that runs the 2 vCPU, 2 GiB virtual machine small-vm. CPU
+      request: 200m - a tenth of a core per vCPU, because CPU is
+      overcommitted by default. Memory request: 2324Mi - the guest's 2Gi
+      plus KubeVirt's overhead. Memory limit: 4648Mi, twice the request,
+      set by OpenShift Virtualization because the project's quota has a
+      limits.memory (nobody wrote it). No CPU limit. The devices.kubevirt.io
+      lines are the VM asking for /dev/kvm and its network devices the same
+      way it asks for CPU and memory: the scheduler only places it on a node
+      that has them. Quotas and the scheduler treat it like any other pod.
     </aside>
   </section>
 </section>

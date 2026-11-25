@@ -2,6 +2,14 @@
 # container disk (no PVC, so it adds nothing to the storage quota). Created
 # stopped: it holds no resources until the presenter starts it in Part 7.
 # reset.yml stops it again.
+# On the pod network like any pod (the VM gets its virt-launcher pod's IP).
+# cloud-init installs psql and the guestbook at every start (the container
+# disk starts fresh), for the optional "same network" step: the same app.py as
+# the pods, from Gitea, on port 8080. Inline, so the console's Configuration
+# -> Initial run shows the user and password. No database credentials in it:
+# the VM gets the same Secret "postgresql" as the guestbook Deployment,
+# attached as a disk (serial "postgresql") and mounted at
+# /run/secrets/postgresql - one file per key, as in a pod's secret volume.
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -15,6 +23,7 @@ spec:
   template:
     metadata:
       labels:
+        # Service guestbook-vm selects the VM by this label, as it would a pod
         kubevirt.io/domain: small-vm
     spec:
       domain:
@@ -23,7 +32,75 @@ spec:
         devices:
           disks:
             - {name: root, disk: {bus: virtio}}
+            - {name: cloudinit, disk: {bus: virtio}}
+            # The Secret as a read-only disk: /dev/disk/by-id/virtio-postgresql
+            - {name: db-secret, serial: postgresql, disk: {bus: virtio}}
+          interfaces:
+            - {name: default, masquerade: {}}
+      networks:
+        - {name: default, pod: {}}
       volumes:
         - name: root
           containerDisk:
             image: quay.io/containerdisks/fedora:latest
+        - name: cloudinit
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              hostname: small-vm
+              user: fedora
+              password: "{{ vm_password }}"
+              chpasswd: {expire: false}
+              mounts:
+                - [/dev/disk/by-id/virtio-postgresql, /run/secrets/postgresql, iso9660, "ro,nofail"]
+              packages:
+                - postgresql
+                - python3-flask
+                - python3-psycopg3
+              write_files:
+                - path: /etc/guestbook.env
+                  content: |
+                    DB_HOST=postgresql
+                    APP_COLOR=#5e40be
+                    APP_TITLE=OpenShift Guestbook - in a VM
+                # The Secret's keys become the same variables the pods get
+                - path: /usr/local/bin/guestbook
+                  permissions: "0755"
+                  content: |
+                    #!/bin/sh
+                    s=/run/secrets/postgresql
+                    export POSTGRESQL_USER=$(cat $s/database-user)
+                    export POSTGRESQL_PASSWORD=$(cat $s/database-password)
+                    export POSTGRESQL_DATABASE=$(cat $s/database-name)
+                    exec /usr/bin/python3 app.py
+                # psql with no options reaches the guestbook's database
+                - path: /etc/profile.d/guestbook-db.sh
+                  content: |
+                    s=/run/secrets/postgresql
+                    export PGHOST=postgresql PGUSER=$(cat $s/database-user) PGPASSWORD=$(cat $s/database-password) PGDATABASE=$(cat $s/database-name)
+                - path: /etc/systemd/system/guestbook.service
+                  content: |
+                    [Unit]
+                    Description=Guestbook (the same app as the pods)
+                    Wants=network-online.target
+                    After=network-online.target
+                    RequiresMountsFor=/run/secrets/postgresql
+                    [Service]
+                    WorkingDirectory=/opt/guestbook
+                    EnvironmentFile=/etc/guestbook.env
+                    ExecStart=/usr/local/bin/guestbook
+                    DynamicUser=yes
+                    Restart=on-failure
+                    [Install]
+                    WantedBy=multi-user.target
+              # Gitea by its full name: the VM's resolver (systemd-resolved) adds the
+              # search domains only to one-word names like "postgresql" - pods (ndots:5)
+              # also resolve "local-gitea.gitea.svc", the VM doesn't
+              runcmd:
+                - mkdir -p /opt/guestbook
+                - curl -sf {{ gitea_internal_url | replace('.svc:', '.svc.cluster.local:') }}/{{ gitea_org }}/{{ guestbook_repo }}/archive/{{ guestbook_revision }}.tar.gz | tar xz -C /opt/guestbook --strip-components=1
+                - systemctl daemon-reload
+                - systemctl enable --now guestbook
+        - name: db-secret
+          secret:
+            secretName: postgresql

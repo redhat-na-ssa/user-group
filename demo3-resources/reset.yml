@@ -1,7 +1,7 @@
 # Demo 3 - Resource Management: back to the start after a rehearsal or a run,
 # in place (keeps the image, the database and its PVC - no rebuild):
 # removes what the demo adds (HPA, quota, limit range, memory-hog, no-requests,
-# big-claim), puts the VPA back to recommend-only (keeping its history), stops
+# big-claim, the VM's Service and Route), puts the VPA back to recommend-only (keeping its history), stops
 # the VM and puts the guestbook back to 2 pods with no requests or limits.
 #
 #   .venv/bin/ansible-playbook demo3-resources/reset.yml
@@ -40,6 +40,8 @@
         - {api: v1, kind: Pod, name: memory-hog}
         - {api: v1, kind: Pod, name: no-requests}
         - {api: v1, kind: PersistentVolumeClaim, name: big-claim}
+        - {api: route.openshift.io/v1, kind: Route, name: guestbook-vm}
+        - {api: v1, kind: Service, name: guestbook-vm}
       loop_control:
         label: "{{ item.kind }}/{{ item.name }}"
       register: removed

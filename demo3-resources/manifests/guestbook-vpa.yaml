@@ -1,6 +1,9 @@
 # Part 6 (optional): a VerticalPodAutoscaler for the guestbook, recommend-only.
 # updateMode "Off": the VPA watches what the pods use and writes recommended
 # requests into its status - it never changes a pod. The safe way to start.
+# Memory only: the HPA (Part 6) owns CPU - it scales on CPU as a percentage of
+# the request, so a VPA changing that request would fight it. (Memory only
+# from the start, so switching to "Initial" never catches a stale CPU value.)
 # Always set the mode: left out, it defaults to "Recreate" (evicts pods).
 # Created by setup.yml, not live: a recommendation needs usage history (the
 # background traffic provides it), so it must run for days before a session.
@@ -22,4 +25,4 @@ spec:
   resourcePolicy:
     containerPolicies:
       - containerName: guestbook
-        controlledResources: [cpu, memory]
+        controlledResources: [memory]

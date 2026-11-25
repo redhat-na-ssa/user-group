@@ -40,6 +40,7 @@
           - manifests/guestbook-hpa.yaml
           - manifests/guestbook-vpa.yaml
           - manifests/guestbook-vpa-initial.patch.yaml
+          - manifests/guestbook-vm-service.yaml
       - name: demo4-storage
         title: OpenShift Storage
         files:

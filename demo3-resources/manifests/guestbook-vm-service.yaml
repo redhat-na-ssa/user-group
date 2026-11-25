@@ -1,0 +1,19 @@
+# Part 7 (optional): a Service in front of the VM - the same kind of object as
+# in front of the guestbook pods. It selects the VM's pod by label; the VM's
+# guestbook listens on 8080, like the container.
+#   oc create -f guestbook-vm-service.yaml
+#   oc create route edge guestbook-vm --service=guestbook-vm
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: demo-resources
+  name: guestbook-vm
+  labels:
+    app.kubernetes.io/part-of: guestbook
+spec:
+  selector:
+    kubevirt.io/domain: small-vm
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      targetPort: 8080

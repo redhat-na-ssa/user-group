@@ -159,6 +159,8 @@
 /* Backup slide that shows a few commands instead of a screenshot, readable
    from the back of the room */
 .reveal pre.big-code { font-size: 0.95em; width: auto; display: inline-block; margin-top: 1.2em; }
+/* Command output under a backup screenshot: as wide as its text */
+.reveal pre.fit { width: auto; display: inline-block; margin-top: 0.8em; }
 
 /* Backup screenshot slides (vertical, "press down") */
 .reveal section.backup h3 { font-size: 0.8em; color: var(--rh-muted); margin-bottom: 0.4em; }
@@ -177,6 +179,9 @@
 }
 .reveal .shot-pair figure { margin: 0; }
 .reveal .shot-pair img.shot { width: 100%; max-width: none; max-height: none; }
+/* A small screenshot in a pair: its own size (sharp), not stretched to the column */
+.reveal .shot-pair figure.natural { text-align: center; }
+.reveal .shot-pair figure.natural img.shot { width: auto; max-width: 100%; }
 .reveal .shot-pair .shot-missing { width: 100%; height: 400px; }
 .reveal .shot-pair figcaption { margin-top: 14px; font-size: 0.55em; color: var(--rh-muted); text-align: left; }
 .shot-missing {

@@ -269,11 +269,34 @@
         name: small-vm
       register: vm
 
+    # cloud-init used to be in this Secret; it's inline in the VM now
+    - name: VM small-vm - old cloud-init Secret gone
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        namespace: "{{ ns }}"
+        name: small-vm-cloudinit
+
     - name: VM small-vm (stopped)
       kubernetes.core.k8s:
         namespace: "{{ ns }}"
         template: "{{ playbook_dir }}/templates/small-vm.yaml.j2"
       when: vm.resources | length == 0
+
+    # An existing VM: bring its template up to date, but leave runStrategy
+    # alone (setup never stops a VM that's running in a demo)
+    - name: VM small-vm - template up to date
+      kubernetes.core.k8s:
+        state: patched
+        api_version: kubevirt.io/v1
+        kind: VirtualMachine
+        namespace: "{{ ns }}"
+        name: small-vm
+        definition:
+          spec:
+            template: "{{ (lookup('template', playbook_dir + '/templates/small-vm.yaml.j2') | from_yaml).spec.template }}"
+      when: vm.resources | length > 0
 
     # ------------------------------------------------------------ background traffic
     # Feeds Cost Management's recommendations (Part 6). Only created when

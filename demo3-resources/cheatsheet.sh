@@ -21,7 +21,7 @@ BASE=https://slides-faa-demo.$APPS/demo3-resources/files
 # The demo's YAML files (the deck's "files" in faa-demo/playbook.yml)
 for f in guestbook-resources.patch.yaml memory-hog.yaml project-limits.yaml \
          project-quota.yaml no-requests-pod.yaml big-claim.yaml guestbook-hpa.yaml \
-         guestbook-vpa.yaml guestbook-vpa-initial.patch.yaml; do
+         guestbook-vpa.yaml guestbook-vpa-initial.patch.yaml guestbook-vm-service.yaml; do
   [ -f "$f" ] || curl -sfO "$BASE/$f" || echo "could not download $f"   # kept if already here
 done
 oc project demo-resources >/dev/null 2>&1
@@ -39,6 +39,9 @@ return 0 2>/dev/null || true
 
 # ---------------------------------------------------------------- 1 - Used vs reserved (user3, then peter)
 oc get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass   # BestEffort
+# Console list of the same (peter): Observe -> Metrics:
+#   sum by (pod, qos_class) (kube_pod_status_qos_class{namespace="demo-resources"}) == 1
+#   (lists pods deleted within the graph's time range too - set it to 5m)
 ab -c 10 -t 120 $GUESTBOOK_URL/                    # laptop; start it first, the dashboards lag
 oc adm top pods                                    # under load 2-3 cores per pod (idle ~2m), nothing reserved
 # Console (peter): Observe -> Dashboards -> Kubernetes / Compute Resources / Namespace (Pods)
@@ -83,6 +86,7 @@ oc describe quota
 oc describe limitrange
 oc scale deployment/guestbook --replicas=10        # user3: only 7 start
 oc get events --sort-by=.eventTime --field-selector reason=FailedCreate | tail -1   # exceeded quota: pods=8
+oc get deploy/guestbook -o jsonpath='{range .status.conditions[*]}{.type}{"\t"}{.status}{"\t"}{.message}{"\n"}{end}'   # ReplicaFailure
 oc scale deployment/guestbook --replicas=2
 oc get pods                                        # wait for 3 pods - terminating ones still count
 oc create -f no-requests-pod.yaml
@@ -103,11 +107,10 @@ ab -c 10 -t 120 $GUESTBOOK_URL/                    # laptop
 oc get hpa guestbook -w                            # 6 pods in ~20s; back to 2 ~80s after the load (Ctrl-C)
 # Optional (DOWN): the VPA - created by setup, recommend-only ("Off")
 cat guestbook-vpa.yaml
-oc get vpa guestbook                               # CPU / MEM: the target (MEM in bytes)
+oc get vpa guestbook                               # MEM: the target, in bytes (memory only: CPU is the HPA's)
 oc describe vpa guestbook                          # Lower Bound, Target, Upper Bound
-#   apply it: memory only, at pod start - the HPA keeps CPU
+#   apply it, at pod start ("Initial"): new pods get the memory target
 oc patch vpa guestbook --type=merge --patch-file=guestbook-vpa-initial.patch.yaml
-oc get vpa guestbook                               # wait for an empty CPU column (up to 1 min)
 oc rollout restart deployment/guestbook
 oc get pods -l app=guestbook -o jsonpath='{range .items[*]}{.metadata.name}{"  "}{.spec.containers[0].resources}{"\n"}{end}'
 
@@ -118,7 +121,18 @@ oc get vm,vmi
 oc get pod -l kubevirt.io=virt-launcher -o jsonpath='{.items[0].spec.containers[0].resources}'; echo
 # 2 vCPU -> cpu 200m; memory 2Gi + overhead = 2324Mi; limit 4648Mi added by
 # OpenShift Virtualization because the quota has limits.memory
-oc describe quota                                  # memory shown in bytes here; the console page reads better
+oc describe quota                                  # project total, not the VM; memory in bytes - the console reads better
+# Optional (DOWN): the VM on the same network - its guestbook is up ~1 min after the start
+oc get vmi small-vm                                # IP: on the pod network
+oc get pods -o wide                                # the pods' IPs - same range
+virtctl console small-vm                           # login fedora / VM_PASSWORD (demo.env); Ctrl+] to leave
+#   ls /run/secrets/postgresql                       # the pods' Secret, as a disk: one file per key
+#   psql -c 'select name, message, pod from entries order by id desc limit 5'
+oc create -f guestbook-vm-service.yaml             # a Service selecting the VM by label
+#   or: virtctl expose vm small-vm --name=guestbook-vm --port=8080   (oc expose doesn't know VMs)
+oc describe service guestbook-vm                   # Endpoints: the VM's IP
+oc create route edge guestbook-vm --service=guestbook-vm
+echo https://$(oc get route guestbook-vm -o jsonpath='{.spec.host}')/   # purple banner, served by small-vm
 virtctl stop small-vm
 
 # ---------------------------------------------------------------- 8 - Bonus: new project defaults (peter, look only)
